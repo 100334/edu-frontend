@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { authAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { AcademicCapIcon } from '@heroicons/react/24/outline';
+
+// Theme constants
+const DARK_BLUE = '#1A237E';
+const AZURE = '#00B0FF';
 
 const LearnerLogin = ({ serverStatus }) => {
   const [name, setName] = useState('');
   const [regNumber, setRegNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { login } = useAuth();
+  const { learnerLogin } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = async () => {
@@ -22,10 +26,16 @@ const LearnerLogin = ({ serverStatus }) => {
     setError('');
 
     try {
-      const result = await login({ name, regNumber }, 'learner');
+      const result = await learnerLogin({
+        name: name,
+        regNumber: regNumber.toUpperCase()
+      });
       
       if (result.success) {
-        toast.success(`Welcome back, ${result.user.name}! 🎒`);
+        toast.success(`Welcome back, ${result.user.name}!`, {
+          icon: '🎒',
+          duration: 4000
+        });
         navigate('/learner/dashboard');
       } else {
         setError(result.message || 'Invalid credentials');
@@ -40,147 +50,145 @@ const LearnerLogin = ({ serverStatus }) => {
     }
   };
 
-  const handleBack = () => {
-    navigate('/');
-  };
-
   return (
-    <div style={{ 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      minHeight: '100vh', 
-      background: '#f7f4ef', 
-      padding: '20px' 
-    }}>
-      <div style={{ 
-        background: 'white', 
-        borderRadius: '20px', 
-        padding: '48px 40px', 
-        width: '100%', 
-        maxWidth: '420px', 
-        boxShadow: '0 12px 48px rgba(15,25,35,0.16)', 
-        border: '1px solid #d4cfc6' 
-      }}>
-        <button 
-          onClick={handleBack} 
-          style={{ 
-            display: 'inline-flex', 
-            alignItems: 'center', 
-            gap: '6px', 
-            fontSize: '13px', 
-            color: '#6b7280', 
-            cursor: 'pointer', 
-            background: 'none', 
-            border: 'none', 
-            marginBottom: '20px' 
-          }}
-        >
-          ← Back
-        </button>
-        
-        <div style={{ marginBottom: '32px' }}>
-          <div style={{ 
-            display: 'inline-block', 
-            padding: '4px 12px', 
-            borderRadius: '20px', 
-            fontSize: '11px', 
-            fontWeight: '600', 
-            letterSpacing: '1.5px', 
-            textTransform: 'uppercase', 
-            marginBottom: '10px', 
-            background: 'rgba(26,107,107,0.12)', 
-            color: '#1a6b6b' 
-          }}>
-            Learner Portal
+    <div className="min-h-screen bg-white">
+      <div className="min-h-screen flex">
+        <div className="flex-1 overflow-auto px-6 py-4">
+          <div className="max-w-[400px] mx-auto">
+            {/* Back button to home */}
+            <button
+              onClick={() => navigate('/')}
+              className="mb-5 flex items-center text-[#1A237E] hover:text-[#00B0FF] transition-colors group"
+            >
+              <svg className="w-4 h-4 mr-1 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              <span className="text-sm">Back to Home</span>
+            </button>
+
+            {/* Logo and Title */}
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-[90px] h-[90px] bg-gradient-to-br from-[#1A237E] to-[#00B0FF] rounded-2xl shadow-lg mb-2">
+                <AcademicCapIcon className="w-12 h-12 text-white" />
+              </div>
+              <h1 className="text-xl font-bold text-[#1A237E] mt-2">
+                STUDENT LOGIN
+              </h1>
+              <div className="w-10 h-1 bg-[#00B0FF] mx-auto mt-2"></div>
+            </div>
+
+            {/* Login Form */}
+            <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} className="space-y-6">
+              {/* Name Field */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold text-blue-600 tracking-wider">
+                  FULL NAME
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-0 flex items-center pointer-events-none">
+                    <svg className="w-5 h-5 text-[#1A237E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Enter your full name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    disabled={loading}
+                    onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                    className="w-full pl-7 pr-4 py-3 bg-transparent border-b-2 text-[#1A237E] font-semibold text-base
+                             placeholder-gray-400 focus:outline-none transition-colors
+                             border-[#1A237E] focus:border-[#00B0FF]"
+                  />
+                </div>
+              </div>
+
+              {/* Registration Number Field */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-extrabold text-blue-600 tracking-wider">
+                  REGISTRATION NUMBER
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-0 flex items-center pointer-events-none">
+                    <svg className="w-5 h-5 text-[#1A237E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Enter your registration number"
+                    value={regNumber}
+                    onChange={(e) => setRegNumber(e.target.value.toUpperCase())}
+                    style={{ fontFamily: 'monospace' }}
+                    disabled={loading}
+                    onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                    className="w-full pl-7 pr-4 py-3 bg-transparent border-b-2 text-[#1A237E] font-semibold text-base
+                             placeholder-gray-400 focus:outline-none transition-colors uppercase
+                             border-[#1A237E] focus:border-[#00B0FF]"
+                  />
+                </div>
+              </div>
+
+              {/* Login Button */}
+              {loading ? (
+                <div className="flex justify-center py-3">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#1A237E]"></div>
+                </div>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={loading || serverStatus?.status === 'offline'}
+                  className="w-full h-[55px] bg-[#1A237E] text-white font-bold tracking-wider text-base
+                           hover:bg-[#00B0FF] transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  style={{ borderRadius: '6px' }}
+                  onClick={handleLogin}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                  </svg>
+                  SIGN IN AS STUDENT
+                </button>
+              )}
+            </form>
+
+            {error && (
+              <div style={{ 
+                color: '#c0392b', 
+                fontSize: '13px', 
+                marginTop: '10px', 
+                textAlign: 'center' 
+              }}>
+                {error}
+              </div>
+            )}
+            
+            {serverStatus?.status === 'offline' && (
+              <div style={{ 
+                marginTop: '16px', 
+                padding: '10px', 
+                background: '#f8d7da', 
+                borderRadius: '8px',
+                fontSize: '12px',
+                color: '#721c24',
+                textAlign: 'center'
+              }}>
+                🔌 Server is offline. Please check your connection.
+              </div>
+            )}
+
+            {/* Security Note */}
+            <div className="mt-8 pt-4 text-center border-t border-gray-100">
+              <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6-4h12a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6a2 2 0 012-2zm10-4V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+                <span>Secure student portal</span>
+                <span>•</span>
+                <span>Personalized learning</span>
+              </div>
+            </div>
           </div>
-          <h2 style={{ 
-            fontFamily: 'Playfair Display, serif', 
-            fontSize: '28px', 
-            fontWeight: '700', 
-            color: '#0f1923' 
-          }}>
-            Hello, student!
-          </h2>
-        </div>
-        
-        <div className="form-group">
-          <label>Full Name</label>
-          <input 
-            type="text" 
-            value={name} 
-            onChange={(e) => setName(e.target.value)} 
-            placeholder="Enter your full name" 
-            disabled={loading}
-            onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-          />
-        </div>
-        
-        <div className="form-group">
-          <label>Registration Number</label>
-          <input 
-            type="text" 
-            value={regNumber} 
-            onChange={(e) => setRegNumber(e.target.value)} 
-            placeholder="e.g., EDU-2024-0001" 
-            style={{ fontFamily: 'monospace' }} 
-            disabled={loading}
-            onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-          />
-        </div>
-        
-        <button 
-          onClick={handleLogin} 
-          disabled={loading || serverStatus?.status === 'offline'} 
-          style={{ 
-            width: '100%', 
-            padding: '14px', 
-            background: '#1a6b6b', 
-            color: 'white', 
-            marginTop: '8px', 
-            border: 'none', 
-            borderRadius: '10px', 
-            fontSize: '15px', 
-            fontWeight: '600', 
-            cursor: loading ? 'not-allowed' : 'pointer', 
-            opacity: loading ? 0.7 : 1 
-          }}
-        >
-          {loading ? 'Signing in...' : 'Sign In as Learner'}
-        </button>
-        
-        {error && (
-          <div style={{ 
-            color: '#c0392b', 
-            fontSize: '13px', 
-            marginTop: '10px', 
-            textAlign: 'center' 
-          }}>
-            {error}
-          </div>
-        )}
-        
-        {serverStatus?.status === 'offline' && (
-          <div style={{ 
-            marginTop: '16px', 
-            padding: '10px', 
-            background: '#f8d7da', 
-            borderRadius: '8px',
-            fontSize: '12px',
-            color: '#721c24',
-            textAlign: 'center'
-          }}>
-            🔌 Server is offline. Please check your connection.
-          </div>
-        )}
-        
-        <div style={{ 
-          marginTop: '16px', 
-          fontSize: '12px', 
-          color: '#6b7280', 
-          textAlign: 'center' 
-        }}>
-          Demo: Violet Ulaya / EDU-2026-0001
         </div>
       </div>
     </div>

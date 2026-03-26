@@ -86,6 +86,7 @@ const Landing = ({ serverStatus }) => {
         </p>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {/* Teacher Login Button */}
           <button
             onClick={() => navigate('/teacher/login')}
             disabled={serverStatus?.status !== 'online'}
@@ -127,6 +128,7 @@ const Landing = ({ serverStatus }) => {
             </div>
           </button>
           
+          {/* Learner Login Button */}
           <button
             onClick={() => navigate('/learner/login')}
             disabled={serverStatus?.status !== 'online'}
@@ -164,6 +166,60 @@ const Landing = ({ serverStatus }) => {
               <div>Learner Login</div>
               <div style={{ fontSize: '12px', opacity: 0.7, fontWeight: 400, marginTop: '2px' }}>
                 View your report card & attendance
+              </div>
+            </div>
+          </button>
+
+          {/* Admin Login Button - NEW */}
+          <button
+            onClick={() => navigate('/admin/login')}
+            disabled={serverStatus?.status !== 'online'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              padding: '18px 24px',
+              borderRadius: '12px',
+              border: '1px solid rgba(201,147,58,0.3)',
+              cursor: serverStatus?.status === 'online' ? 'pointer' : 'not-allowed',
+              fontSize: '15px',
+              fontWeight: '600',
+              transition: 'transform 0.18s, box-shadow 0.18s',
+              textAlign: 'left',
+              background: serverStatus?.status === 'online' ? 'transparent' : '#6b7280',
+              color: '#f7f4ef',
+              opacity: serverStatus?.status === 'online' ? 1 : 0.6
+            }}
+            onMouseEnter={(e) => {
+              if (serverStatus?.status === 'online') {
+                e.currentTarget.style.background = 'rgba(201,147,58,0.1)';
+                e.currentTarget.style.borderColor = '#c9933a';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (serverStatus?.status === 'online') {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.borderColor = 'rgba(201,147,58,0.3)';
+              }
+            }}
+          >
+            <div style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '8px',
+              background: 'rgba(201,147,58,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '20px',
+              flexShrink: 0
+            }}>
+              👑
+            </div>
+            <div>
+              <div>Admin Login</div>
+              <div style={{ fontSize: '12px', opacity: 0.7, fontWeight: 400, marginTop: '2px' }}>
+                Manage teachers, learners & credentials
               </div>
             </div>
           </button>

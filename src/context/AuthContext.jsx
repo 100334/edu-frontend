@@ -18,68 +18,62 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     // Check for stored user data
     const token = localStorage.getItem('token');
-    const userType = localStorage.getItem('userType');
-    const userData = localStorage.getItem(userType === 'teacher' ? 'teacherData' : 'learnerData');
+    const userData = localStorage.getItem('user');
+    
+    console.log('🔍 AuthProvider init - token exists:', !!token);
+    console.log('🔍 AuthProvider init - userData exists:', !!userData);
     
     if (token && userData) {
       try {
         const parsedUser = JSON.parse(userData);
+        console.log('📦 Parsed user from storage:', parsedUser);
+        console.log('📦 User role:', parsedUser.role);
+        
+        // Set user based on role
         setUser({
-          ...parsedUser,
-          role: userType,
           id: parsedUser.id,
           name: parsedUser.name,
           email: parsedUser.email,
+          role: parsedUser.role, // 'admin', 'teacher', or 'learner'
           reg: parsedUser.reg || parsedUser.reg_number,
-          form: parsedUser.form || parsedUser.grade, // Support both old and new
-          grade: parsedUser.grade // Keep for backward compatibility
+          reg_number: parsedUser.reg_number || parsedUser.reg,
+          form: parsedUser.form || parsedUser.grade,
+          grade: parsedUser.grade,
+          is_active: parsedUser.is_active
         });
+        
         // Set default axios header
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        console.log('✅ Auth initialized, user role:', parsedUser.role);
       } catch (error) {
         console.error('Error parsing user data:', error);
         localStorage.clear();
       }
+    } else {
+      console.log('⚠️ No stored auth data found');
     }
     setLoading(false);
   }, []);
 
-  const login = async (credentials, role) => {
+  // Generic login function for any role
+  const login = async (userData, token) => {
     try {
-      const endpoint = role === 'teacher' 
-        ? '/api/auth/teacher/login' 
-        : '/api/auth/learner/login';
+      console.log('🔐 Logging in user:', userData);
+      console.log('🔐 User role:', userData.role);
       
-      const response = await api.post(endpoint, credentials);
+      // Save to localStorage
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(userData));
       
-      if (response.data.success) {
-        const userData = {
-          id: response.data[role]?.id,
-          name: response.data[role]?.name,
-          email: response.data[role]?.email,
-          reg: response.data[role]?.reg,
-          reg_number: response.data[role]?.reg,
-          form: response.data[role]?.form || response.data[role]?.grade, // Use form if available, fallback to grade
-          grade: response.data[role]?.grade, // Keep for backward compatibility
-          role: role,
-          ...response.data[role]
-        };
-        
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('userType', role);
-        localStorage.setItem(role === 'teacher' ? 'teacherData' : 'learnerData', JSON.stringify(userData));
-        
-        if (response.data.refreshToken) {
-          localStorage.setItem('refreshToken', response.data.refreshToken);
-        }
-        
-        api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-        setUser(userData);
-        
-        return { success: true, user: userData };
-      }
+      // Set axios header
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       
-      return { success: false, message: response.data.message };
+      // Update state
+      setUser(userData);
+      
+      console.log('✅ Login successful, user role:', userData.role);
+      
+      return { success: true, user: userData };
     } catch (error) {
       console.error('Login error:', error);
       return { 
@@ -89,13 +83,111 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Teacher login - FIXED to ensure role is set
+  const teacherLogin = async (credentials) => {
+    try {
+      console.log('👨‍🏫 Teacher login attempt:', credentials.username);
+      
+      const response = await api.post('/api/auth/teacher/login', credentials);
+      
+      console.log('📥 Teacher login response:', response.data);
+      
+      if (response.data.success) {
+        // Make sure role is explicitly set to 'teacher'
+        const userData = {
+          id: response.data.user?.id,
+          name: response.data.user?.name,
+          email: response.data.user?.email,
+          role: 'teacher', // Force role to teacher
+          reg: response.data.user?.reg,
+          reg_number: response.data.user?.reg_number,
+          form: response.data.user?.form
+        };
+        
+        console.log('📦 Teacher user data to store:', userData);
+        
+        return await login(userData, response.data.token);
+      }
+      
+      return { success: false, message: response.data.message };
+    } catch (error) {
+      console.error('❌ Teacher login error:', error);
+      console.error('Error response:', error.response?.data);
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Login failed' 
+      };
+    }
+  };
+
+  // Learner login
+  const learnerLogin = async (credentials) => {
+    try {
+      console.log('🎓 Learner login attempt:', credentials.name);
+      
+      const response = await api.post('/api/auth/learner/login', credentials);
+      
+      console.log('📥 Learner login response:', response.data);
+      
+      if (response.data.success) {
+        const userData = {
+          id: response.data.user?.id,
+          name: response.data.user?.name,
+          email: response.data.user?.email,
+          role: 'learner', // Force role to learner
+          reg: response.data.user?.reg,
+          reg_number: response.data.user?.reg_number,
+          form: response.data.user?.form
+        };
+        
+        return await login(userData, response.data.token);
+      }
+      
+      return { success: false, message: response.data.message };
+    } catch (error) {
+      console.error('❌ Learner login error:', error);
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Login failed' 
+      };
+    }
+  };
+
+  // Admin login
+  const adminLogin = async (credentials) => {
+    try {
+      console.log('👑 Admin login attempt:', credentials.email);
+      
+      const response = await api.post('/api/auth/admin/login', credentials);
+      
+      console.log('📥 Admin login response:', response.data);
+      
+      if (response.data.success) {
+        const userData = {
+          id: response.data.user?.id,
+          name: response.data.user?.name,
+          email: response.data.user?.email,
+          role: 'admin', // Force role to admin
+          is_active: response.data.user?.is_active !== undefined ? response.data.user.is_active : true
+        };
+        
+        return await login(userData, response.data.token);
+      }
+      
+      return { success: false, message: response.data.message || 'Login failed' };
+    } catch (error) {
+      console.error('❌ Admin login error:', error);
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Login failed' 
+      };
+    }
+  };
+
   const logout = () => {
+    console.log('🚪 Logging out');
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    localStorage.removeItem('userType');
-    localStorage.removeItem('teacherData');
-    localStorage.removeItem('learnerData');
-    localStorage.removeItem('refreshToken');
     delete api.defaults.headers.common['Authorization'];
     setUser(null);
   };
@@ -104,6 +196,9 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     login,
+    teacherLogin,
+    learnerLogin,
+    adminLogin,
     logout,
     isAuthenticated: !!user
   };

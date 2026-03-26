@@ -4,6 +4,12 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
+// Theme constants - Matching Admin Dashboard
+const NAVY_DARK = '#0A192F';
+const NAVY_PRIMARY = '#1A237E';
+const AZURE_ACCENT = '#00B0FF';
+const ICE_WHITE = '#F8FAFC';
+
 const SUBJECTS = ["Mathematics", "English", "Science", "Social Studies", "Chichewa", "Creative Arts"];
 
 // Grade classification function
@@ -46,225 +52,217 @@ const getGradeFromScore = (score) => {
   }
 };
 
+// Stat Card Component
+const StatCard = ({ emoji, value, label, subtitle }) => (
+  <div className="bg-white rounded-xl border border-[#d4cfc6] p-4 lg:p-6 shadow-sm hover:shadow-md transition">
+    <div className="text-2xl lg:text-3xl mb-2 lg:mb-3">{emoji}</div>
+    <div className="text-xl lg:text-3xl font-bold text-[#0f1923] mb-1">{value}</div>
+    <div className="text-[10px] lg:text-xs text-gray-500 font-semibold uppercase">{label}</div>
+    {subtitle && <div className="text-[10px] text-gray-400 mt-1">{subtitle}</div>}
+  </div>
+);
+
+// Navigation Item Component
+const NavItem = ({ icon, label, isActive, onClick }) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-all duration-200 ${
+      isActive
+        ? 'bg-[#1A237E] text-white shadow-md'
+        : 'text-gray-600 hover:bg-gray-100 hover:text-[#1A237E]'
+    }`}
+  >
+    <span className="text-lg">{icon}</span>
+    <span>{label}</span>
+  </button>
+);
+
 export default function TeacherDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  
-  // Persist active tab in sessionStorage
   const [activeTab, setActiveTab] = useState(() => {
     const saved = sessionStorage.getItem('teacherActiveTab');
     return saved || 'overview';
   });
-  
   const [loading, setLoading] = useState(true);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const dataLoadedRef = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Data states
-  const [learners, setLearners] = useState([]);
+  const [myLearners, setMyLearners] = useState([]); // Learners assigned to this teacher
+  const [allLearners, setAllLearners] = useState([]); // All learners for selection
   const [reports, setReports] = useState([]);
   const [attendance, setAttendance] = useState([]);
+  const [subjects, setSubjects] = useState([]);
   const [stats, setStats] = useState({
     totalLearners: 0,
     totalReports: 0,
-    avgAttendance: 0
+    attendanceRate: 0
   });
   
-  // Form states - persist in sessionStorage
-  const [showAddLearnerModal, setShowAddLearnerModal] = useState(false);
-  const [newLearner, setNewLearner] = useState(() => {
-    const saved = sessionStorage.getItem('newLearner');
-    return saved ? JSON.parse(saved) : { name: '', form: 'Form 1', status: 'Active' };
-  });
+  // Modal states
+  const [showAddLearnersModal, setShowAddLearnersModal] = useState(false);
+  const [selectedLearners, setSelectedLearners] = useState([]);
+  const [availableLearners, setAvailableLearners] = useState([]);
   
-  // Report form states - persist in sessionStorage
-  const [selectedLearnerId, setSelectedLearnerId] = useState(() => {
-    return sessionStorage.getItem('selectedLearnerId') || '';
-  });
-  const [reportTerm, setReportTerm] = useState(() => {
-    return sessionStorage.getItem('reportTerm') || 'Term 1 – 2024';
-  });
-  const [reportForm, setReportForm] = useState(() => {
-    return sessionStorage.getItem('reportForm') || 'Form 1';
-  });
-  const [subjectScores, setSubjectScores] = useState(() => {
-    const saved = sessionStorage.getItem('subjectScores');
-    return saved ? JSON.parse(saved) : {};
-  });
-  const [teacherComment, setTeacherComment] = useState(() => {
-    return sessionStorage.getItem('teacherComment') || '';
-  });
+  // Report form states
+  const [selectedLearnerId, setSelectedLearnerId] = useState('');
+  const [selectedLearner, setSelectedLearner] = useState(null);
+  const [reportTerm, setReportTerm] = useState('Term 1 – 2024');
+  const [reportForm, setReportForm] = useState('Form 1');
+  const [subjectScores, setSubjectScores] = useState({});
+  const [teacherComment, setTeacherComment] = useState('');
   
   // Attendance form states
-  const [attDate, setAttDate] = useState(() => {
-    return sessionStorage.getItem('attDate') || new Date().toISOString().split('T')[0];
-  });
-  const [attLearnerId, setAttLearnerId] = useState(() => {
-    return sessionStorage.getItem('attLearnerId') || '';
-  });
-  const [attStatus, setAttStatus] = useState(() => {
-    return sessionStorage.getItem('attStatus') || 'present';
-  });
+  const [attDate, setAttDate] = useState(new Date().toISOString().split('T')[0]);
+  const [attLearnerId, setAttLearnerId] = useState('');
+  const [attStatus, setAttStatus] = useState('present');
   
   // Modal states
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
 
-  // Save form data to sessionStorage
+  // Save active tab to sessionStorage
   useEffect(() => {
     sessionStorage.setItem('teacherActiveTab', activeTab);
   }, [activeTab]);
 
+  // Load data on mount
   useEffect(() => {
-    sessionStorage.setItem('newLearner', JSON.stringify(newLearner));
-  }, [newLearner]);
+    loadDashboardData();
+  }, []);
 
+  // Fetch subjects when learner is selected for report
   useEffect(() => {
-    sessionStorage.setItem('selectedLearnerId', selectedLearnerId);
-  }, [selectedLearnerId]);
+    if (selectedLearner && selectedLearner.class_id) {
+      fetchSubjectsForClass(selectedLearner.class_id);
+    }
+  }, [selectedLearner]);
 
-  useEffect(() => {
-    sessionStorage.setItem('reportTerm', reportTerm);
-  }, [reportTerm]);
-
-  useEffect(() => {
-    sessionStorage.setItem('reportForm', reportForm);
-  }, [reportForm]);
-
-  useEffect(() => {
-    sessionStorage.setItem('subjectScores', JSON.stringify(subjectScores));
-  }, [subjectScores]);
-
-  useEffect(() => {
-    sessionStorage.setItem('teacherComment', teacherComment);
-  }, [teacherComment]);
-
-  useEffect(() => {
-    sessionStorage.setItem('attDate', attDate);
-  }, [attDate]);
-
-  useEffect(() => {
-    sessionStorage.setItem('attLearnerId', attLearnerId);
-  }, [attLearnerId]);
-
-  useEffect(() => {
-    sessionStorage.setItem('attStatus', attStatus);
-  }, [attStatus]);
-
-  // Load data with AbortController for cleanup
-  const loadDashboardData = useCallback(async () => {
-    const abortController = new AbortController();
-    
+  const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const [learnersRes, reportsRes, attendanceRes] = await Promise.all([
-        api.get('/api/teacher/learners', { signal: abortController.signal }),
-        api.get('/api/teacher/reports', { signal: abortController.signal }),
-        api.get('/api/teacher/attendance', { signal: abortController.signal })
+      // Use TEACHER endpoints, not ADMIN endpoints
+      const [myLearnersRes, allLearnersRes, reportsRes, attendanceRes, statsRes] = await Promise.all([
+        api.get('/api/teacher/my-learners'),
+        api.get('/api/teacher/all-learners'),
+        api.get('/api/teacher/reports'),
+        api.get('/api/teacher/attendance'),
+        api.get('/api/teacher/dashboard/stats')
       ]);
       
-      const learnersData = learnersRes.data || [];
-      const reportsData = reportsRes.data || [];
-      const attendanceData = attendanceRes.data || [];
+      const myLearnersData = myLearnersRes.data?.learners || myLearnersRes.data || [];
+      const allLearnersData = allLearnersRes.data?.learners || allLearnersRes.data || [];
+      const reportsData = reportsRes.data?.data || reportsRes.data || [];
+      const attendanceData = attendanceRes.data?.data?.records || attendanceRes.data || [];
+      const statsData = statsRes.data?.data || statsRes.data || {};
       
-      setLearners(learnersData);
+      console.log('📊 My Learners:', myLearnersData.length);
+      console.log('📊 All Learners:', allLearnersData.length);
+      console.log('📊 Reports:', reportsData.length);
+      console.log('📊 Attendance:', attendanceData.length);
+      console.log('📊 Stats:', statsData);
+      
+      setMyLearners(myLearnersData);
+      setAllLearners(allLearnersData);
       setReports(reportsData);
       setAttendance(attendanceData);
       
-      // Calculate attendance stats
-      let totalAtt = 0, presentCount = 0;
-      learnersData.forEach(learner => {
-        const records = attendanceData.filter(a => a.learner_id === learner.id);
-        if (records.length) {
-          const present = records.filter(a => a.status === 'present' || a.status === 'late').length;
-          totalAtt += records.length;
-          presentCount += present;
-        }
-      });
-      const avg = totalAtt ? Math.round(presentCount / totalAtt * 100) : 0;
-      
       setStats({
-        totalLearners: learnersData.length,
-        totalReports: reportsData.length,
-        avgAttendance: avg
+        totalLearners: statsData.totalLearners || myLearnersData.length,
+        totalReports: statsData.totalReports || reportsData.length,
+        attendanceRate: statsData.attendanceRate || 0
       });
       
-      dataLoadedRef.current = true;
+      // Set available learners (those not already assigned)
+      const assignedIds = new Set(myLearnersData.map(l => l.id));
+      const available = allLearnersData.filter(l => !assignedIds.has(l.id));
+      setAvailableLearners(available);
+      
     } catch (error) {
-      if (error.name !== 'AbortError') {
-        console.error('Error loading dashboard:', error);
-        toast.error('Failed to load dashboard data. Please check your connection.');
-      }
+      console.error('Error loading dashboard:', error);
+      toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
-    
-    return () => abortController.abort();
-  }, []);
+  };
 
-  // Check auth and load data on mount
-  useEffect(() => {
-    // Check if user is authenticated
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/login');
-      return;
-    }
-    
-    loadDashboardData();
-    
-    // Handle visibility change (when user returns to tab after refresh)
-    const handleVisibilityChange = () => {
-      if (!document.hidden && !dataLoadedRef.current) {
-        loadDashboardData();
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [navigate, loadDashboardData]);
-
-  // Generate preview registration number
-  const generatePreviewReg = useCallback(() => {
-    const nextReg = learners.length + 1;
-    return `EDU-${new Date().getFullYear()}-${String(nextReg).padStart(4, '0')}`;
-  }, [learners.length]);
-
-  // Add Learner
-  const handleAddLearner = async () => {
-    if (!newLearner.name.trim()) {
-      toast.error('Please enter a name');
-      return;
-    }
+  // Fetch subjects for a specific class
+  const fetchSubjectsForClass = async (classId) => {
+    if (!classId) return;
     
     try {
-      const response = await api.post('/api/teacher/learners', newLearner);
-      if (response.data.success || response.data.learner) {
-        toast.success(`Learner added! Reg#: ${response.data.learner?.reg_number || generatePreviewReg()}`);
-        setShowAddLearnerModal(false);
-        setNewLearner({ name: '', form: 'Form 1', status: 'Active' });
-        await loadDashboardData();
-      }
+      const response = await api.get(`/api/teacher/subjects/${classId}`);
+      const subjectsData = response.data || [];
+      setSubjects(subjectsData);
+      
+      const newScores = {};
+      subjectsData.forEach(subject => {
+        newScores[subject.name] = '';
+      });
+      setSubjectScores(newScores);
     } catch (error) {
-      console.error('Error adding learner:', error);
-      toast.error('Failed to add learner. Please try again.');
+      console.error('Error fetching subjects:', error);
+      setSubjects([]);
     }
   };
 
-  // Remove Learner
-  const handleRemoveLearner = async (id) => {
-    if (!window.confirm('Remove this learner?')) return;
+  // Add selected learners to teacher's class
+  const handleAddLearners = async () => {
+    if (selectedLearners.length === 0) {
+      toast.error('Please select at least one learner');
+      return;
+    }
+    
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     
     try {
-      await api.delete(`/api/teacher/learners/${id}`);
-      toast.success('Learner removed');
-      await loadDashboardData();
+      const response = await api.post('/api/teacher/add-learners', {
+        learnerIds: selectedLearners
+      });
+      
+      if (response.data.success) {
+        toast.success(response.data.message);
+        setShowAddLearnersModal(false);
+        setSelectedLearners([]);
+        loadDashboardData();
+      } else {
+        toast.error(response.data.message || 'Failed to add learners');
+      }
+    } catch (error) {
+      console.error('Error adding learners:', error);
+      toast.error(error.response?.data?.message || 'Failed to add learners');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Remove learner from teacher's class
+  const handleRemoveLearner = async (learnerId, learnerName) => {
+    if (!window.confirm(`Remove ${learnerName} from your class?`)) return;
+    
+    try {
+      const response = await api.delete(`/api/teacher/remove-learner/${learnerId}`);
+      
+      if (response.data.success) {
+        toast.success('Learner removed from your class');
+        loadDashboardData();
+      } else {
+        toast.error(response.data.message || 'Failed to remove learner');
+      }
     } catch (error) {
       console.error('Error removing learner:', error);
-      toast.error('Failed to remove learner. Please try again.');
+      toast.error('Failed to remove learner');
+    }
+  };
+
+  // Handle learner selection for report card
+  const handleLearnerSelect = async (learnerId) => {
+    const learner = myLearners.find(l => l.id === parseInt(learnerId));
+    setSelectedLearnerId(learnerId);
+    setSelectedLearner(learner);
+    if (learner) {
+      setReportForm(learner.form || 'Form 1');
     }
   };
 
@@ -275,29 +273,46 @@ export default function TeacherDashboard() {
       return;
     }
     
-    const subjects = SUBJECTS.map(s => ({
-      name: s,
-      score: parseInt(subjectScores[s]) || 0
+    const missingScores = subjects.filter(subject => !subjectScores[subject.name] || subjectScores[subject.name] === '');
+    if (missingScores.length > 0) {
+      toast.error(`Please enter scores for all subjects: ${missingScores.map(s => s.name).join(', ')}`);
+      return;
+    }
+    
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    
+    const subjectsData = subjects.map(s => ({
+      name: s.name,
+      score: parseInt(subjectScores[s.name]) || 0
     }));
     
     const reportData = {
       learnerId: parseInt(selectedLearnerId),
       term: reportTerm,
       form: reportForm,
-      subjects,
+      subjects: subjectsData,
       comment: teacherComment
     };
     
     try {
-      await api.post('/api/teacher/reports', reportData);
-      toast.success('Report card saved! ✅');
-      setSubjectScores({});
-      setTeacherComment('');
-      setSelectedLearnerId('');
-      await loadDashboardData();
+      const response = await api.post('/api/teacher/reports', reportData);
+      if (response.data.success) {
+        toast.success('Report card saved! ✅');
+        setSubjectScores({});
+        setTeacherComment('');
+        setSelectedLearnerId('');
+        setSelectedLearner(null);
+        setSubjects([]);
+        loadDashboardData();
+      } else {
+        toast.error(response.data.message || 'Failed to save report');
+      }
     } catch (error) {
       console.error('Error saving report:', error);
-      toast.error('Failed to save report. Please try again.');
+      toast.error('Failed to save report');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -308,10 +323,10 @@ export default function TeacherDashboard() {
     try {
       await api.delete(`/api/teacher/reports/${id}`);
       toast.success('Report deleted');
-      await loadDashboardData();
+      loadDashboardData();
     } catch (error) {
       console.error('Error deleting report:', error);
-      toast.error('Failed to delete report. Please try again.');
+      toast.error('Failed to delete report');
     }
   };
 
@@ -328,52 +343,69 @@ export default function TeacherDashboard() {
       return;
     }
     
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    
+    const payload = {
+      learnerId: parseInt(attLearnerId),
+      date: attDate,
+      status: attStatus
+    };
+    
     try {
-      await api.post('/api/teacher/attendance', {
-        learnerId: parseInt(attLearnerId),
-        date: attDate,
-        status: attStatus
-      });
+      const response = await api.post('/api/teacher/attendance', payload);
       toast.success('Attendance recorded ✔');
       setAttLearnerId('');
-      await loadDashboardData();
+      loadDashboardData();
     } catch (error) {
       console.error('Error recording attendance:', error);
-      toast.error('Failed to record attendance. Please try again.');
+      toast.error('Failed to record attendance');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   // Helper functions
-  const formatDate = useCallback((dateStr) => {
-    return new Date(dateStr + 'T00:00:00').toLocaleDateString('en', { 
-      day: 'numeric', 
-      month: 'short', 
-      year: 'numeric' 
-    });
-  }, []);
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    try {
+      return new Date(dateStr).toLocaleDateString('en', { 
+        day: 'numeric', 
+        month: 'short', 
+        year: 'numeric' 
+      });
+    } catch {
+      return dateStr;
+    }
+  };
 
-  const getLearnerName = useCallback((learnerId) => {
-    const learner = learners.find(l => l.id === learnerId);
-    return learner ? learner.name : 'Unknown';
-  }, [learners]);
+  const getLearnerName = (learnerId) => {
+    const learner = myLearners.find(l => l?.id === learnerId);
+    return learner?.name || 'Unknown';
+  };
 
-  const getLearnerReg = useCallback((learnerId) => {
-    const learner = learners.find(l => l.id === learnerId);
+  const getLearnerReg = (learnerId) => {
+    const learner = myLearners.find(l => l?.id === learnerId);
     return learner?.reg_number || learner?.reg || 'N/A';
-  }, [learners]);
+  };
 
-  const getReportHTML = useCallback((report) => {
+  const getLearnerForm = (learnerId) => {
+    const learner = myLearners.find(l => l?.id === learnerId);
+    return learner?.form || 'N/A';
+  };
+
+  const getReportHTML = (report) => {
     if (!report || !report.subjects) return '<div>No report data</div>';
     
     const avg = Math.round(report.subjects.reduce((s, x) => s + x.score, 0) / report.subjects.length);
-    const learner = learners.find(l => l.id === report.learner_id);
+    const learner = myLearners?.find(l => l?.id === report.learner_id);
     const avgGrade = getGradeFromScore(avg);
     
     return `
       <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(15,25,35,0.1);">
         <div style="background: #0f1923; color: white; padding: 20px 24px;">
           <div style="font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: #c9933a; margin-bottom: 4px;">EduPortal Academy</div>
-          <div style="font-size: 12px; opacity: 0.6;">${report.term} · ${report.form || report.grade}</div>
+          <div style="font-size: 12px; opacity: 0.6;">${report.term} · ${report.form}</div>
           <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
             <div style="font-weight: 600;">${learner?.name || 'Unknown'}</div>
             <div style="font-family: monospace; font-size: 11px; opacity: 0.6; margin-top: 2px;">${getLearnerReg(report.learner_id)}</div>
@@ -421,36 +453,22 @@ export default function TeacherDashboard() {
         </div>
       </div>
     `;
-  }, [learners, getLearnerReg]);
-
-  // Handle logout
-  const handleLogout = () => {
-    // Clear sessionStorage on logout
-    const keysToKeep = [];
-    for (let i = 0; i < sessionStorage.length; i++) {
-      const key = sessionStorage.key(i);
-      if (!key.startsWith('teacher')) {
-        keysToKeep.push(key);
-      }
-    }
-    sessionStorage.clear();
-    keysToKeep.forEach(key => {
-      const value = localStorage.getItem(key);
-      if (value) sessionStorage.setItem(key, value);
-    });
-    
-    logout();
-    navigate('/');
   };
 
-  // Get user name
+  // Handle logout
+  const handleLogout = async () => {
+    sessionStorage.removeItem('teacherActiveTab');
+    await logout();
+    navigate('/');
+    toast.success('Logged out successfully');
+  };
+
   const getUserName = () => {
     if (user?.name) return user.name;
     if (user?.email) return user.email.split('@')[0];
     return 'Teacher';
   };
 
-  // Get current time greeting
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -458,47 +476,20 @@ export default function TeacherDashboard() {
     return 'Good evening';
   };
 
-  // Handle tab change with scroll to top
-  const handleTabChange = (tab) => {
-    setActiveTab(tab);
-    // Scroll to top when changing tabs on mobile
-    if (window.innerWidth < 1024) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
+  // Toggle learner selection for adding to class
+  const toggleLearnerSelection = (learnerId) => {
+    setSelectedLearners(prev => 
+      prev.includes(learnerId) 
+        ? prev.filter(id => id !== learnerId)
+        : [...prev, learnerId]
+    );
   };
 
-  // Mobile tab navigation component
-  const MobileTabNav = () => (
-    <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50 shadow-lg">
-      <div className="flex justify-around py-2">
-        {['overview', 'learners', 'reports', 'attendance'].map(tab => (
-          <button
-            key={tab}
-            onClick={() => handleTabChange(tab)}
-            className={`flex flex-col items-center px-3 py-2 rounded-lg transition-all ${
-              activeTab === tab
-                ? 'text-[#c9933a]'
-                : 'text-gray-500'
-            }`}
-          >
-            <span className="text-xl">
-              {tab === 'overview' && '📊'}
-              {tab === 'learners' && '👥'}
-              {tab === 'reports' && '📋'}
-              {tab === 'attendance' && '📅'}
-            </span>
-            <span className="text-xs mt-1 capitalize">{tab}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
-  if (loading && !dataLoadedRef.current) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef] flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: ICE_WHITE }}>
         <div className="text-center">
-          <div className="text-4xl mb-4 animate-pulse">📚</div>
+          <div className="w-12 h-12 border-4 border-[#00B0FF] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-500">Loading dashboard...</p>
         </div>
       </div>
@@ -506,9 +497,14 @@ export default function TeacherDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef] flex pb-16 lg:pb-0">
+    <div className="min-h-screen bg-[#f7f4ef]">
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-[#0f1923] to-[#1a2d3f] text-white w-full fixed top-0 left-0 right-0 z-30">
+      <div 
+        className="w-full"
+        style={{
+          background: `linear-gradient(135deg, ${NAVY_DARK}, #1E3A8A)`,
+        }}
+      >
         <div className="container mx-auto px-4 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
@@ -516,8 +512,8 @@ export default function TeacherDashboard() {
                 <span className="text-xl font-bold text-[#0f1923]">E</span>
               </div>
               <div>
-                <h1 className="text-xl font-serif font-bold">EduPortal Academy</h1>
-                <p className="text-xs text-gray-300 hidden sm:block">Excellence in Education</p>
+                <h1 className="text-xl font-serif font-bold text-white">EduPortal Academy</h1>
+                <p className="text-xs text-white/70 hidden sm:block">Excellence in Education</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -526,8 +522,8 @@ export default function TeacherDashboard() {
                   👨‍🏫
                 </div>
                 <div>
-                  <div className="text-sm font-semibold">{getUserName()}</div>
-                  <div className="text-xs text-gray-300">Class Teacher</div>
+                  <div className="text-sm font-semibold text-white">{getUserName()}</div>
+                  <div className="text-xs text-white/70">Class Teacher</div>
                 </div>
               </div>
               <button
@@ -538,56 +534,531 @@ export default function TeacherDashboard() {
               </button>
             </div>
           </div>
-          <div className="mt-2">
-            <div className="text-sm text-[#c9933a] font-semibold uppercase tracking-wide">
-              Welcome Back
-            </div>
-            <div className="text-xl font-serif font-bold">
-              {getGreeting()}, {getUserName()}! 👋
-            </div>
+          <div className="mt-4">
+            <p className="text-xs font-extrabold tracking-wider mb-1" style={{ color: AZURE_ACCENT }}>
+              TEACHER PORTAL
+            </p>
+            <h1 className="text-xl lg:text-2xl font-bold text-white">
+              Hello, {getUserName()}
+            </h1>
+            <p className="text-sm text-white/70 mt-1">{getGreeting()}! Welcome back</p>
           </div>
         </div>
       </div>
       
-      {/* Mobile Header Spacer */}
-      <div className="h-32 lg:hidden"></div>
-      
-      {/* Tab Navigation */}
-      <div className="fixed top-28 lg:top-24 left-0 right-0 z-20 bg-white border-b border-gray-200 shadow-sm">
+      {/* Navigation Bar */}
+      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="flex gap-2 overflow-x-auto scrollbar-hide py-2">
-            {['overview', 'learners', 'reports', 'attendance'].map(tab => (
-              <button
-                key={tab}
-                onClick={() => handleTabChange(tab)}
-                className={`px-4 lg:px-5 py-2 text-sm font-medium rounded-lg transition-all whitespace-nowrap ${
-                  activeTab === tab
-                    ? 'bg-[#0f1923] text-white shadow-md'
-                    : 'text-gray-600 hover:text-[#0f1923] hover:bg-gray-100'
-                }`}
-              >
-                {tab === 'overview' && '📊 Overview'}
-                {tab === 'learners' && '👥 Learners'}
-                {tab === 'reports' && '📋 Report Cards'}
-                {tab === 'attendance' && '📅 Attendance'}
-              </button>
-            ))}
+          <div className="flex gap-1 py-3">
+            <NavItem
+              icon="📊"
+              label="Overview"
+              isActive={activeTab === 'overview'}
+              onClick={() => setActiveTab('overview')}
+            />
+            <NavItem
+              icon="👥"
+              label="My Learners"
+              isActive={activeTab === 'learners'}
+              onClick={() => setActiveTab('learners')}
+            />
+            <NavItem
+              icon="📋"
+              label="Report Cards"
+              isActive={activeTab === 'reports'}
+              onClick={() => setActiveTab('reports')}
+            />
+            <NavItem
+              icon="📅"
+              label="Attendance"
+              isActive={activeTab === 'attendance'}
+              onClick={() => setActiveTab('attendance')}
+            />
           </div>
         </div>
       </div>
       
-      <main className="flex-1 overflow-y-auto mt-44 lg:mt-36 pb-20 lg:pb-8">
-        <div className="container mx-auto px-4 lg:px-8 max-w-7xl">
-          {/* Keep your existing JSX for Overview, Learners, Reports, and Attendance tabs - they remain the same */}
-          {/* ... (rest of your JSX remains unchanged) ... */}
-        </div>
+      <main className="container mx-auto px-4 lg:px-8 py-8 max-w-7xl">
+        {/* Overview Tab */}
+        {activeTab === 'overview' && (
+          <>
+            <div className="mb-6 lg:mb-8">
+              <p className="text-sm text-gray-500">Here's what's happening with your students today.</p>
+            </div>
+            
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-6 mb-6 lg:mb-8">
+              <StatCard emoji="👥" value={stats.totalLearners} label="My Learners" />
+              <StatCard emoji="📋" value={stats.totalReports} label="Reports" />
+              <StatCard emoji="📅" value={`${stats.attendanceRate}%`} label="Attendance Rate" />
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* My Learners */}
+              <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
+                <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-[#d4cfc6] flex justify-between items-center">
+                  <h2 className="font-semibold text-[#0f1923] text-sm lg:text-base">My Learners</h2>
+                  <button
+                    onClick={() => setShowAddLearnersModal(true)}
+                    className="text-xs text-[#c9933a] hover:underline"
+                  >
+                    + Add Learners
+                  </button>
+                </div>
+                <div className="p-4 lg:p-6">
+                  {myLearners && myLearners.length > 0 ? (
+                    myLearners.slice(-5).reverse().map(learner => (
+                      <div key={learner.id} className="flex items-center justify-between py-2 lg:py-3 border-b border-[#ede9e1] last:border-0">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-[#0f1923] text-sm lg:text-base truncate">{learner.name}</div>
+                          <div className="font-mono text-[10px] lg:text-xs bg-[#0f1923] text-[#c9933a] px-2 py-1 rounded mt-1 inline-block">
+                            {learner.reg_number || learner.reg}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-1 rounded-full text-[10px] lg:text-xs font-semibold bg-[#c9933a]/10 text-[#c9933a]">
+                            {learner.form}
+                          </span>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <div className="text-3xl lg:text-4xl mb-2">👥</div>
+                      <div className="text-sm">No learners added yet</div>
+                      <button
+                        onClick={() => setShowAddLearnersModal(true)}
+                        className="mt-3 text-sm text-[#c9933a] hover:underline"
+                      >
+                        Add learners to your class
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Quick Actions */}
+              <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
+                <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-[#d4cfc6]">
+                  <h2 className="font-semibold text-[#0f1923] text-sm lg:text-base">Quick Actions</h2>
+                </div>
+                <div className="p-4 lg:p-6 flex flex-col gap-2 lg:gap-3">
+                  <button onClick={() => setShowAddLearnersModal(true)} className="px-3 lg:px-4 py-2 lg:py-2.5 bg-[#0f1923] text-white rounded-lg hover:bg-[#1a2d3f] transition text-sm font-medium">
+                    ➕ Add Learners to Class
+                  </button>
+                  <button onClick={() => setActiveTab('reports')} className="px-3 lg:px-4 py-2 lg:py-2.5 bg-[#c9933a] text-[#0f1923] rounded-lg hover:bg-[#e8b96a] transition text-sm font-medium">
+                    📋 Generate Report Card
+                  </button>
+                  <button onClick={() => setActiveTab('attendance')} className="px-3 lg:px-4 py-2 lg:py-2.5 bg-[#1a6b6b] text-white rounded-lg hover:bg-[#2a9090] transition text-sm font-medium">
+                    📅 Record Attendance
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* My Learners Tab */}
+        {activeTab === 'learners' && (
+          <>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+              <div>
+                <h1 className="font-serif text-2xl lg:text-3xl font-bold text-[#0f1923] mb-1">My Learners</h1>
+                <p className="text-sm text-gray-500">Students assigned to your class</p>
+              </div>
+              <button onClick={() => setShowAddLearnersModal(true)} className="w-full sm:w-auto px-4 py-2 bg-[#0f1923] text-white rounded-lg hover:bg-[#1a2d3f] transition font-semibold text-sm">
+                ➕ Add Learners
+              </button>
+            </div>
+            
+            <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[500px]">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-semibold text-gray-500 uppercase">Name</th>
+                      <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-semibold text-gray-500 uppercase">Reg No</th>
+                      <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-semibold text-gray-500 uppercase">Form</th>
+                      <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                      <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {myLearners && myLearners.length > 0 ? (
+                      myLearners.map(learner => (
+                        <tr key={learner.id} className="hover:bg-gray-50 transition">
+                          <td className="px-3 lg:px-6 py-3 text-sm font-medium truncate max-w-[120px] lg:max-w-none">{learner.name}</td>
+                          <td className="px-3 lg:px-6 py-3 text-xs font-mono text-gray-600">{learner.reg_number || learner.reg}</td>
+                          <td className="px-3 lg:px-6 py-3 text-sm">{learner.form}</td>
+                          <td className="px-3 lg:px-6 py-3">
+                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                              (learner.status === 'Active' || learner.status === undefined) 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-red-100 text-red-700'
+                            }`}>
+                              {learner.status || 'Active'}
+                            </span>
+                          </td>
+                          <td className="px-3 lg:px-6 py-3">
+                            <button onClick={() => handleRemoveLearner(learner.id, learner.name)} className="text-red-600 hover:text-red-800 text-sm">
+                              Remove
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="5" className="px-6 py-8 text-center text-gray-500 text-sm">
+                          No learners added yet. Click "Add Learners" to add students to your class.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Reports Tab */}
+        {activeTab === 'reports' && (
+          <>
+            <div className="mb-6">
+              <h1 className="font-serif text-2xl lg:text-3xl font-bold text-[#0f1923] mb-1">Report Cards</h1>
+              <p className="text-sm text-gray-500">Create and manage academic reports for your learners</p>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Generate Report Card Form */}
+              <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
+                <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-[#d4cfc6]">
+                  <h2 className="font-semibold text-[#0f1923] text-sm lg:text-base">Generate Report Card</h2>
+                </div>
+                <div className="p-4 lg:p-6">
+                  <div className="mb-4">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Select Learner</label>
+                    <select
+                      value={selectedLearnerId}
+                      onChange={(e) => handleLearnerSelect(e.target.value)}
+                      className="w-full px-3 lg:px-4 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      <option value="">Select a learner</option>
+                      {myLearners && myLearners.map(learner => (
+                        <option key={learner.id} value={learner.id}>
+                          {learner.name} ({learner.reg_number || learner.reg})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3 lg:gap-4 mb-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Term</label>
+                      <select value={reportTerm} onChange={(e) => setReportTerm(e.target.value)} className="w-full px-3 lg:px-4 py-2 border border-gray-300 rounded-lg text-sm">
+                        <option>Term 1 – 2024</option>
+                        <option>Term 2 – 2024</option>
+                        <option>Term 3 – 2024</option>
+                        <option>Term 1 – 2025</option>
+                        <option>Term 2 – 2025</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Form</label>
+                      <select value={reportForm} onChange={(e) => setReportForm(e.target.value)} className="w-full px-3 lg:px-4 py-2 border border-gray-300 rounded-lg text-sm">
+                        <option>Form 1</option>
+                        <option>Form 2</option>
+                        <option>Form 3</option>
+                        <option>Form 4</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  {selectedLearner && subjects.length === 0 && (
+                    <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
+                      No subjects found for this learner's class. Please add subjects first.
+                    </div>
+                  )}
+                  
+                  {subjects.length > 0 && (
+                    <div className="mb-4">
+                      <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">Subject Scores</label>
+                      {subjects.map(subject => (
+                        <div key={subject.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-2">
+                          <label className="w-full sm:w-32 text-sm font-medium text-[#0f1923]">{subject.name}</label>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            placeholder="Score"
+                            value={subjectScores[subject.name] || ''}
+                            onChange={(e) => setSubjectScores({...subjectScores, [subject.name]: e.target.value})}
+                            className="w-full sm:flex-1 px-3 lg:px-4 py-2 border border-gray-300 rounded-lg text-sm"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <div className="mb-4">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Comment</label>
+                    <textarea
+                      value={teacherComment}
+                      onChange={(e) => setTeacherComment(e.target.value)}
+                      placeholder="Write a brief comment..."
+                      className="w-full px-3 lg:px-4 py-2 border border-gray-300 rounded-lg text-sm"
+                      rows="3"
+                    />
+                  </div>
+                  
+                  <button 
+                    onClick={handleSaveReport} 
+                    disabled={isSubmitting || !selectedLearnerId || subjects.length === 0}
+                    className="w-full px-4 py-2 bg-[#c9933a] text-[#0f1923] rounded-lg hover:bg-[#e8b96a] transition font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? 'Saving...' : '💾 Save Report Card'}
+                  </button>
+                </div>
+              </div>
+              
+              {/* Saved Reports List */}
+              <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
+                <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-[#d4cfc6]">
+                  <h2 className="font-semibold text-[#0f1923] text-sm lg:text-base">Saved Reports</h2>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[400px]">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 lg:px-4 py-2 lg:py-3 text-left text-xs font-semibold text-gray-500 uppercase">Learner</th>
+                        <th className="px-3 lg:px-4 py-2 lg:py-3 text-left text-xs font-semibold text-gray-500 uppercase">Term</th>
+                        <th className="px-3 lg:px-4 py-2 lg:py-3 text-left text-xs font-semibold text-gray-500 uppercase">Avg</th>
+                        <th className="px-3 lg:px-4 py-2 lg:py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                       </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {reports && reports.length > 0 ? (
+                        reports.map(report => {
+                          const avg = Math.round(report.subjects.reduce((s, x) => s + x.score, 0) / report.subjects.length);
+                          const grade = getGradeFromScore(avg);
+                          return (
+                            <tr key={report.id}>
+                              <td className="px-3 lg:px-4 py-3 text-sm font-medium truncate max-w-[100px] lg:max-w-none">
+                                {getLearnerName(report.learner_id)}
+                              </td>
+                              <td className="px-3 lg:px-4 py-3">
+                                <span className="px-2 py-1 rounded-full text-xs font-semibold bg-[#1a6b6b]/10 text-[#1a6b6b]">
+                                  {report.term}
+                                </span>
+                              </td>
+                              <td className="px-3 lg:px-4 py-3">
+                                <span className="font-semibold" style={{ color: grade.color }}>
+                                  {avg}% ({grade.letter})
+                                </span>
+                              </td>
+                              <td className="px-3 lg:px-4 py-3">
+                                <button onClick={() => handleViewReport(report)} className="text-blue-600 hover:text-blue-800 text-sm mr-2">View</button>
+                                <button onClick={() => handleDeleteReport(report.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan="4" className="px-4 py-8 text-center text-gray-500 text-sm">No reports yet</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Attendance Tab */}
+        {activeTab === 'attendance' && (
+          <>
+            <div className="mb-6">
+              <h1 className="font-serif text-2xl lg:text-3xl font-bold text-[#0f1923] mb-1">Attendance</h1>
+              <p className="text-sm text-gray-500">Record and manage daily attendance for your learners</p>
+            </div>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Record Attendance Form */}
+              <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
+                <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-[#d4cfc6]">
+                  <h2 className="font-semibold text-[#0f1923] text-sm lg:text-base">Record Attendance</h2>
+                </div>
+                <div className="p-4 lg:p-6">
+                  <div className="mb-4">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Date</label>
+                    <input type="date" value={attDate} onChange={(e) => setAttDate(e.target.value)} className="w-full px-3 lg:px-4 py-2 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Learner</label>
+                    <select value={attLearnerId} onChange={(e) => setAttLearnerId(e.target.value)} className="w-full px-3 lg:px-4 py-2 border border-gray-300 rounded-lg text-sm">
+                      <option value="">Select a learner</option>
+                      {myLearners && myLearners.map(learner => (
+                        <option key={learner.id} value={learner.id}>
+                          {learner.name} ({learner.form})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div className="mb-4">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">Status</label>
+                    <div className="flex flex-wrap gap-2">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="status" value="present" checked={attStatus === 'present'} onChange={(e) => setAttStatus(e.target.value)} />
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">Present</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="status" value="absent" checked={attStatus === 'absent'} onChange={(e) => setAttStatus(e.target.value)} />
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">Absent</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="status" value="late" checked={attStatus === 'late'} onChange={(e) => setAttStatus(e.target.value)} />
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">Late</span>
+                      </label>
+                    </div>
+                  </div>
+                  
+                  <button 
+                    onClick={handleSaveAttendance} 
+                    disabled={isSubmitting || !attLearnerId}
+                    className="w-full px-4 py-2 bg-[#1a6b6b] text-white rounded-lg hover:bg-[#2a9090] transition font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? 'Saving...' : '✔ Record Attendance'}
+                  </button>
+                </div>
+              </div>
+              
+              {/* Attendance Log */}
+              <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
+                <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-[#d4cfc6]">
+                  <h2 className="font-semibold text-[#0f1923] text-sm lg:text-base">Attendance Log</h2>
+                </div>
+                <div className="overflow-x-auto max-h-[400px] overflow-y-auto">
+                  <table className="w-full min-w-[400px]">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        <th className="px-3 lg:px-4 py-2 lg:py-3 text-left text-xs font-semibold text-gray-500 uppercase">Learner</th>
+                        <th className="px-3 lg:px-4 py-2 lg:py-3 text-left text-xs font-semibold text-gray-500 uppercase">Form</th>
+                        <th className="px-3 lg:px-4 py-2 lg:py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
+                        <th className="px-3 lg:px-4 py-2 lg:py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                       </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {attendance && attendance.length > 0 ? (
+                        [...attendance].sort((a, b) => new Date(b.date) - new Date(a.date)).map(record => (
+                          <tr key={record.id}>
+                            <td className="px-3 lg:px-4 py-3 text-sm font-medium truncate max-w-[100px] lg:max-w-none">
+                              {getLearnerName(record.learner_id)}
+                            </td>
+                            <td className="px-3 lg:px-4 py-3 text-sm">
+                              <span className="px-2 py-1 rounded text-xs font-semibold bg-[#c9933a]/10 text-[#c9933a]">
+                                {getLearnerForm(record.learner_id)}
+                              </span>
+                            </td>
+                            <td className="px-3 lg:px-4 py-3 text-sm">{formatDate(record.date)}</td>
+                            <td className="px-3 lg:px-4 py-3">
+                              <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                record.status === 'present' ? 'bg-green-100 text-green-700' : 
+                                record.status === 'absent' ? 'bg-red-100 text-red-700' : 
+                                'bg-yellow-100 text-yellow-700'
+                              }`}>
+                                {record.status === 'present' ? 'Present' : record.status === 'absent' ? 'Absent' : 'Late'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="4" className="px-4 py-8 text-center text-gray-500 text-sm">No records yet</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
       </main>
 
-      {/* Mobile Bottom Navigation */}
-      <MobileTabNav />
+      {/* Add Learners Modal */}
+      {showAddLearnersModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowAddLearnersModal(false)}>
+          <div className="bg-white rounded-xl p-5 lg:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg lg:text-xl font-bold">Add Learners to Your Class</h2>
+              <button onClick={() => setShowAddLearnersModal(false)} className="text-gray-400 hover:text-gray-600">
+                ✕
+              </button>
+            </div>
+            
+            {availableLearners.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No learners available to add.</p>
+                <p className="text-sm text-gray-400 mt-2">All learners are already assigned to your class.</p>
+              </div>
+            ) : (
+              <>
+                <div className="mb-4">
+                  <p className="text-sm text-gray-600">Select learners to add to your class:</p>
+                </div>
+                
+                <div className="space-y-2 max-h-[400px] overflow-y-auto mb-4">
+                  {availableLearners.map(learner => (
+                    <label key={learner.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedLearners.includes(learner.id)}
+                        onChange={() => toggleLearnerSelection(learner.id)}
+                        className="w-4 h-4 text-[#c9933a]"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium text-[#0f1923]">{learner.name}</div>
+                        <div className="text-xs text-gray-500 font-mono">{learner.reg_number} • {learner.form}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                
+                <div className="flex gap-3 pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => setShowAddLearnersModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAddLearners}
+                    disabled={selectedLearners.length === 0 || isSubmitting}
+                    className="flex-1 px-4 py-2 bg-[#c9933a] text-white rounded-lg hover:bg-[#b5822e] transition disabled:opacity-50"
+                  >
+                    {isSubmitting ? 'Adding...' : `Add ${selectedLearners.length} Learner(s)`}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
-      {/* Keep your existing Modals */}
-      {/* ... (modals remain unchanged) ... */}
+      {/* View Report Modal */}
+      {showReportModal && selectedReport && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowReportModal(false)}>
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div dangerouslySetInnerHTML={{ __html: getReportHTML(selectedReport) }} />
+            <div className="mt-4 flex justify-end">
+              <button onClick={() => setShowReportModal(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm">
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

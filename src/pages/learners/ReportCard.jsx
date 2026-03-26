@@ -28,22 +28,20 @@ export default function LearnerReportCard() {
         setLoading(false);
         setFetchError('Request timed out. Please try again.');
       }
-    }, 10000); // 10 second timeout for loading
+    }, 10000);
 
     // Only fetch if user exists
     if (user?.id) {
       loadReports();
     } else if (user === null) {
-      // User is null (not loading), stop loading
       setLoading(false);
       setFetchError('Please log in to view your reports.');
     }
 
     return () => clearTimeout(loadingTimeout);
-  }, [user]); // Add user as dependency
+  }, [user]);
 
   const loadReports = async () => {
-    // Guard clause - check if user exists
     if (!user?.id) {
       console.log('No user ID available, skipping report fetch');
       setLoading(false);
@@ -52,20 +50,87 @@ export default function LearnerReportCard() {
     }
 
     try {
-      console.log('Fetching reports for user:', user.id);
+      console.log('Fetching reports for user ID:', user.id);
       const response = await api.get(`/api/learner/reports`);
       
-      if (response.data) {
-        setReports(response.data);
-        if (response.data.length > 0) {
-          setSelectedTerm(response.data[0].term);
-        }
+      console.log('Full API response:', response.data);
+      
+      // IMPORTANT: Extract reports from the response structure
+      let reportsData = [];
+      
+      // Check different possible response structures
+      if (response.data && response.data.data && Array.isArray(response.data.data)) {
+        // Structure: { success: true, data: [...] }
+        reportsData = response.data.data;
+        console.log('Found reports in data.data:', reportsData.length);
+      } 
+      else if (Array.isArray(response.data)) {
+        // Structure: direct array
+        reportsData = response.data;
+        console.log('Found reports as direct array:', reportsData.length);
       }
+      else if (response.data && response.data.reports && Array.isArray(response.data.reports)) {
+        // Structure: { reports: [...] }
+        reportsData = response.data.reports;
+        console.log('Found reports in reports property:', reportsData.length);
+      }
+      else {
+        console.warn('Unexpected response structure:', response.data);
+        reportsData = [];
+      }
+      
+      // Process each report to ensure subjects is an array
+      const processedReports = reportsData.map(report => {
+        // Parse subjects if it's a string, otherwise use as is
+        let subjects = report.subjects;
+        if (typeof subjects === 'string') {
+          try {
+            subjects = JSON.parse(subjects);
+          } catch (e) {
+            console.error('Failed to parse subjects JSON:', e);
+            subjects = [];
+          }
+        }
+        
+        // Ensure subjects is an array
+        if (!Array.isArray(subjects)) {
+          subjects = [];
+        }
+        
+        // Ensure each subject has name and score
+        subjects = subjects.map(subject => ({
+          name: subject.name || 'Unknown Subject',
+          score: subject.score || 0
+        }));
+        
+        return {
+          ...report,
+          subjects: subjects,
+          term: report.term || 'Term 1',
+          form: report.form || user?.form || 'Form 1',
+          comment: report.comment || report.teacher_comment || null
+        };
+      });
+      
+      console.log('Processed reports:', processedReports);
+      console.log('Number of reports:', processedReports.length);
+      
+      if (processedReports.length > 0) {
+        console.log('First report subjects:', processedReports[0].subjects);
+        console.log('First report subjects count:', processedReports[0].subjects.length);
+      }
+      
+      setReports(processedReports);
+      
+      if (processedReports.length > 0) {
+        setSelectedTerm(processedReports[0].term);
+      }
+      
     } catch (error) {
       console.error('Failed to load reports:', error);
       
       // Handle different error types
-      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
         setFetchError('Server is taking too long to respond. Please try again.');
       } else if (error.response?.status === 401) {
         setFetchError('Your session has expired. Please login again.');
@@ -92,11 +157,10 @@ export default function LearnerReportCard() {
 
   const calculateAverage = (subjects) => {
     if (!subjects || subjects.length === 0) return 0;
-    const sum = subjects.reduce((acc, subj) => acc + subj.score, 0);
+    const sum = subjects.reduce((acc, subj) => acc + (subj.score || 0), 0);
     return Math.round(sum / subjects.length);
   };
 
-  // Updated grade description based on new grading system
   const getGradeDescription = (score) => {
     if (score >= 75) return 'Excellent';
     if (score >= 65) return 'Very Good';
@@ -235,7 +299,7 @@ export default function LearnerReportCard() {
       
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(azureColor[0], azureColor[1], azureColor[2]);
-      doc.text("Principal's Remarks:", 22, finalY + 8);
+      doc.text("Teacher's Remarks:", 22, finalY + 8);
       
       doc.setFont('helvetica', 'italic');
       doc.setTextColor(navyColor[0], navyColor[1], navyColor[2]);
@@ -254,14 +318,14 @@ export default function LearnerReportCard() {
       doc.text('Progress Secondary - Official Document', pageWidth - 15, footerY, { align: 'right' });
 
       const fileName = user?.name 
-        ? `${user.name.replace(/\s+/g, '_')}_${selectedReport?.term.replace(/\s+/g, '_')}_Report.pdf`
+        ? `${user.name.replace(/\s+/g, '_')}_${selectedReport?.term?.replace(/\s+/g, '_') || 'report'}_Report.pdf`
         : 'report_card.pdf';
       
       doc.save(fileName);
       toast.success('Report card downloaded successfully!');
     } catch (error) {
       console.error('PDF generation error:', error);
-      toast.error('Failed to generate PDF');
+      toast.error('Failed to generate PDF: ' + error.message);
     }
   };
 
@@ -337,14 +401,15 @@ export default function LearnerReportCard() {
         doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 80, 98);
 
         // Subjects Table
+        const subjects = report.subjects || [];
         const tableColumn = ["Subject", "Score", "Grade", "Remarks"];
-        const tableRows = report.subjects?.map(subject => {
+        const tableRows = subjects.map(subject => {
           const grade = getGradeFromScore(subject.score);
           return [subject.name, `${subject.score}%`, grade.letter, getGradeDescription(subject.score)];
-        }) || [];
+        });
 
         if (tableRows.length > 0) {
-          const avgScore = calculateAverage(report.subjects);
+          const avgScore = calculateAverage(subjects);
           const avgGrade = getGradeFromScore(avgScore);
           
           tableRows.push([
@@ -375,6 +440,26 @@ export default function LearnerReportCard() {
           });
         }
 
+        // Teacher's Comment
+        if (report.comment) {
+          const commentY = doc.lastAutoTable?.finalY + 10 || 200;
+          doc.setDrawColor(azureColor[0], azureColor[1], azureColor[2]);
+          doc.setFillColor(248, 250, 252);
+          doc.roundedRect(15, commentY, pageWidth - 30, 35, 2, 2, 'FD');
+          
+          doc.setFillColor(azureColor[0], azureColor[1], azureColor[2]);
+          doc.rect(15, commentY, 4, 35, 'F');
+          
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(azureColor[0], azureColor[1], azureColor[2]);
+          doc.text("Teacher's Remarks:", 22, commentY + 8);
+          
+          doc.setFont('helvetica', 'italic');
+          doc.setTextColor(navyColor[0], navyColor[1], navyColor[2]);
+          const splitComment = doc.splitTextToSize(report.comment, pageWidth - 50);
+          doc.text(splitComment, 22, commentY + 16);
+        }
+
         // Page number
         const footerY = pageHeight - 15;
         doc.setFontSize(8);
@@ -390,7 +475,7 @@ export default function LearnerReportCard() {
       toast.success('All reports downloaded successfully!');
     } catch (error) {
       console.error('PDF generation error:', error);
-      toast.error('Failed to generate PDFs');
+      toast.error('Failed to generate PDFs: ' + error.message);
     }
   };
 
@@ -483,11 +568,11 @@ export default function LearnerReportCard() {
                     </option>
                   ))}
                 </select>
-                <ChevronDownIcon className="absolute right-3 top-1/2 transform translate-y-1/2 w-5 h-5 text-[#00B0FF] pointer-events-none" />
+                <ChevronDownIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#00B0FF] pointer-events-none" />
               </div>
             </div>
 
-            {selectedReport && (
+            {selectedReport && selectedReport.subjects && selectedReport.subjects.length > 0 ? (
               <div ref={reportRef} className="bg-white rounded-xl border-2 border-[#00B0FF]/20 shadow-lg overflow-hidden relative group hover:border-[#00B0FF]/40 transition-all">
                 {/* Download Button */}
                 <button
@@ -505,7 +590,7 @@ export default function LearnerReportCard() {
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
                       <h2 className="font-serif text-2xl font-bold text-[#00B0FF] mb-2">PROGRESS SECONDARY SCHOOL</h2>
-                      <p className="text-white/60 text-sm">{selectedReport.term} · {selectedReport.form || selectedReport.grade}</p>
+                      <p className="text-white/60 text-sm">{selectedReport.term} · {selectedReport.form || selectedReport.grade || 'N/A'}</p>
                     </div>
                     <div className="text-left md:text-right">
                       <p className="font-serif text-xl font-semibold text-white">{user?.name}</p>
@@ -520,7 +605,7 @@ export default function LearnerReportCard() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                     <div className="bg-gray-50 p-4 rounded-xl border border-[#00B0FF]/20">
                       <p className="text-xs text-gray-500 mb-1">Subjects</p>
-                      <p className="text-2xl font-bold text-[#1A237E]">{selectedReport.subjects?.length || 0}</p>
+                      <p className="text-2xl font-bold text-[#1A237E]">{selectedReport.subjects.length}</p>
                       <div className="mt-2 h-1 bg-gray-200 rounded-full">
                         <div className="w-full h-1 bg-[#00B0FF] rounded-full"></div>
                       </div>
@@ -558,7 +643,7 @@ export default function LearnerReportCard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {selectedReport.subjects?.map((subject, index) => {
+                        {selectedReport.subjects.map((subject, index) => {
                           const grade = getGradeFromScore(subject.score);
                           return (
                             <tr key={index} className="hover:bg-gray-50 transition-colors">
@@ -608,6 +693,10 @@ export default function LearnerReportCard() {
                     </div>
                   )}
                 </div>
+              </div>
+            ) : (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8 text-center">
+                <p className="text-yellow-700">Selected report has no subject data. Please contact your teacher.</p>
               </div>
             )}
           </>

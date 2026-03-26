@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Toaster, toast } from 'react-hot-toast';
 import { AppProvider } from './context/AppContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -7,12 +7,24 @@ import api, { testConnection, checkHealth, authAPI } from './services/api';
 import './App.css';
 
 // Import components
-import Landing from './components/Auth/Landing';
 import TeacherLogin from './components/Auth/TeacherLogin';
 import LearnerLogin from './components/Auth/LearnerLogin';
+import AdminLogin from './components/Auth/AdminLogin';
 import TeacherDashboard from './components/Teacher/TeacherDashboard';
 import LearnerDashboard from './components/Learner/LearnerDashboard';
 import ErrorBoundary from './components/common/ErrorBoundary';
+
+// Import Admin Components
+import AdminDashboard from './pages/admin/AdminDashboard';
+import TeachersList from './components/Admin/TeachersList';
+import LearnersList from './components/Admin/LearnersList';
+import AddTeacher from './components/Admin/AddTeacher';
+import AddLearner from './components/Admin/AddLearner';
+import RegisterLearner from './components/Admin/RegisterLearner';
+import RegisterTeacher from './components/Admin/RegisterTeacher';
+import AdminClassManagement from './components/Admin/AdminClassManagement';
+import AdminSubjectManagement from './components/Admin/AdminSubjectManagement';
+import SecurityLogs from './components/Admin/SecurityLogs';
 
 const LoadingScreen = () => (
   <div style={{
@@ -35,16 +47,64 @@ const LoadingScreen = () => (
   </div>
 );
 
+// Debug component to check authentication
+const DebugAuth = () => {
+  const { user, token } = useAuth();
+  const [decodedToken, setDecodedToken] = useState(null);
+  
+  useEffect(() => {
+    if (token) {
+      try {
+        const decoded = JSON.parse(atob(token));
+        setDecodedToken(decoded);
+      } catch (e) {
+        console.error('Failed to decode token:', e);
+      }
+    }
+  }, [token]);
+  
+  return (
+    <div style={{ padding: '20px', background: '#f0f0f0', margin: '20px', borderRadius: '8px' }}>
+      <h3>🔧 Debug Auth Info</h3>
+      <p><strong>User:</strong> {user ? JSON.stringify(user) : 'No user'}</p>
+      <p><strong>Token exists:</strong> {token ? 'Yes' : 'No'}</p>
+      <p><strong>Token decoded:</strong> {decodedToken ? JSON.stringify(decodedToken) : 'N/A'}</p>
+      <p><strong>User role:</strong> {user?.role || 'No role'}</p>
+      <button onClick={() => {
+        localStorage.clear();
+        window.location.href = '/';
+      }}>Clear Storage & Reload</button>
+    </div>
+  );
+};
+
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRole }) => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
+    console.log('ProtectedRoute check:', { user, loading, allowedRole });
+    
     if (!loading && !user) {
+      console.log('No user, redirecting to home');
       navigate('/');
+      return;
     }
-  }, [user, loading, navigate]);
+    
+    if (!loading && user && allowedRole && user.role !== allowedRole) {
+      console.log(`Wrong role: ${user.role} !== ${allowedRole}, redirecting`);
+      if (user.role === 'teacher') {
+        navigate('/teacher/dashboard');
+      } else if (user.role === 'learner') {
+        navigate('/learner/dashboard');
+      } else if (user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
+    }
+  }, [user, loading, navigate, allowedRole]);
 
   if (loading) {
     return <LoadingScreen />;
@@ -54,13 +114,56 @@ const ProtectedRoute = ({ children, allowedRole }) => {
     return null;
   }
 
-  // Check role if specified
   if (allowedRole && user.role !== allowedRole) {
-    navigate('/');
     return null;
   }
 
   return children;
+};
+
+// Admin Route Component
+const AdminRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!loading && (!user || user.role !== 'admin')) {
+      navigate('/');
+    }
+  }, [user, loading, navigate]);
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  if (!user || user.role !== 'admin') {
+    return null;
+  }
+
+  return children;
+};
+
+// Wrapper component for AdminSubjectManagement to handle route params
+const AdminSubjectManagementWrapper = () => {
+  const { classId } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  
+  const className = location.state?.className || 'Class';
+  
+  const handleBack = () => {
+    navigate('/admin/class-management');
+  };
+  
+  return (
+    <AdminSubjectManagement
+      user={user}
+      classId={classId}
+      className={className}
+      onBack={handleBack}
+    />
+  );
 };
 
 function AppContent() {
@@ -131,14 +234,19 @@ function AppContent() {
       />
       
       <Routes>
-        <Route path="/" element={<Landing setScreen={(screen) => {
-          // Handle navigation
-          const nav = useNavigate();
-          nav(screen === 'teacher-login' ? '/teacher/login' : '/learner/login');
-        }} serverStatus={serverStatus} />} />
-        <Route path="/teacher/login" element={<TeacherLogin serverStatus={serverStatus} />} />
-        <Route path="/learner/login" element={<LearnerLogin serverStatus={serverStatus} />} />
+        {/* Learner Login as Default Home Page */}
+        <Route path="/" element={<LearnerLogin serverStatus={serverStatus} />} />
         
+        {/* Teacher Login */}
+        <Route path="/teacher/login" element={<TeacherLogin serverStatus={serverStatus} />} />
+        
+        {/* Admin Login */}
+        <Route path="/admin/login" element={<AdminLogin serverStatus={serverStatus} />} />
+        
+        {/* Debug Route - Remove in production */}
+        <Route path="/debug" element={<DebugAuth />} />
+        
+        {/* Teacher Routes */}
         <Route 
           path="/teacher/dashboard" 
           element={
@@ -150,6 +258,7 @@ function AppContent() {
           } 
         />
         
+        {/* Learner Routes */}
         <Route 
           path="/learner/dashboard" 
           element={
@@ -161,9 +270,131 @@ function AppContent() {
           } 
         />
         
+        {/* Admin Routes */}
+        <Route 
+          path="/admin" 
+          element={
+            <AdminRoute>
+              <ErrorBoundary>
+                <AdminDashboard />
+              </ErrorBoundary>
+            </AdminRoute>
+          } 
+        />
+        
+        {/* Admin Teachers Management */}
+        <Route 
+          path="/admin/teachers" 
+          element={
+            <AdminRoute>
+              <ErrorBoundary>
+                <TeachersList />
+              </ErrorBoundary>
+            </AdminRoute>
+          } 
+        />
+        
+        {/* Admin Learners Management */}
+        <Route 
+          path="/admin/learners" 
+          element={
+            <AdminRoute>
+              <ErrorBoundary>
+                <LearnersList />
+              </ErrorBoundary>
+            </AdminRoute>
+          } 
+        />
+        
+        {/* Admin Add Teacher */}
+        <Route 
+          path="/admin/add-teacher" 
+          element={
+            <AdminRoute>
+              <ErrorBoundary>
+                <AddTeacher onSuccess={() => window.location.href = '/admin/teachers'} />
+              </ErrorBoundary>
+            </AdminRoute>
+          } 
+        />
+        
+        {/* Admin Register Teacher */}
+        <Route 
+          path="/admin/register-teacher" 
+          element={
+            <AdminRoute>
+              <ErrorBoundary>
+                <RegisterTeacher />
+              </ErrorBoundary>
+            </AdminRoute>
+          } 
+        />
+        
+        {/* Admin Add Learner */}
+        <Route 
+          path="/admin/add-learner" 
+          element={
+            <AdminRoute>
+              <ErrorBoundary>
+                <AddLearner onSuccess={() => window.location.href = '/admin/learners'} />
+              </ErrorBoundary>
+            </AdminRoute>
+          } 
+        />
+        
+        {/* Admin Register Learner */}
+        <Route 
+          path="/admin/register-learner" 
+          element={
+            <AdminRoute>
+              <ErrorBoundary>
+                <RegisterLearner />
+              </ErrorBoundary>
+            </AdminRoute>
+          } 
+        />
+        
+        {/* Admin Class Management */}
+        <Route 
+          path="/admin/class-management" 
+          element={
+            <AdminRoute>
+              <ErrorBoundary>
+                <AdminClassManagement />
+              </ErrorBoundary>
+            </AdminRoute>
+          } 
+        />
+        
+        {/* Admin Subject Management */}
+        <Route 
+          path="/admin/class/:classId/subjects" 
+          element={
+            <AdminRoute>
+              <ErrorBoundary>
+                <AdminSubjectManagementWrapper />
+              </ErrorBoundary>
+            </AdminRoute>
+          } 
+        />
+        
+        {/* Admin Security Logs */}
+        <Route 
+          path="/admin/security-logs" 
+          element={
+            <AdminRoute>
+              <ErrorBoundary>
+                <SecurityLogs />
+              </ErrorBoundary>
+            </AdminRoute>
+          } 
+        />
+        
+        {/* Catch all - redirect to learner login */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       
+      {/* Offline Mode Indicator */}
       {serverStatus?.status === 'offline' && (
         <div style={{
           position: 'fixed',

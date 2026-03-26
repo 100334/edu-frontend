@@ -19,8 +19,13 @@ import { getGradeFromScore } from '../../utils/constants';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import jsPDF from 'jspdf';
-// Important: Import autoTable this way
 import autoTable from 'jspdf-autotable';
+
+// Theme constants - Matching Admin Dashboard
+const NAVY_DARK = '#0A192F';
+const NAVY_PRIMARY = '#1A237E';
+const AZURE_ACCENT = '#00B0FF';
+const ICE_WHITE = '#F8FAFC';
 
 export default function LearnerDashboard() {
   const { user } = useAuth();
@@ -178,11 +183,11 @@ export default function LearnerDashboard() {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       
-      // Header
+      // Header with admin theme colors
       doc.setFillColor(255, 255, 255);
       doc.rect(0, 0, pageWidth, 50, 'F');
       
-      doc.setFillColor(0, 127, 255);
+      doc.setFillColor(26, 35, 126); // NAVY_PRIMARY
       doc.rect(0, 50, pageWidth, 2, 'F');
       
       doc.setTextColor(10, 25, 47);
@@ -195,7 +200,7 @@ export default function LearnerDashboard() {
       doc.setTextColor(100, 116, 139);
       doc.text('Excellence in Education', pageWidth / 2, 35, { align: 'center' });
 
-      doc.setTextColor(0, 127, 255);
+      doc.setTextColor(26, 35, 126);
       doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
       doc.text('STUDENT REPORT CARD', pageWidth / 2, 70, { align: 'center' });
@@ -204,7 +209,7 @@ export default function LearnerDashboard() {
       doc.setFillColor(248, 250, 252);
       doc.roundedRect(20, 80, pageWidth - 40, 45, 3, 3, 'F');
       
-      doc.setDrawColor(0, 127, 255);
+      doc.setDrawColor(26, 35, 126);
       doc.setLineWidth(0.5);
       doc.roundedRect(20, 80, pageWidth - 40, 45, 3, 3, 'S');
       
@@ -242,19 +247,18 @@ export default function LearnerDashboard() {
       
       tableRows.push([
         'AVERAGE',
-        { content: avgScore.toString(), styles: { fontStyle: 'bold', textColor: [0, 127, 255] } },
-        { content: avgGrade.letter, styles: { fontStyle: 'bold', textColor: [0, 127, 255] } },
+        { content: avgScore.toString(), styles: { fontStyle: 'bold', textColor: [26, 35, 126] } },
+        { content: avgGrade.letter, styles: { fontStyle: 'bold', textColor: [26, 35, 126] } },
         { content: getGradeDescription(avgScore), styles: { fontStyle: 'bold' } }
       ]);
 
-      // Use autoTable function correctly
       autoTable(doc, {
         startY: 135,
         head: [tableColumn],
         body: tableRows,
         theme: 'grid',
         headStyles: {
-          fillColor: [0, 127, 255],
+          fillColor: [26, 35, 126],
           textColor: [255, 255, 255],
           fontStyle: 'bold',
           halign: 'center',
@@ -282,12 +286,12 @@ export default function LearnerDashboard() {
         doc.setFillColor(248, 250, 252);
         doc.roundedRect(20, finalY, pageWidth - 40, 40, 3, 3, 'F');
         
-        doc.setFillColor(0, 127, 255);
+        doc.setFillColor(26, 35, 126);
         doc.rect(20, finalY, 4, 40, 'F');
         
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(0, 127, 255);
+        doc.setTextColor(26, 35, 126);
         doc.text("Teacher's Comment", 30, finalY + 10);
         
         doc.setFont('helvetica', 'normal');
@@ -324,11 +328,11 @@ export default function LearnerDashboard() {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       
-      // Header
+      // Header with admin theme
       doc.setFillColor(255, 255, 255);
       doc.rect(0, 0, pageWidth, 50, 'F');
       
-      doc.setFillColor(0, 127, 255);
+      doc.setFillColor(26, 35, 126);
       doc.rect(0, 50, pageWidth, 2, 'F');
       
       doc.setTextColor(10, 25, 47);
@@ -345,7 +349,7 @@ export default function LearnerDashboard() {
       doc.setFillColor(248, 250, 252);
       doc.roundedRect(20, 65, pageWidth - 40, 40, 3, 3, 'F');
       
-      doc.setDrawColor(0, 127, 255);
+      doc.setDrawColor(26, 35, 126);
       doc.setLineWidth(0.5);
       doc.roundedRect(20, 65, pageWidth - 40, 40, 3, 3, 'S');
       
@@ -364,13 +368,13 @@ export default function LearnerDashboard() {
       // Stats
       let yPos = 120;
       
-      doc.setDrawColor(0, 127, 255);
+      doc.setDrawColor(26, 35, 126);
       doc.setLineWidth(0.3);
       
       doc.roundedRect(20, yPos, (pageWidth - 50) / 2, 40, 3, 3, 'S');
       doc.roundedRect(pageWidth / 2 + 5, yPos, (pageWidth - 50) / 2, 40, 3, 3, 'S');
       
-      doc.setTextColor(0, 127, 255);
+      doc.setTextColor(26, 35, 126);
       doc.setFontSize(22);
       doc.setFont('helvetica', 'bold');
       doc.text(stats.totalDays.toString(), 40, yPos + 25);
@@ -386,9 +390,9 @@ export default function LearnerDashboard() {
       yPos += 55;
       
       const statusData = [
-        { label: 'Present', count: stats.presentCount, color: [45, 212, 135] },
-        { label: 'Late', count: stats.lateCount, color: [0, 127, 255] },
-        { label: 'Absent', count: stats.absentCount, color: [230, 57, 70] }
+        { label: 'Present', count: stats.presentCount, color: [34, 197, 94] },
+        { label: 'Late', count: stats.lateCount, color: [26, 35, 126] },
+        { label: 'Absent', count: stats.absentCount, color: [239, 68, 68] }
       ];
 
       statusData.forEach((item, index) => {
@@ -428,14 +432,13 @@ export default function LearnerDashboard() {
         ];
       });
 
-      // Use autoTable function correctly
       autoTable(doc, {
         startY: yPos,
         head: [tableColumn],
         body: tableRows,
         theme: 'grid',
         headStyles: {
-          fillColor: [0, 127, 255],
+          fillColor: [26, 35, 126],
           textColor: [255, 255, 255],
           fontStyle: 'bold',
           fontSize: 10
@@ -474,73 +477,79 @@ export default function LearnerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-white flex">
+    <div className="min-h-screen" style={{ backgroundColor: ICE_WHITE }}>
       <Sidebar />
       
-      <main className="flex-1 p-8 overflow-y-auto">
-        {/* Welcome Banner */}
-        <div className="relative mb-8 overflow-hidden rounded-2xl bg-white border-2 border-azure/20 hover:border-azure/40 transition-all shadow-sm">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-azure/5 rounded-full filter blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-azure/5 rounded-full filter blur-2xl"></div>
-          
-          <div className="relative p-6 flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <SparklesIcon className="w-5 h-5 text-azure" />
-                <span className="text-azure text-sm font-medium">Welcome Back!</span>
+      <main className="flex-1 ml-0 lg:ml-64 p-6 lg:p-8 overflow-y-auto">
+        {/* Header with Admin Theme */}
+        <div 
+          className="w-full rounded-xl mb-8 overflow-hidden"
+          style={{
+            background: `linear-gradient(135deg, ${NAVY_DARK}, #1E3A8A)`,
+          }}
+        >
+          <div className="relative p-6 lg:p-8">
+            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <SparklesIcon className="w-5 h-5" style={{ color: AZURE_ACCENT }} />
+                  <span className="text-xs font-extrabold tracking-wider" style={{ color: AZURE_ACCENT }}>
+                    LEARNER PORTAL
+                  </span>
+                </div>
+                <h1 className="text-2xl lg:text-3xl font-bold text-white mb-2">
+                  Hello, {user?.name?.split(' ')[0] || 'Student'}
+                  <span className="ml-3 text-2xl inline-block animate-wave">👋</span>
+                </h1>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="px-3 py-1 bg-white/10 backdrop-blur rounded-full text-xs font-medium text-white/90 border border-white/20 flex items-center gap-1">
+                    <AcademicCapIcon className="w-3 h-3" />
+                    {user?.reg_number || 'N/A'}
+                  </span>
+                  <span className="px-3 py-1 bg-white/10 backdrop-blur rounded-full text-xs font-medium text-white/90 border border-white/20">
+                    {user?.grade || 'Grade N/A'}
+                  </span>
+                </div>
               </div>
-              <h1 className="text-3xl md:text-4xl font-serif font-bold text-[#0a192f] mb-2">
-                {user?.name?.split(' ')[0] || 'Student'}
-                <span className="ml-3 text-2xl text-azure inline-block animate-wave">👋</span>
-              </h1>
-              <div className="flex items-center gap-3">
-                <span className="px-3 py-1 bg-azure/5 text-azure rounded-full text-xs font-medium border border-azure/30 flex items-center gap-1">
-                  <AcademicCapIcon className="w-3 h-3" />
-                  {user?.reg_number || 'N/A'}
-                </span>
-                <span className="px-3 py-1 bg-gray-50 text-gray-600 rounded-full text-xs border border-gray-200">
-                  {user?.grade || 'Grade N/A'}
-                </span>
-              </div>
-            </div>
-            
-            <div className="hidden md:block">
-              <div className="text-right">
-                <p className="text-sm text-gray-400">Member since</p>
-                <p className="text-lg font-medium text-[#0a192f]">
-                  {new Date().toLocaleDateString('en', { month: 'long', year: 'numeric' })}
-                </p>
-                <div className="mt-2 flex items-center gap-1 justify-end">
-                  <ChartBarIcon className="w-4 h-4 text-azure" />
-                  <span className="text-xs text-azure">Active Student</span>
+              
+              <div className="hidden lg:block">
+                <div className="text-right">
+                  <p className="text-sm text-white/60">Member since</p>
+                  <p className="text-lg font-medium text-white">
+                    {new Date().toLocaleDateString('en', { month: 'long', year: 'numeric' })}
+                  </p>
+                  <div className="mt-2 flex items-center gap-1 justify-end">
+                    <ChartBarIcon className="w-4 h-4" style={{ color: AZURE_ACCENT }} />
+                    <span className="text-xs" style={{ color: AZURE_ACCENT }}>Active Student</span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Stats Grid */}
+        {/* Stats Grid - Using Admin Theme Colors */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <StatCard
-            icon={<DocumentTextIcon className="w-8 h-8 text-azure" />}
+            icon={<DocumentTextIcon className="w-8 h-8" style={{ color: AZURE_ACCENT }} />}
             value={stats.reportsCount}
             label="Reports Available"
             color="azure"
           />
           <StatCard
-            icon={<CalendarIcon className="w-8 h-8 text-azure" />}
+            icon={<CalendarIcon className="w-8 h-8" style={{ color: AZURE_ACCENT }} />}
             value={stats.attendanceRate}
             label="Attendance Rate"
             color="azure"
           />
           <StatCard
-            icon={<StarIcon className="w-8 h-8 text-azure" />}
+            icon={<StarIcon className="w-8 h-8" style={{ color: AZURE_ACCENT }} />}
             value={stats.averageScore}
             label="Average Score"
             color="azure"
           />
           <StatCard
-            icon={<ClockIcon className="w-8 h-8 text-azure" />}
+            icon={<ClockIcon className="w-8 h-8" style={{ color: AZURE_ACCENT }} />}
             value={stats.totalDays}
             label="Total Days"
             color="azure"
@@ -551,21 +560,22 @@ export default function LearnerDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Report Card Section */}
           <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl border-2 border-azure/20 hover:border-azure/40 transition-all shadow-sm overflow-hidden h-full">
-              <div className="px-6 py-4 border-b-2 border-azure/20 bg-gradient-to-r from-white to-azure/5">
+            <div className="bg-white rounded-xl border-2" style={{ borderColor: `${AZURE_ACCENT}20` }}>
+              <div className="px-6 py-4 border-b-2" style={{ borderColor: `${AZURE_ACCENT}20`, background: 'linear-gradient(to right, white, #F0F9FF)' }}>
                 <div className="flex items-center justify-between">
-                  <h2 className="font-serif text-lg font-bold text-[#0a192f] flex items-center gap-2">
-                    <span className="text-azure text-xl">📋</span>
+                  <h2 className="font-serif text-lg font-bold" style={{ color: NAVY_DARK }}>
+                    <span className="text-xl mr-2" style={{ color: AZURE_ACCENT }}>📋</span>
                     Latest Report Card
                   </h2>
                   {latestReport && (
                     <div className="flex items-center gap-3">
-                      <span className="px-3 py-1 bg-azure/5 text-azure rounded-full text-xs font-medium border border-azure/30">
+                      <span className="px-3 py-1 rounded-full text-xs font-medium border" style={{ backgroundColor: `${AZURE_ACCENT}10`, color: AZURE_ACCENT, borderColor: `${AZURE_ACCENT}30` }}>
                         {latestReport.term}
                       </span>
                       <button
                         onClick={() => downloadReportPDF(latestReport)}
-                        className="p-2 text-azure hover:bg-azure/10 rounded-lg transition-all hover:scale-110 border border-azure/20 hover:border-azure/40"
+                        className="p-2 rounded-lg transition-all hover:scale-110"
+                        style={{ color: AZURE_ACCENT }}
                         title="Download PDF"
                       >
                         <ArrowDownTrayIcon className="w-5 h-5" />
@@ -579,36 +589,36 @@ export default function LearnerDashboard() {
                   <div className="space-y-4">
                     {/* Performance Summary Cards */}
                     <div className="grid grid-cols-3 gap-4 mb-4">
-                      <div className="bg-gray-50 p-4 rounded-xl border border-azure/20 hover:border-azure/40 transition-all">
+                      <div className="p-4 rounded-xl border" style={{ backgroundColor: '#F9FAFB', borderColor: `${AZURE_ACCENT}20` }}>
                         <p className="text-xs text-gray-500 mb-1">Subjects</p>
-                        <p className="text-2xl font-bold text-[#0a192f]">{latestReport.subjects.length}</p>
+                        <p className="text-2xl font-bold" style={{ color: NAVY_DARK }}>{latestReport.subjects.length}</p>
                         <div className="mt-2 w-full h-1 bg-gray-200 rounded-full">
-                          <div className="w-full h-1 bg-azure rounded-full"></div>
+                          <div className="w-full h-1 rounded-full" style={{ backgroundColor: AZURE_ACCENT }}></div>
                         </div>
                       </div>
-                      <div className="bg-gray-50 p-4 rounded-xl border border-azure/20 hover:border-azure/40 transition-all">
+                      <div className="p-4 rounded-xl border" style={{ backgroundColor: '#F9FAFB', borderColor: `${AZURE_ACCENT}20` }}>
                         <p className="text-xs text-gray-500 mb-1">Average Score</p>
-                        <p className="text-2xl font-bold text-azure">
+                        <p className="text-2xl font-bold" style={{ color: AZURE_ACCENT }}>
                           {calculateAverage(latestReport.subjects)}%
                         </p>
                         <div className="mt-2 w-full h-1 bg-gray-200 rounded-full">
                           <div 
-                            className="h-1 bg-azure rounded-full" 
-                            style={{ width: `${calculateAverage(latestReport.subjects)}%` }}
+                            className="h-1 rounded-full" 
+                            style={{ width: `${calculateAverage(latestReport.subjects)}%`, backgroundColor: AZURE_ACCENT }}
                           ></div>
                         </div>
                       </div>
-                      <div className="bg-gray-50 p-4 rounded-xl border border-azure/20 hover:border-azure/40 transition-all">
+                      <div className="p-4 rounded-xl border" style={{ backgroundColor: '#F9FAFB', borderColor: `${AZURE_ACCENT}20` }}>
                         <p className="text-xs text-gray-500 mb-1">Term</p>
-                        <p className="text-xl font-bold text-[#0a192f]">{latestReport.term}</p>
-                        <p className="text-xs text-azure mt-2">Current Period</p>
+                        <p className="text-xl font-bold" style={{ color: NAVY_DARK }}>{latestReport.term}</p>
+                        <p className="text-xs mt-2" style={{ color: AZURE_ACCENT }}>Current Period</p>
                       </div>
                     </div>
 
                     {/* Subject Grades */}
-                    <div className="bg-gray-50 rounded-xl p-4 border border-azure/10">
-                      <h3 className="text-sm font-medium text-[#0a192f] mb-3 flex items-center gap-2">
-                        <span className="w-1 h-4 bg-azure rounded-full"></span>
+                    <div className="rounded-xl p-4 border" style={{ backgroundColor: '#F9FAFB', borderColor: `${AZURE_ACCENT}10` }}>
+                      <h3 className="text-sm font-medium mb-3 flex items-center gap-2" style={{ color: NAVY_DARK }}>
+                        <span className="w-1 h-4 rounded-full" style={{ backgroundColor: AZURE_ACCENT }}></span>
                         Subject Performance
                       </h3>
                       <div className="space-y-3">
@@ -647,8 +657,8 @@ export default function LearnerDashboard() {
 
                     {/* Teacher's Comment */}
                     {latestReport.comment && (
-                      <div className="bg-gray-50 p-4 rounded-xl border-l-4 border-azure">
-                        <div className="text-azure text-xs font-bold uppercase tracking-wider mb-2">
+                      <div className="p-4 rounded-xl border-l-4" style={{ backgroundColor: '#F9FAFB', borderLeftColor: AZURE_ACCENT }}>
+                        <div className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: AZURE_ACCENT }}>
                           Teacher's Note
                         </div>
                         <p className="text-sm text-gray-700 italic">"{latestReport.comment}"</p>
@@ -658,9 +668,12 @@ export default function LearnerDashboard() {
                     {/* View Full Report Button */}
                     <button
                       onClick={() => handleNavigation('/learner/report-card')}
-                      className="w-full mt-4 py-3 text-sm text-azure font-medium transition-all 
-                                 bg-azure/5 hover:bg-azure/10 rounded-lg border border-azure/30 
-                                 hover:border-azure/60 flex items-center justify-center gap-2 group"
+                      className="w-full mt-4 py-3 text-sm font-medium transition-all rounded-lg flex items-center justify-center gap-2 group"
+                      style={{ 
+                        backgroundColor: `${AZURE_ACCENT}10`, 
+                        color: AZURE_ACCENT,
+                        border: `1px solid ${AZURE_ACCENT}30`
+                      }}
                     >
                       <DocumentTextIcon className="w-4 h-4 group-hover:animate-pulse" />
                       View Full Report
@@ -669,10 +682,10 @@ export default function LearnerDashboard() {
                   </div>
                 ) : (
                   <div className="text-center py-16">
-                    <div className="w-20 h-20 mx-auto mb-4 bg-azure/5 rounded-full flex items-center justify-center border-2 border-azure/20">
-                      <DocumentTextIcon className="w-10 h-10 text-azure" />
+                    <div className="w-20 h-20 mx-auto mb-4 rounded-full flex items-center justify-center border-2" style={{ backgroundColor: `${AZURE_ACCENT}10`, borderColor: `${AZURE_ACCENT}20` }}>
+                      <DocumentTextIcon className="w-10 h-10" style={{ color: AZURE_ACCENT }} />
                     </div>
-                    <div className="font-medium text-[#0a192f] mb-2">
+                    <div className="font-medium mb-2" style={{ color: NAVY_DARK }}>
                       No Report Card Available
                     </div>
                     <p className="text-sm text-gray-500 max-w-xs mx-auto">
@@ -688,17 +701,18 @@ export default function LearnerDashboard() {
           {/* Side Panel */}
           <div className="space-y-6">
             {/* Attendance Summary Card */}
-            <div className="bg-white rounded-xl border-2 border-azure/20 hover:border-azure/40 transition-all shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b-2 border-azure/20 bg-gradient-to-r from-white to-azure/5">
+            <div className="bg-white rounded-xl border-2" style={{ borderColor: `${AZURE_ACCENT}20` }}>
+              <div className="px-6 py-4 border-b-2" style={{ borderColor: `${AZURE_ACCENT}20`, background: 'linear-gradient(to right, white, #F0F9FF)' }}>
                 <div className="flex items-center justify-between">
-                  <h2 className="font-serif text-lg font-bold text-[#0a192f] flex items-center gap-2">
-                    <span className="text-azure">📊</span>
+                  <h2 className="font-serif text-lg font-bold" style={{ color: NAVY_DARK }}>
+                    <span className="text-xl mr-2" style={{ color: AZURE_ACCENT }}>📊</span>
                     Attendance Summary
                   </h2>
                   {attendanceRecords.length > 0 && (
                     <button
                       onClick={downloadAttendancePDF}
-                      className="p-2 text-azure hover:bg-azure/10 rounded-lg transition-all hover:scale-110 border border-azure/20 hover:border-azure/40"
+                      className="p-2 rounded-lg transition-all hover:scale-110"
+                      style={{ color: AZURE_ACCENT }}
                       title="Download Attendance PDF"
                     >
                       <ArrowDownTrayIcon className="w-4 h-4" />
@@ -709,32 +723,32 @@ export default function LearnerDashboard() {
               <div className="p-6">
                 <div className="text-center mb-6">
                   <div className="relative inline-flex items-center justify-center mb-4">
-                    <div className="w-24 h-24 rounded-full border-4 border-azure/20 flex items-center justify-center">
-                      <span className="text-2xl font-bold text-azure">{stats.attendanceRate}</span>
+                    <div className="w-24 h-24 rounded-full border-4 flex items-center justify-center" style={{ borderColor: `${AZURE_ACCENT}20` }}>
+                      <span className="text-2xl font-bold" style={{ color: AZURE_ACCENT }}>{stats.attendanceRate}</span>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-600 bg-gray-50 py-2 px-4 rounded-full inline-block border border-gray-200">
+                  <p className="text-sm text-gray-600 py-2 px-4 rounded-full inline-block border border-gray-200" style={{ backgroundColor: '#F9FAFB' }}>
                     {getAttendanceMessage()}
                   </p>
                 </div>
                 
                 {stats.totalDays > 0 ? (
                   <div className="grid grid-cols-3 gap-3 mt-4">
-                    <div className="text-center p-3 bg-green-50 rounded-xl border border-green-200 hover:border-green-400 transition-all">
-                      <div className="w-8 h-8 mx-auto mb-2 bg-green-100 rounded-lg flex items-center justify-center">
+                    <div className="text-center p-3 rounded-xl border" style={{ backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }}>
+                      <div className="w-8 h-8 mx-auto mb-2 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#BBF7D0' }}>
                         <CheckCircleIcon className="w-5 h-5 text-green-600" />
                       </div>
                       <div className="text-green-600 font-bold text-xl">{stats.presentCount}</div>
                       <div className="text-xs text-gray-500">Present</div>
                     </div>
-                    <div className="text-center p-3 bg-azure/5 rounded-xl border border-azure/20 hover:border-azure/40 transition-all">
-                      <div className="w-8 h-8 mx-auto mb-2 bg-azure/10 rounded-lg flex items-center justify-center">
-                        <ClockIcon className="w-5 h-5 text-azure" />
+                    <div className="text-center p-3 rounded-xl border" style={{ backgroundColor: `${AZURE_ACCENT}10`, borderColor: `${AZURE_ACCENT}30` }}>
+                      <div className="w-8 h-8 mx-auto mb-2 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${AZURE_ACCENT}20` }}>
+                        <ClockIcon className="w-5 h-5" style={{ color: AZURE_ACCENT }} />
                       </div>
-                      <div className="text-azure font-bold text-xl">{stats.lateCount}</div>
+                      <div className="font-bold text-xl" style={{ color: AZURE_ACCENT }}>{stats.lateCount}</div>
                       <div className="text-xs text-gray-500">Late</div>
                     </div>
-                    <div className="text-center p-3 bg-red-50 rounded-xl border border-red-200 hover:border-red-400 transition-all">
+                    <div className="text-center p-3 rounded-xl border" style={{ backgroundColor: '#FEF2F2', borderColor: '#FECACA' }}>
                       <div className="w-8 h-8 mx-auto mb-2 bg-red-100 rounded-lg flex items-center justify-center">
                         <span className="text-red-600 text-xl font-bold">✕</span>
                       </div>
@@ -754,24 +768,25 @@ export default function LearnerDashboard() {
             </div>
 
             {/* Quick Actions Card */}
-            <div className="bg-white rounded-xl border-2 border-azure/20 hover:border-azure/40 transition-all shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b-2 border-azure/20 bg-gradient-to-r from-white to-azure/5">
-                <h2 className="font-serif text-lg font-bold text-[#0a192f] flex items-center gap-2">
-                  <span className="text-azure">⚡</span>
+            <div className="bg-white rounded-xl border-2" style={{ borderColor: `${AZURE_ACCENT}20` }}>
+              <div className="px-6 py-4 border-b-2" style={{ borderColor: `${AZURE_ACCENT}20`, background: 'linear-gradient(to right, white, #F0F9FF)' }}>
+                <h2 className="font-serif text-lg font-bold" style={{ color: NAVY_DARK }}>
+                  <span className="text-xl mr-2" style={{ color: AZURE_ACCENT }}>⚡</span>
                   Quick Actions
                 </h2>
               </div>
               <div className="p-6 space-y-3">
                 <button 
                   onClick={() => handleNavigation('/learner/report-card')}
-                  className="w-full text-left p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all group border border-gray-200 hover:border-azure/30"
+                  className="w-full text-left p-4 rounded-xl transition-all group border" 
+                  style={{ backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' }}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-azure/5 rounded-lg flex items-center justify-center group-hover:bg-azure/10 border border-azure/20">
-                      <DocumentTextIcon className="w-5 h-5 text-azure" />
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${AZURE_ACCENT}10`, border: `1px solid ${AZURE_ACCENT}20` }}>
+                      <DocumentTextIcon className="w-5 h-5" style={{ color: AZURE_ACCENT }} />
                     </div>
                     <div className="flex-1">
-                      <span className="font-medium text-[#0a192f] group-hover:text-azure transition-colors">
+                      <span className="font-medium group-hover:transition-colors" style={{ color: NAVY_DARK }}>
                         View All Reports
                       </span>
                       <p className="text-xs text-gray-500 mt-1">Access your complete academic history</p>
@@ -782,14 +797,15 @@ export default function LearnerDashboard() {
                 {stats.reportsCount > 0 && latestReport && (
                   <button 
                     onClick={() => downloadReportPDF(latestReport)}
-                    className="w-full text-left p-4 bg-azure/5 rounded-xl hover:bg-azure/10 transition-all group border border-azure/30"
+                    className="w-full text-left p-4 rounded-xl transition-all group border" 
+                    style={{ backgroundColor: `${AZURE_ACCENT}10`, borderColor: `${AZURE_ACCENT}30` }}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-azure rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform" style={{ backgroundColor: AZURE_ACCENT }}>
                         <ArrowDownTrayIcon className="w-5 h-5 text-white" />
                       </div>
                       <div className="flex-1">
-                        <span className="font-medium text-azure">
+                        <span className="font-medium" style={{ color: AZURE_ACCENT }}>
                           Download Latest Report
                         </span>
                         <p className="text-xs text-gray-500 mt-1">Save as PDF</p>
@@ -800,14 +816,15 @@ export default function LearnerDashboard() {
                 
                 <button 
                   onClick={() => handleNavigation('/learner/attendance')}
-                  className="w-full text-left p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all group border border-gray-200 hover:border-azure/30"
+                  className="w-full text-left p-4 rounded-xl transition-all group border" 
+                  style={{ backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' }}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-azure/5 rounded-lg flex items-center justify-center group-hover:bg-azure/10 border border-azure/20">
-                      <CalendarIcon className="w-5 h-5 text-azure" />
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${AZURE_ACCENT}10`, border: `1px solid ${AZURE_ACCENT}20` }}>
+                      <CalendarIcon className="w-5 h-5" style={{ color: AZURE_ACCENT }} />
                     </div>
                     <div className="flex-1">
-                      <span className="font-medium text-[#0a192f] group-hover:text-azure transition-colors">
+                      <span className="font-medium group-hover:transition-colors" style={{ color: NAVY_DARK }}>
                         Attendance Details
                       </span>
                       <p className="text-xs text-gray-500 mt-1">See your daily attendance record</p>
@@ -818,14 +835,15 @@ export default function LearnerDashboard() {
                 {attendanceRecords.length > 0 && (
                   <button 
                     onClick={downloadAttendancePDF}
-                    className="w-full text-left p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-all group border border-gray-200 hover:border-azure/30"
+                    className="w-full text-left p-4 rounded-xl transition-all group border" 
+                    style={{ backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' }}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-azure/5 rounded-lg flex items-center justify-center group-hover:bg-azure/10 border border-azure/20">
-                        <ArrowDownTrayIcon className="w-5 h-5 text-azure" />
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${AZURE_ACCENT}10`, border: `1px solid ${AZURE_ACCENT}20` }}>
+                        <ArrowDownTrayIcon className="w-5 h-5" style={{ color: AZURE_ACCENT }} />
                       </div>
                       <div className="flex-1">
-                        <span className="font-medium text-[#0a192f] group-hover:text-azure transition-colors">
+                        <span className="font-medium group-hover:transition-colors" style={{ color: NAVY_DARK }}>
                           Download Attendance
                         </span>
                         <p className="text-xs text-gray-500 mt-1">Save attendance record as PDF</p>
@@ -838,10 +856,10 @@ export default function LearnerDashboard() {
 
             {/* Recent Activity Card */}
             {recentActivity.length > 0 && (
-              <div className="bg-white rounded-xl border-2 border-azure/20 hover:border-azure/40 transition-all shadow-sm overflow-hidden">
-                <div className="px-6 py-4 border-b-2 border-azure/20 bg-gradient-to-r from-white to-azure/5">
-                  <h2 className="font-serif text-lg font-bold text-[#0a192f] flex items-center gap-2">
-                    <span className="text-azure">🕒</span>
+              <div className="bg-white rounded-xl border-2" style={{ borderColor: `${AZURE_ACCENT}20` }}>
+                <div className="px-6 py-4 border-b-2" style={{ borderColor: `${AZURE_ACCENT}20`, background: 'linear-gradient(to right, white, #F0F9FF)' }}>
+                  <h2 className="font-serif text-lg font-bold" style={{ color: NAVY_DARK }}>
+                    <span className="text-xl mr-2" style={{ color: AZURE_ACCENT }}>🕒</span>
                     Recent Activity
                   </h2>
                 </div>
@@ -852,7 +870,7 @@ export default function LearnerDashboard() {
                         <div className="flex items-center gap-3">
                           <span className={`text-xl ${activity.color || 'text-azure'}`}>{activity.icon}</span>
                           <div className="flex-1">
-                            <p className="text-sm font-medium text-[#0a192f]">{activity.title}</p>
+                            <p className="text-sm font-medium" style={{ color: NAVY_DARK }}>{activity.title}</p>
                             <p className="text-xs text-gray-500 mt-1">{activity.description}</p>
                           </div>
                           <span className="text-xs text-gray-400">

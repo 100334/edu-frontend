@@ -9,7 +9,7 @@ export default function TeacherAttendance() {
   const [attendance, setAttendance] = useState([]);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
-    learnerId: '',  // Keep as string for UUID
+    learnerId: '',
     date: new Date().toISOString().split('T')[0],
     status: 'present'
   });
@@ -26,12 +26,16 @@ export default function TeacherAttendance() {
         api.get('/api/teacher/attendance')
       ]);
       
-      console.log('📊 Loaded learners:', learnersRes.data?.length || 0);
-      console.log('📊 Loaded attendance:', attendanceRes.data?.length || 0);
-      console.log('📊 Sample learner ID type:', learnersRes.data?.[0]?.id, typeof learnersRes.data?.[0]?.id);
+      // FIXED: Handle different response structures
+      const learnersData = learnersRes.data?.learners || learnersRes.data || [];
+      const attendanceData = attendanceRes.data?.data?.records || attendanceRes.data || [];
       
-      setLearners(learnersRes.data || []);
-      setAttendance(attendanceRes.data || []);
+      console.log('📊 Loaded learners:', learnersData.length);
+      console.log('📊 Loaded attendance:', attendanceData.length);
+      console.log('📊 Sample learner ID:', learnersData[0]?.id, typeof learnersData[0]?.id);
+      
+      setLearners(learnersData);
+      setAttendance(attendanceData);
     } catch (error) {
       console.error('Error loading attendance data:', error);
       toast.error('Failed to load data. Please check your connection.');
@@ -67,31 +71,34 @@ export default function TeacherAttendance() {
     }
 
     const payload = {
-      learnerId: formData.learnerId,  // Don't convert to integer - keep as string for UUID
+      learnerId: formData.learnerId,
       date: formData.date,
       status: formData.status
     };
     
     console.log('📤 Sending attendance payload:', payload);
-    console.log('📤 learnerId type:', typeof payload.learnerId, 'value:', payload.learnerId);
     
     try {
       const response = await api.post('/api/teacher/attendance', payload);
       console.log('✅ Attendance response:', response.data);
       
-      // Handle different response structures
-      const newRecord = response.data.attendance || response.data;
-      
-      // Add the new record to the list (display at top)
-      setAttendance([newRecord, ...attendance]);
-      toast.success(`Attendance recorded: ${getLearnerName(formData.learnerId)} - ${formData.status}`);
-      
-      // Reset form but keep current date
-      setFormData({
-        ...formData,
-        learnerId: '',
-        status: 'present'
-      });
+      if (response.data.success) {
+        // FIXED: Handle different response structures
+        const newRecord = response.data.attendance || response.data.data;
+        
+        // Add the new record to the list (display at top)
+        setAttendance([newRecord, ...attendance]);
+        toast.success(`Attendance recorded: ${getLearnerName(formData.learnerId)} - ${formData.status}`);
+        
+        // Reset form but keep current date
+        setFormData({
+          ...formData,
+          learnerId: '',
+          status: 'present'
+        });
+      } else {
+        toast.error(response.data.message || 'Failed to record attendance');
+      }
     } catch (error) {
       console.error('❌ Error recording attendance:', error);
       console.error('Error details:', error.response?.data);
@@ -101,13 +108,13 @@ export default function TeacherAttendance() {
       if (error.response?.status === 409) {
         toast.error('Attendance already recorded for this learner on this date');
       } else if (error.response?.status === 400) {
-        toast.error(error.response?.data?.error || 'Invalid data provided');
+        toast.error(error.response?.data?.message || 'Invalid data provided');
       } else if (error.response?.status === 404) {
         toast.error('Learner not found');
+      } else if (error.response?.status === 500) {
+        toast.error('Server error. Please try again later.');
       } else {
-        const errorMsg = error.response?.data?.error || 
-                         error.response?.data?.message || 
-                         'Failed to record attendance';
+        const errorMsg = error.response?.data?.message || 'Failed to record attendance';
         toast.error(errorMsg);
       }
     }
@@ -215,14 +222,14 @@ export default function TeacherAttendance() {
               <h2 className="card-title">Record Attendance</h2>
             </div>
             <div className="card-body">
-              <div className="form-row">
+              <div className="space-y-4">
                 <div className="form-group">
                   <label className="form-label">Date</label>
                   <input
                     type="date"
                     value={formData.date}
                     onChange={(e) => setFormData({...formData, date: e.target.value})}
-                    className="form-input"
+                    className="form-input w-full"
                     max={new Date().toISOString().split('T')[0]}
                   />
                 </div>
@@ -232,7 +239,7 @@ export default function TeacherAttendance() {
                   <select
                     value={formData.learnerId}
                     onChange={(e) => setFormData({...formData, learnerId: e.target.value})}
-                    className="form-select"
+                    className="form-select w-full"
                   >
                     <option value="">Select learner</option>
                     {learners.map(learner => (
@@ -242,54 +249,54 @@ export default function TeacherAttendance() {
                     ))}
                   </select>
                 </div>
-              </div>
 
-              <div className="form-group">
-                <label className="form-label">Status</label>
-                <div className="flex gap-4 mt-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="status"
-                      value="present"
-                      checked={formData.status === 'present'}
-                      onChange={(e) => setFormData({...formData, status: e.target.value})}
-                      className="w-4 h-4 text-green"
-                    />
-                    <span className="badge badge-green">Present</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="status"
-                      value="absent"
-                      checked={formData.status === 'absent'}
-                      onChange={(e) => setFormData({...formData, status: e.target.value})}
-                      className="w-4 h-4 text-red"
-                    />
-                    <span className="badge badge-red">Absent</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="status"
-                      value="late"
-                      checked={formData.status === 'late'}
-                      onChange={(e) => setFormData({...formData, status: e.target.value})}
-                      className="w-4 h-4 text-yellow"
-                    />
-                    <span className="badge badge-gold">Late</span>
-                  </label>
+                <div className="form-group">
+                  <label className="form-label">Status</label>
+                  <div className="flex gap-4 mt-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="status"
+                        value="present"
+                        checked={formData.status === 'present'}
+                        onChange={(e) => setFormData({...formData, status: e.target.value})}
+                        className="w-4 h-4 text-green-600"
+                      />
+                      <span className="badge badge-green">Present</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="status"
+                        value="absent"
+                        checked={formData.status === 'absent'}
+                        onChange={(e) => setFormData({...formData, status: e.target.value})}
+                        className="w-4 h-4 text-red-600"
+                      />
+                      <span className="badge badge-red">Absent</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="status"
+                        value="late"
+                        checked={formData.status === 'late'}
+                        onChange={(e) => setFormData({...formData, status: e.target.value})}
+                        className="w-4 h-4 text-yellow-600"
+                      />
+                      <span className="badge badge-gold">Late</span>
+                    </label>
+                  </div>
                 </div>
-              </div>
 
-              <button
-                onClick={handleRecordAttendance}
-                className="btn btn-teal w-full mt-4"
-                disabled={!formData.learnerId}
-              >
-                ✔ Record Attendance
-              </button>
+                <button
+                  onClick={handleRecordAttendance}
+                  className="btn btn-teal w-full mt-4"
+                  disabled={!formData.learnerId}
+                >
+                  ✔ Record Attendance
+                </button>
+              </div>
             </div>
           </div>
 
