@@ -4,274 +4,250 @@ import toast from 'react-hot-toast';
 
 export default function TeachersList() {
   const [teachers, setTeachers] = useState([]);
+  const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState(null);
-  const [showCredentials, setShowCredentials] = useState(null);
+  const [editingTeacher, setEditingTeacher] = useState(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: '',
+    department: '',
+    specialization: '',
+    phone: '',
+    address: '',
+    class_id: '',
+    is_active: true
+  });
 
   useEffect(() => {
-    fetchTeachers();
+    loadTeachers();
+    loadClasses();
   }, []);
 
-  const fetchTeachers = async () => {
+  const loadTeachers = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await api.get('/api/admin/teachers', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      console.log('Teachers response:', response.data);
-      
-      // Handle the response structure correctly
-      if (response.data.success) {
-        setTeachers(response.data.teachers || []);
-      } else if (Array.isArray(response.data)) {
-        setTeachers(response.data);
-      } else {
-        setTeachers([]);
-      }
+      const response = await api.get('/api/admin/teachers');
+      setTeachers(response.data.teachers || []);
     } catch (error) {
-      console.error('Error fetching teachers:', error);
+      console.error('Error loading teachers:', error);
       toast.error('Failed to load teachers');
-      setTeachers([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleToggleStatus = async (userId, currentStatus) => {
-    setActionLoading(userId);
+  const loadClasses = async () => {
     try {
-      const token = localStorage.getItem('token');
-      // Use the correct endpoint for updating teacher status
-      const response = await api.put(
-        `/api/admin/teachers/${userId}`,
-        { is_active: !currentStatus },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      if (response.data.success) {
-        toast.success(`Teacher ${!currentStatus ? 'activated' : 'deactivated'}`);
-        fetchTeachers();
-      } else {
-        toast.error(response.data.message || 'Failed to update status');
-      }
+      const response = await api.get('/api/admin/classes');
+      setClasses(response.data.classes || []);
     } catch (error) {
-      console.error('Error updating status:', error);
-      toast.error(error.response?.data?.message || 'Failed to update status');
-    } finally {
-      setActionLoading(null);
+      console.error('Error loading classes:', error);
     }
   };
 
-  const handleResetPassword = async (userId, teacherName) => {
-    if (!window.confirm(`Reset password for ${teacherName}? The new password will be sent to their email.`)) return;
-    
-    setActionLoading(userId);
-    try {
-      const token = localStorage.getItem('token');
-      // Generate a random temporary password
-      const tempPassword = Math.random().toString(36).slice(-8);
-      
-      const response = await api.put(
-        `/api/admin/teachers/${userId}`,
-        { password: tempPassword },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      
-      if (response.data.success) {
-        setShowCredentials({
-          name: teacherName,
-          password: tempPassword
-        });
-        toast.success('Password reset successfully');
-        
-        // Auto-hide after 10 seconds
-        setTimeout(() => setShowCredentials(null), 10000);
-      } else {
-        toast.error(response.data.message || 'Failed to reset password');
-      }
-    } catch (error) {
-      console.error('Error resetting password:', error);
-      toast.error(error.response?.data?.message || 'Failed to reset password');
-    } finally {
-      setActionLoading(null);
-    }
+  const handleEditClick = (teacher) => {
+    setEditingTeacher(teacher.id);
+    setEditForm({
+      name: teacher.full_name || teacher.name,
+      email: teacher.email,
+      department: teacher.department || '',
+      specialization: teacher.specialization || '',
+      phone: teacher.phone || '',
+      address: teacher.address || '',
+      class_id: teacher.class_id || '',
+      is_active: teacher.is_active !== false
+    });
   };
 
-  const handleDelete = async (userId, teacherName) => {
-    if (!window.confirm(`Delete ${teacherName}? This action cannot be undone.`)) return;
-    
-    setActionLoading(userId);
+  const handleUpdateTeacher = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await api.delete(`/api/admin/teachers/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+      const response = await api.put(`/api/admin/teachers/${editingTeacher}`, {
+        name: editForm.name,
+        email: editForm.email,
+        department: editForm.department,
+        specialization: editForm.specialization,
+        phone: editForm.phone,
+        address: editForm.address,
+        is_active: editForm.is_active,
+        class_id: editForm.class_id || null  // ← CRITICAL: Include class_id
       });
       
       if (response.data.success) {
-        toast.success('Teacher deleted successfully');
-        fetchTeachers();
-      } else {
-        toast.error(response.data.message || 'Failed to delete teacher');
+        toast.success('Teacher updated successfully');
+        setEditingTeacher(null);
+        loadTeachers();
       }
     } catch (error) {
-      console.error('Error deleting teacher:', error);
-      toast.error(error.response?.data?.message || 'Failed to delete teacher');
-    } finally {
-      setActionLoading(null);
+      console.error('Error updating teacher:', error);
+      toast.error('Failed to update teacher');
     }
   };
 
-  const getDepartmentBadgeColor = (department) => {
-    const colors = {
-      'Mathematics': 'bg-blue-100 text-blue-700',
-      'English': 'bg-green-100 text-green-700',
-      'Science': 'bg-purple-100 text-purple-700',
-      'Social Studies': 'bg-yellow-100 text-yellow-700',
-      'Chichewa': 'bg-orange-100 text-orange-700',
-      'Creative Arts': 'bg-pink-100 text-pink-700'
-    };
-    return colors[department] || 'bg-gray-100 text-gray-700';
+  const handleDeleteTeacher = async (teacherId, teacherName) => {
+    if (!window.confirm(`Are you sure you want to delete ${teacherName}?`)) return;
+    
+    try {
+      const response = await api.delete(`/api/admin/teachers/${teacherId}`);
+      if (response.data.success) {
+        toast.success('Teacher deleted successfully');
+        loadTeachers();
+      }
+    } catch (error) {
+      console.error('Error deleting teacher:', error);
+      toast.error('Failed to delete teacher');
+    }
+  };
+
+  const getClassName = (classId) => {
+    const cls = classes.find(c => c.id === classId);
+    return cls ? `${cls.name} (${cls.year})` : 'Not assigned';
   };
 
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <div className="text-3xl mb-2 animate-pulse">👨‍🏫</div>
-        <p className="text-gray-500">Loading teachers...</p>
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#1A237E]"></div>
       </div>
     );
   }
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h2 className="text-xl font-serif font-bold text-[#0f1923]">Teachers List</h2>
-          <p className="text-sm text-gray-500">Manage faculty members and their credentials</p>
-        </div>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-bold text-[#0f1923]">Teachers List</h2>
         <button
           onClick={() => window.location.href = '/admin/register-teacher'}
-          className="px-4 py-2 bg-[#c9933a] text-white rounded-lg hover:bg-[#b5822e] transition text-sm font-medium"
+          className="px-4 py-2 bg-[#1A237E] text-white rounded-lg hover:bg-[#00B0FF] transition text-sm"
         >
-          + Add New Teacher
+          + Register Teacher
         </button>
       </div>
-      
-      {showCredentials && (
-        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg animate-fade-in">
-          <div className="flex justify-between items-start">
-            <div>
-              <h3 className="font-semibold text-green-800 mb-2">✅ Password Reset Successful</h3>
-              <p className="text-sm text-green-700 mb-2">
-                New temporary password for <strong>{showCredentials.name}</strong>:
-              </p>
-              <div className="bg-white p-3 rounded border border-green-200">
-                <code className="font-mono text-sm bg-gray-50 px-2 py-1 rounded">
-                  {showCredentials.password}
-                </code>
-              </div>
-              <p className="text-xs text-green-600 mt-2">
-                ⚠️ Please share this temporary password with the teacher. They will be prompted to change it on first login.
-              </p>
-            </div>
-            <button
-              onClick={() => setShowCredentials(null)}
-              className="text-gray-400 hover:text-gray-600 transition"
-            >
-              ✕
-            </button>
-          </div>
-        </div>
-      )}
-      
+
       <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-[#f7f4ef] border-b-2 border-[#d4cfc6]">
+        <table className="w-full min-w-[800px]">
+          <thead className="bg-gray-50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Name</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Department</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Employee ID</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Name</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Email</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Department</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Assigned Class</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#ede9e1]">
+          <tbody className="divide-y divide-gray-200">
             {teachers.map((teacher) => (
-              <tr key={teacher.id} className="hover:bg-[#f7f4ef]/50 transition duration-150">
-                <td className="px-4 py-3">
-                  <div className="font-medium text-[#0f1923] text-sm">{teacher.full_name || teacher.name}</div>
-                  {teacher.qualification && (
-                    <div className="text-xs text-gray-400 mt-0.5">{teacher.qualification}</div>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-600">{teacher.email}</td>
-                <td className="px-4 py-3">
-                  {teacher.department ? (
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getDepartmentBadgeColor(teacher.department)}`}>
-                      {teacher.department}
-                    </span>
-                  ) : (
-                    <span className="text-sm text-gray-400">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <code className="text-xs font-mono bg-[#f7f4ef] px-2 py-1 rounded text-[#0f1923]">
-                    {teacher.employee_id || '—'}
-                  </code>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                    teacher.is_active !== false
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-red-100 text-red-700'
-                  }`}>
-                    {teacher.is_active !== false ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex gap-2 flex-wrap">
-                    <button
-                      onClick={() => handleToggleStatus(teacher.id, teacher.is_active)}
-                      disabled={actionLoading === teacher.id}
-                      className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition disabled:opacity-50"
-                    >
-                      {teacher.is_active !== false ? 'Deactivate' : 'Activate'}
-                    </button>
-                    <button
-                      onClick={() => handleResetPassword(teacher.id, teacher.full_name || teacher.name)}
-                      disabled={actionLoading === teacher.id}
-                      className="text-xs px-2 py-1 rounded bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition disabled:opacity-50"
-                    >
-                      Reset PW
-                    </button>
-                    <button
-                      onClick={() => handleDelete(teacher.id, teacher.full_name || teacher.name)}
-                      disabled={actionLoading === teacher.id}
-                      className="text-xs px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 transition disabled:opacity-50"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </td>
+              <tr key={teacher.id} className="hover:bg-gray-50">
+                {editingTeacher === teacher.id ? (
+                  // Edit Mode
+                  <>
+                    <td className="px-4 py-3">
+                      <input
+                        type="text"
+                        value={editForm.name}
+                        onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                        className="w-full px-2 py-1 border rounded text-sm"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="email"
+                        value={editForm.email}
+                        onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                        className="w-full px-2 py-1 border rounded text-sm"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="text"
+                        value={editForm.department}
+                        onChange={(e) => setEditForm({...editForm, department: e.target.value})}
+                        className="w-full px-2 py-1 border rounded text-sm"
+                        placeholder="Department"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <select
+                        value={editForm.class_id}
+                        onChange={(e) => setEditForm({...editForm, class_id: e.target.value})}
+                        className="w-full px-2 py-1 border rounded text-sm"
+                      >
+                        <option value="">No class assigned</option>
+                        {classes.map(cls => (
+                          <option key={cls.id} value={cls.id}>
+                            {cls.name} ({cls.year})
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td className="px-4 py-3">
+                      <select
+                        value={editForm.is_active ? 'active' : 'inactive'}
+                        onChange={(e) => setEditForm({...editForm, is_active: e.target.value === 'active'})}
+                        className="w-full px-2 py-1 border rounded text-sm"
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={handleUpdateTeacher}
+                          className="text-green-600 hover:text-green-800 text-sm"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingTeacher(null)}
+                          className="text-gray-600 hover:text-gray-800 text-sm"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </td>
+                  </>
+                ) : (
+                  // View Mode
+                  <>
+                    <td className="px-4 py-3 text-sm font-medium">{teacher.full_name || teacher.name}</td>
+                    <td className="px-4 py-3 text-sm">{teacher.email}</td>
+                    <td className="px-4 py-3 text-sm">{teacher.department || '—'}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        teacher.class_id ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {getClassName(teacher.class_id)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        teacher.is_active !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {teacher.is_active !== false ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEditClick(teacher)}
+                          className="text-blue-600 hover:text-blue-800 text-sm"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTeacher(teacher.id, teacher.full_name || teacher.name)}
+                          className="text-red-600 hover:text-red-800 text-sm"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
-        
-        {teachers.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-4xl mb-3">👨‍🏫</div>
-            <p className="text-gray-500 mb-2">No teachers added yet</p>
-            <button
-              onClick={() => window.location.href = '/admin/register-teacher'}
-              className="text-sm text-[#c9933a] hover:text-[#0f1923] transition font-medium"
-            >
-              Click here to add your first teacher →
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

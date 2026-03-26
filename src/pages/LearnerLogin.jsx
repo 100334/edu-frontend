@@ -80,15 +80,16 @@ const LearnerLogin = ({ serverStatus }) => {
       <div className="min-h-screen flex">
         <div className="flex-1 overflow-auto px-4 sm:px-6 py-4 sm:py-6">
           <div className="max-w-[400px] mx-auto">
-            {/* Logo and Title */}
+            {/* Logo and Title - Removed back button */}
             <div className="text-center mb-6 sm:mb-8">
               <div className="inline-flex items-center justify-center w-[70px] h-[70px] sm:w-[90px] sm:h-[90px] bg-gradient-to-br from-[#1A237E] to-[#00B0FF] rounded-2xl shadow-lg mb-2">
                 <AcademicCapIcon className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
               </div>
               <h1 className="text-lg sm:text-xl font-bold text-[#1A237E] mt-2">
-                STUDENT LOGIN
+                PROGRESS SECONDARY SCHOOL
               </h1>
               <div className="w-8 sm:w-10 h-1 bg-[#00B0FF] mx-auto mt-2"></div>
+              <p className="text-xs text-gray-500 mt-2">Student Portal</p>
             </div>
 
             {/* Login Form */}
@@ -158,13 +159,13 @@ const LearnerLogin = ({ serverStatus }) => {
                   </span>
                 </label>
                 
-                {/* Optional: Forgot Password Link (if you have that feature) */}
+                {/* Forgot Registration Number Link */}
                 <button
                   type="button"
                   onClick={() => toast.info('Contact your teacher for registration number assistance', { duration: 4000 })}
                   className="text-xs sm:text-sm text-[#00B0FF] hover:text-[#1A237E] transition-colors"
                 >
-                  Forgot registration number?
+                  Forgot number?
                 </button>
               </div>
 

@@ -90,9 +90,12 @@ const MobileNavDrawer = ({ isOpen, onClose, activeNav, onNavClick, navItems }) =
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-[#c9933a] rounded-lg flex items-center justify-center">
-                <span className="text-lg font-bold text-[#0f1923]">E</span>
+                <span className="text-lg font-bold text-[#0f1923]">P</span>
               </div>
-              <span className="font-bold text-[#0f1923]">EduPortal Admin</span>
+              <div>
+                <span className="font-bold text-[#0f1923] block text-sm">PROGRESS</span>
+                <span className="text-xs text-gray-500">Secondary School</span>
+              </div>
             </div>
             <button
               onClick={onClose}

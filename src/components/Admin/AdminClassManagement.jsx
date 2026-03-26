@@ -23,6 +23,7 @@ const AdminClassManagement = ({ onManageSubjects }) => {
     year: new Date().getFullYear().toString(),
     teacher_id: ''
   });
+  const [showIdCopiedTooltip, setShowIdCopiedTooltip] = useState(null);
 
   useEffect(() => {
     fetchClasses();
@@ -150,6 +151,17 @@ const AdminClassManagement = ({ onManageSubjects }) => {
     }
   }, [fetchClasses]);
 
+  // Copy ID to clipboard
+  const copyToClipboard = (id, className) => {
+    navigator.clipboard.writeText(id).then(() => {
+      setShowIdCopiedTooltip(className);
+      toast.success(`Class ID copied to clipboard!`, { duration: 2000 });
+      setTimeout(() => setShowIdCopiedTooltip(null), 2000);
+    }).catch(() => {
+      toast.error('Failed to copy ID');
+    });
+  };
+
   // Handle add form submit - memoized
   const handleAddSubmit = useCallback((e) => {
     e.preventDefault();
@@ -196,10 +208,8 @@ const AdminClassManagement = ({ onManageSubjects }) => {
   // Handle manage subjects - uses the prop from parent
   const handleManageSubjects = useCallback((classId, className) => {
     if (onManageSubjects) {
-      // If onManageSubjects prop is provided (when used in AdminDashboard)
       onManageSubjects(classId, className);
     } else {
-      // Fallback: navigate to subjects page (when used standalone)
       navigate(`/admin/class/${classId}/subjects`, { 
         state: { className: className, classId: classId }
       });
@@ -224,6 +234,14 @@ const AdminClassManagement = ({ onManageSubjects }) => {
   const handleSelectChange = useCallback((field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   }, []);
+
+  // Format ID for display (show first 8 and last 4 characters)
+  const formatId = (id) => {
+    if (!id) return '';
+    const str = id.toString();
+    if (str.length <= 12) return str;
+    return `${str.slice(0, 8)}...${str.slice(-4)}`;
+  };
 
   // AddClassDialog component
   const AddClassDialog = React.memo(() => (
@@ -381,6 +399,30 @@ const AdminClassManagement = ({ onManageSubjects }) => {
               </select>
             </div>
             
+            {/* Display Class ID for reference (read-only) */}
+            {selectedClass && selectedClass.id && (
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  Class ID (Reference)
+                </label>
+                <div className="flex items-center justify-between gap-2">
+                  <code className="text-xs font-mono text-gray-600 break-all">
+                    {selectedClass.id}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(selectedClass.id, selectedClass.name)}
+                    className="p-1 text-gray-400 hover:text-[#00B0FF] transition"
+                    title="Copy ID to clipboard"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
+            
             <div className="flex gap-3">
               <button
                 type="button"
@@ -482,9 +524,25 @@ const AdminClassManagement = ({ onManageSubjects }) => {
                   <p className="text-xs text-gray-500 mt-0.5">
                     Academic Year {classItem.year} • Teacher: {classItem.teacher_name || 'Unassigned'}
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    {classItem.learner_count || 0} students enrolled
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-xs text-gray-400">
+                      {classItem.learner_count || 0} students enrolled
+                    </p>
+                    {/* Display Class ID with copy functionality */}
+                    <button
+                      onClick={() => copyToClipboard(classItem.id, classItem.name)}
+                      className="text-[10px] text-gray-400 hover:text-[#00B0FF] transition flex items-center gap-1 font-mono bg-gray-50 px-2 py-0.5 rounded"
+                      title="Click to copy class ID"
+                    >
+                      <span>ID: {formatId(classItem.id)}</span>
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                    {showIdCopiedTooltip === classItem.name && (
+                      <span className="text-[10px] text-green-600 animate-pulse">Copied!</span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex gap-1">
                   <button
