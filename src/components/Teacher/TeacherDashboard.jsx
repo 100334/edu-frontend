@@ -410,7 +410,7 @@ export default function TeacherDashboard() {
     return `
       <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(15,25,35,0.1);">
         <div style="background: #0f1923; color: white; padding: 16px 20px;">
-          <div style="font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700; color: #c9933a; margin-bottom: 4px;">EduPortal Academy</div>
+          <div style="font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700; color: #c9933a; margin-bottom: 4px;">Progress Secondary School</div>
           <div style="font-size: 11px; opacity: 0.6;">${report.term} · ${report.form}</div>
           <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
             <div style="font-weight: 600; font-size: 14px;">${learner?.name || 'Unknown'}</div>
@@ -517,11 +517,11 @@ export default function TeacherDashboard() {
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#c9933a] rounded-xl flex items-center justify-center">
-                <span className="text-lg sm:text-xl font-bold text-[#0f1923]">E</span>
+                <span className="text-lg sm:text-xl font-bold text-[#0f1923]">P</span>
               </div>
               <div>
-                <h1 className="text-base sm:text-xl font-serif font-bold text-white">EduPortal</h1>
-                <p className="text-[10px] sm:text-xs text-white/70 hidden sm:block">Excellence in Education</p>
+                <h1 className="text-base sm:text-xl font-serif font-bold text-white">Progress</h1>
+                <p className="text-[10px] sm:text-xs text-white/70 hidden sm:block">Secondary School</p>
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-4">
