@@ -22,58 +22,131 @@ const AZURE_ACCENT = '#00B0FF';
 const AZURE_LIGHT = '#E3F2FD';
 const ICE_WHITE = '#F8FAFC';
 
-// Stat Card Component
+// Stat Card Component - Mobile Responsive
 const StatCard = ({ emoji, value, label, subtitle }) => (
-  <div className="bg-white rounded-xl border border-[#d4cfc6] p-4 lg:p-6 shadow-sm hover:shadow-md transition">
-    <div className="text-2xl lg:text-3xl mb-2 lg:mb-3">{emoji}</div>
-    <div className="text-xl lg:text-3xl font-bold text-[#0f1923] mb-1">{value}</div>
-    <div className="text-[10px] lg:text-xs text-gray-500 font-semibold uppercase">{label}</div>
-    {subtitle && <div className="text-[10px] text-gray-400 mt-1">{subtitle}</div>}
+  <div className="bg-white rounded-xl border border-[#d4cfc6] p-3 sm:p-4 lg:p-6 shadow-sm hover:shadow-md transition">
+    <div className="text-xl sm:text-2xl lg:text-3xl mb-1 sm:mb-2 lg:mb-3">{emoji}</div>
+    <div className="text-base sm:text-xl lg:text-3xl font-bold text-[#0f1923] mb-0.5 sm:mb-1">{value}</div>
+    <div className="text-[8px] sm:text-[10px] lg:text-xs text-gray-500 font-semibold uppercase">{label}</div>
+    {subtitle && <div className="text-[8px] sm:text-[10px] text-gray-400 mt-1">{subtitle}</div>}
   </div>
 );
 
-// Hero Stat Component
+// Hero Stat Component - Mobile Responsive
 const HeroStat = ({ label, value }) => (
   <div className="text-center">
-    <div className="text-2xl font-extrabold text-white">{value}</div>
-    <div className="text-xs text-white/60 font-medium mt-1">{label}</div>
+    <div className="text-lg sm:text-2xl font-extrabold text-white">{value}</div>
+    <div className="text-[10px] sm:text-xs text-white/60 font-medium mt-0.5 sm:mt-1">{label}</div>
   </div>
 );
 
-// Horizontal Nav Item Component
+// Mobile Menu Button Component
+const MobileMenuButton = ({ isOpen, onClick }) => (
+  <button
+    onClick={onClick}
+    className="lg:hidden p-2 rounded-lg bg-white/10 hover:bg-white/20 transition"
+    aria-label="Toggle menu"
+  >
+    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {isOpen ? (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      ) : (
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+      )}
+    </svg>
+  </button>
+);
+
+// Horizontal Nav Item Component - Mobile Responsive
 const NavItem = ({ icon, label, isActive, onClick }) => (
   <button
     onClick={onClick}
-    className={`flex flex-col items-center gap-2 px-4 py-3 rounded-xl transition-all duration-200 ${
+    className={`flex flex-col items-center gap-1 sm:gap-2 px-2 sm:px-3 lg:px-4 py-2 sm:py-3 rounded-xl transition-all duration-200 whitespace-nowrap ${
       isActive
         ? 'bg-[#1A237E] text-white shadow-md'
         : 'text-gray-600 hover:bg-gray-100 hover:text-[#1A237E]'
     }`}
   >
-    <span className="text-2xl">{icon}</span>
-    <span className="text-xs font-medium">{label}</span>
+    <span className="text-lg sm:text-2xl">{icon}</span>
+    <span className="text-[10px] sm:text-xs font-medium">{label}</span>
   </button>
 );
 
-// Modal Component for Register Learner
+// Mobile Navigation Drawer Component
+const MobileNavDrawer = ({ isOpen, onClose, activeNav, onNavClick, navItems }) => {
+  if (!isOpen) return null;
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+        onClick={onClose}
+      />
+      
+      {/* Drawer */}
+      <div className="fixed left-0 top-0 bottom-0 w-64 bg-white z-50 shadow-xl transform transition-transform duration-300 ease-in-out lg:hidden">
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-[#c9933a] rounded-lg flex items-center justify-center">
+                <span className="text-lg font-bold text-[#0f1923]">E</span>
+              </div>
+              <span className="font-bold text-[#0f1923]">EduPortal Admin</span>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1 hover:bg-gray-100 rounded-lg"
+            >
+              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div className="p-2 space-y-1">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => {
+                onNavClick(item.id);
+                onClose();
+              }}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition ${
+                activeNav === item.id
+                  ? 'bg-[#1A237E] text-white'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              <span className="text-xl">{item.icon}</span>
+              <span className="text-sm font-medium">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+};
+
+// Modal Component for Register Learner - Mobile Responsive
 const RegisterLearnerModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center">
-          <h2 className="text-xl font-bold" style={{ color: NAVY_DARK }}>Register New Learner</h2>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl sm:rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-3 sm:p-4 flex justify-between items-center">
+          <h2 className="text-base sm:text-xl font-bold" style={{ color: NAVY_DARK }}>Register New Learner</h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition"
           >
-            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-        <div className="p-6">
+        <div className="p-3 sm:p-6">
           <RegisterLearner onSuccess={onClose} />
         </div>
       </div>
@@ -81,25 +154,25 @@ const RegisterLearnerModal = ({ isOpen, onClose }) => {
   );
 };
 
-// Modal Component for Register Teacher
+// Modal Component for Register Teacher - Mobile Responsive
 const RegisterTeacherModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center">
-          <h2 className="text-xl font-bold" style={{ color: NAVY_DARK }}>Register New Teacher</h2>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl sm:rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-3 sm:p-4 flex justify-between items-center">
+          <h2 className="text-base sm:text-xl font-bold" style={{ color: NAVY_DARK }}>Register New Teacher</h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition"
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition"
           >
-            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
-        <div className="p-6">
+        <div className="p-3 sm:p-6">
           <RegisterTeacher />
         </div>
       </div>
@@ -113,6 +186,7 @@ export default function AdminDashboard() {
   const [activeNav, setActiveNav] = useState(() => {
     return sessionStorage.getItem('adminActiveNav') || 'register-learner';
   });
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [selectedClassId, setSelectedClassId] = useState(null);
   const [selectedClassName, setSelectedClassName] = useState('');
@@ -123,6 +197,17 @@ export default function AdminDashboard() {
   });
   const [showRegisterLearnerModal, setShowRegisterLearnerModal] = useState(false);
   const [showRegisterTeacherModal, setShowRegisterTeacherModal] = useState(false);
+
+  // Navigation items for mobile drawer
+  const navItems = [
+    { id: 'register-learner', icon: '📝', label: 'Register Learner' },
+    { id: 'register-teacher', icon: '👨‍🏫', label: 'Register Teacher' },
+    { id: 'class-management', icon: '📚', label: 'Class Management' },
+    { id: 'subject-management', icon: '📖', label: 'Subject Management' },
+    { id: 'security-logs', icon: '🔒', label: 'Security Logs' },
+    { id: 'teachers-list', icon: '👥', label: 'Teachers List' },
+    { id: 'learners-list', icon: '👨‍🎓', label: 'Learners List' }
+  ];
 
   // Save active nav to sessionStorage
   useEffect(() => {
@@ -191,6 +276,7 @@ export default function AdminDashboard() {
 
   const handleNavClick = (nav) => {
     setActiveNav(nav);
+    setMobileMenuOpen(false);
     // Scroll to the content area
     setTimeout(() => {
       document.getElementById('content-area')?.scrollIntoView({ behavior: 'smooth' });
@@ -201,6 +287,7 @@ export default function AdminDashboard() {
     setSelectedClassId(classId);
     setSelectedClassName(className);
     setActiveNav('subject-management');
+    setMobileMenuOpen(false);
   };
 
   const handleOpenRegisterLearner = () => {
@@ -254,8 +341,8 @@ export default function AdminDashboard() {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: ICE_WHITE }}>
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#00B0FF] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500">Loading admin panel...</p>
+          <div className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 border-4 border-[#00B0FF] border-t-transparent rounded-full animate-spin mx-auto mb-3 sm:mb-4"></div>
+          <p className="text-xs sm:text-sm text-gray-500">Loading admin panel...</p>
         </div>
       </div>
     );
@@ -264,109 +351,92 @@ export default function AdminDashboard() {
   return (
     <>
       <div className="min-h-screen" style={{ backgroundColor: ICE_WHITE }}>
-        {/* Header */}
+        {/* Header - Mobile Responsive */}
         <div 
-          className="w-full px-6 pt-8 pb-6"
+          className="w-full px-3 sm:px-6 pt-4 sm:pt-6 lg:pt-8 pb-4 sm:pb-6"
           style={{
             background: `linear-gradient(135deg, ${NAVY_DARK}, #1E3A8A)`,
           }}
         >
           <div className="max-w-7xl mx-auto">
-            <div className="flex justify-between items-start mb-4">
+            <div className="flex justify-between items-start mb-3 sm:mb-4">
               <div>
-                <p className="text-xs font-extrabold tracking-wider mb-1" style={{ color: AZURE_ACCENT }}>
+                <p className="text-[10px] sm:text-xs font-extrabold tracking-wider mb-0.5 sm:mb-1" style={{ color: AZURE_ACCENT }}>
                   ADMINISTRATION
                 </p>
-                <h1 className="text-2xl lg:text-3xl font-bold text-white">
+                <h1 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-white">
                   Hello, {getUserName()}
                 </h1>
-                <p className="text-sm text-white/70 mt-1">{getGreeting()}! Welcome back</p>
+                <p className="text-xs sm:text-sm text-white/70 mt-0.5 sm:mt-1">{getGreeting()}! Welcome back</p>
               </div>
-              <button
-                onClick={handleLogout}
-                className="w-11 h-11 bg-white/10 backdrop-blur rounded-xl flex items-center justify-center transition-all hover:bg-white/20"
-              >
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-              </button>
+              <div className="flex items-center gap-2 sm:gap-3">
+                {/* Mobile Menu Button */}
+                <MobileMenuButton 
+                  isOpen={mobileMenuOpen} 
+                  onClick={() => setMobileMenuOpen(!mobileMenuOpen)} 
+                />
+                <button
+                  onClick={handleLogout}
+                  className="w-8 h-8 sm:w-10 sm:h-10 lg:w-11 lg:h-11 bg-white/10 backdrop-blur rounded-xl flex items-center justify-center transition-all hover:bg-white/20"
+                >
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                </button>
+              </div>
             </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-3 gap-4 mt-6">
-              <div className="bg-white/10 backdrop-blur rounded-xl p-4">
-                <div className="text-2xl mb-1">👨‍🎓</div>
-                <div className="text-2xl font-bold text-white">{stats.totalLearners}</div>
-                <div className="text-xs text-white/60">Total Learners</div>
+            {/* Stats Cards - Mobile Responsive Grid */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:gap-4 mt-4 sm:mt-6">
+              <div className="bg-white/10 backdrop-blur rounded-xl p-2 sm:p-3 lg:p-4">
+                <div className="text-lg sm:text-2xl mb-0.5 sm:mb-1">👨‍🎓</div>
+                <div className="text-lg sm:text-xl lg:text-2xl font-bold text-white">{stats.totalLearners}</div>
+                <div className="text-[8px] sm:text-[10px] lg:text-xs text-white/60">Learners</div>
               </div>
-              <div className="bg-white/10 backdrop-blur rounded-xl p-4">
-                <div className="text-2xl mb-1">👨‍🏫</div>
-                <div className="text-2xl font-bold text-white">{stats.totalTeachers}</div>
-                <div className="text-xs text-white/60">Total Teachers</div>
+              <div className="bg-white/10 backdrop-blur rounded-xl p-2 sm:p-3 lg:p-4">
+                <div className="text-lg sm:text-2xl mb-0.5 sm:mb-1">👨‍🏫</div>
+                <div className="text-lg sm:text-xl lg:text-2xl font-bold text-white">{stats.totalTeachers}</div>
+                <div className="text-[8px] sm:text-[10px] lg:text-xs text-white/60">Teachers</div>
               </div>
-              <div className="bg-white/10 backdrop-blur rounded-xl p-4">
-                <div className="text-2xl mb-1">📚</div>
-                <div className="text-2xl font-bold text-white">{stats.totalClasses}</div>
-                <div className="text-xs text-white/60">Total Classes</div>
+              <div className="bg-white/10 backdrop-blur rounded-xl p-2 sm:p-3 lg:p-4">
+                <div className="text-lg sm:text-2xl mb-0.5 sm:mb-1">📚</div>
+                <div className="text-lg sm:text-xl lg:text-2xl font-bold text-white">{stats.totalClasses}</div>
+                <div className="text-[8px] sm:text-[10px] lg:text-xs text-white/60">Classes</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Horizontal Navigation Bar */}
-        <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
-          <div className="max-w-7xl mx-auto px-6">
+        {/* Horizontal Navigation Bar - Desktop (hidden on mobile) */}
+        <div className="hidden lg:block sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <div className="flex overflow-x-auto scrollbar-hide gap-1 py-3">
-              <NavItem
-                icon="📝"
-                label="Register Learner"
-                isActive={activeNav === 'register-learner'}
-                onClick={() => handleNavClick('register-learner')}
-              />
-              <NavItem
-                icon="👨‍🏫"
-                label="Register Teacher"
-                isActive={activeNav === 'register-teacher'}
-                onClick={() => handleNavClick('register-teacher')}
-              />
-              <NavItem
-                icon="📚"
-                label="Class Management"
-                isActive={activeNav === 'class-management'}
-                onClick={() => handleNavClick('class-management')}
-              />
-              <NavItem
-                icon="📖"
-                label="Subject Management"
-                isActive={activeNav === 'subject-management'}
-                onClick={() => handleNavClick('subject-management')}
-              />
-              <NavItem
-                icon="🔒"
-                label="Security Logs"
-                isActive={activeNav === 'security-logs'}
-                onClick={() => handleNavClick('security-logs')}
-              />
-              <NavItem
-                icon="👥"
-                label="Teachers List"
-                isActive={activeNav === 'teachers-list'}
-                onClick={() => handleNavClick('teachers-list')}
-              />
-              <NavItem
-                icon="👨‍🎓"
-                label="Learners List"
-                isActive={activeNav === 'learners-list'}
-                onClick={() => handleNavClick('learners-list')}
-              />
+              {navItems.map((item) => (
+                <NavItem
+                  key={item.id}
+                  icon={item.icon}
+                  label={item.label}
+                  isActive={activeNav === item.id}
+                  onClick={() => handleNavClick(item.id)}
+                />
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Content Area */}
-        <div id="content-area" className="max-w-7xl mx-auto px-6 py-8">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="p-6">
+        {/* Mobile Navigation Drawer */}
+        <MobileNavDrawer
+          isOpen={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+          activeNav={activeNav}
+          onNavClick={handleNavClick}
+          navItems={navItems}
+        />
+
+        {/* Content Area - Mobile Responsive */}
+        <div id="content-area" className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 lg:py-8">
+          <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-3 sm:p-4 lg:p-6">
               {renderContent()}
             </div>
           </div>

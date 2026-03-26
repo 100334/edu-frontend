@@ -350,11 +350,11 @@ export default function LearnerDashboard() {
       doc.setTextColor(10, 25, 47);
       doc.setFontSize(24);
       doc.setFont('helvetica', 'bold');
-      doc.text('EduPortal Academy', pageWidth / 2, 25, { align: 'center' });
+      doc.text('PROGRESS SECONDARY SCHOOL', pageWidth / 2, 25, { align: 'center' });
       doc.setFontSize(11);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(100, 116, 139);
-      doc.text('Excellence in Education', pageWidth / 2, 35, { align: 'center' });
+      doc.text('Scholastica, Excellentia et Disciplina', pageWidth / 2, 35, { align: 'center' });
       doc.setTextColor(0, 127, 255);
       doc.setFontSize(18);
       doc.text('STUDENT REPORT CARD', pageWidth / 2, 70, { align: 'center' });
@@ -469,7 +469,7 @@ export default function LearnerDashboard() {
       doc.setTextColor(10, 25, 47);
       doc.setFontSize(24);
       doc.setFont('helvetica', 'bold');
-      doc.text('EduPortal Academy', pageWidth / 2, 25, { align: 'center' });
+      doc.text('PROGRESS SECONDARY SCHOOL', pageWidth / 2, 25, { align: 'center' });
       doc.setFontSize(11);
       doc.text('Attendance Record', pageWidth / 2, 35, { align: 'center' });
 
@@ -550,8 +550,9 @@ export default function LearnerDashboard() {
     return `
       <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(15,25,35,0.1);">
         <div style="background: #0f1923; color: white; padding: 20px 24px;">
-          <div style="font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: #c9933a; margin-bottom: 4px;">EduPortal Academy</div>
-          <div style="font-size: 12px; opacity: 0.6;">${report.term || 'Report'} · ${report.form || user?.form || 'N/A'}</div>
+          <div style="font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: #c9933a; margin-bottom: 4px;">PROGRESS SECONDARY SCHOOL</div>
+          <div style="font-size: 12px; opacity: 0.6;">Scholastica, Excellentia et Disciplina</div>
+          <div style="font-size: 11px; opacity: 0.6; margin-top: 4px;">${report.term || 'Report'} · ${report.form || user?.form || 'N/A'}</div>
           <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
             <div style="font-weight: 600;">${user?.name || user?.full_name || 'Unknown'}</div>
             <div style="font-family: monospace; font-size: 11px; opacity: 0.6; margin-top: 2px;">${user?.reg_number || user?.registration_number || 'N/A'}</div>
@@ -636,12 +637,13 @@ export default function LearnerDashboard() {
         <div className="container mx-auto px-4 lg:px-8 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
+              {/* School Logo - Replace with actual image if needed */}
               <div className="w-10 h-10 bg-[#c9933a] rounded-xl flex items-center justify-center">
-                <span className="text-xl font-bold text-[#0f1923]">E</span>
+                <span className="text-xl font-bold text-[#0f1923]">P</span>
               </div>
               <div>
-                <h1 className="text-xl font-serif font-bold text-white">EduPortal Academy</h1>
-                <p className="text-xs text-white/70 hidden sm:block">Excellence in Education</p>
+                <h1 className="text-xl font-serif font-bold text-white">PROGRESS SECONDARY SCHOOL</h1>
+                <p className="text-xs text-white/70 hidden sm:block">Scholastica, Excellentia et Disciplina</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -1140,7 +1142,7 @@ export default function LearnerDashboard() {
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Day</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
                     </tr>
-                  </thead>
+                    </thead>
                   <tbody className="divide-y divide-gray-200">
                     {attendanceRecords && attendanceRecords.length > 0 ? (
                       [...attendanceRecords]

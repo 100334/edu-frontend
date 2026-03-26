@@ -50,16 +50,82 @@ export default function LearnerReportCard() {
       console.log('Fetching reports for user:', user.id);
       const response = await api.get(`/api/learner/reports`);
       
-      if (response.data) {
-        setReports(response.data);
-        if (response.data.length > 0) {
-          setSelectedTerm(response.data[0].term);
-        }
+      console.log('Raw API response:', response.data);
+      
+      // CRITICAL FIX: Extract reports from response.data.data
+      let reportsData = [];
+      
+      // Check the structure of the response
+      if (response.data && response.data.data && Array.isArray(response.data.data)) {
+        // Expected structure: { success: true, data: [...] }
+        reportsData = response.data.data;
+        console.log('Found reports in data.data:', reportsData.length);
+      } 
+      else if (Array.isArray(response.data)) {
+        // Fallback: response is directly an array
+        reportsData = response.data;
+        console.log('Found reports as direct array:', reportsData.length);
       }
+      else if (response.data && response.data.reports && Array.isArray(response.data.reports)) {
+        // Alternative structure: { reports: [...] }
+        reportsData = response.data.reports;
+        console.log('Found reports in reports property:', reportsData.length);
+      }
+      else {
+        console.warn('Unexpected response structure:', response.data);
+        reportsData = [];
+      }
+      
+      // Process each report to ensure subjects is properly parsed
+      const processedReports = reportsData.map(report => {
+        // Parse subjects if it's a string
+        let subjects = report.subjects;
+        if (typeof subjects === 'string') {
+          try {
+            subjects = JSON.parse(subjects);
+            console.log('Parsed subjects string to array:', subjects);
+          } catch (e) {
+            console.error('Failed to parse subjects JSON:', e);
+            subjects = [];
+          }
+        }
+        
+        // Ensure subjects is an array
+        if (!Array.isArray(subjects)) {
+          subjects = [];
+        }
+        
+        // Ensure each subject has name and score
+        subjects = subjects.map(subject => ({
+          name: subject.name || 'Unknown Subject',
+          score: subject.score || 0
+        }));
+        
+        return {
+          ...report,
+          subjects: subjects,
+          term: report.term || 'Term 1',
+          form: report.form || user?.form || 'Form 1',
+          comment: report.comment || report.teacher_comment || null
+        };
+      });
+      
+      console.log('Processed reports count:', processedReports.length);
+      if (processedReports.length > 0) {
+        console.log('First report subjects:', processedReports[0].subjects);
+        console.log('First report subjects count:', processedReports[0].subjects.length);
+      }
+      
+      setReports(processedReports);
+      
+      if (processedReports.length > 0) {
+        setSelectedTerm(processedReports[0].term);
+      }
+      
     } catch (error) {
       console.error('Failed to load reports:', error);
       
-      if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
         setFetchError('Server is taking too long to respond. Please try again.');
       } else if (error.response?.status === 401) {
         setFetchError('Your session has expired. Please login again.');
@@ -85,7 +151,7 @@ export default function LearnerReportCard() {
 
   const calculateAverage = (subjects) => {
     if (!subjects || subjects.length === 0) return 0;
-    const sum = subjects.reduce((acc, subj) => acc + subj.score, 0);
+    const sum = subjects.reduce((acc, subj) => acc + (subj.score || 0), 0);
     return Math.round(sum / subjects.length);
   };
 
@@ -140,7 +206,7 @@ export default function LearnerReportCard() {
       doc.setTextColor(100, 116, 139);
       doc.text('Scholastica, Excellentia et Disciplina', pageWidth / 2, 35, { align: 'center' });
 
-      // 3. STUDENT INFO BOX - UPDATED to show Form
+      // 3. STUDENT INFO BOX
       doc.setDrawColor(azureColor[0], azureColor[1], azureColor[2]);
       doc.setLineWidth(0.2);
       doc.setFillColor(255, 255, 255);
@@ -247,14 +313,14 @@ export default function LearnerReportCard() {
       doc.text('Progress Secondary - Official Document', pageWidth - 15, footerY, { align: 'right' });
 
       const fileName = user?.name 
-        ? `${user.name.replace(/\s+/g, '_')}_${selectedReport?.term.replace(/\s+/g, '_')}_Report.pdf`
+        ? `${user.name.replace(/\s+/g, '_')}_${selectedReport?.term?.replace(/\s+/g, '_') || 'report'}_Report.pdf`
         : 'report_card.pdf';
       
       doc.save(fileName);
       toast.success('Report card downloaded successfully!');
     } catch (error) {
       console.error('PDF generation error:', error);
-      toast.error('Failed to generate PDF');
+      toast.error('Failed to generate PDF: ' + error.message);
     }
   };
 
@@ -313,7 +379,7 @@ export default function LearnerReportCard() {
         doc.setFont('helvetica', 'bold');
         doc.text(`${report.term} - Report Card`, pageWidth / 2, 70, { align: 'center' });
 
-        // Student Info Box - UPDATED to show Form
+        // Student Info Box
         doc.setDrawColor(azureColor[0], azureColor[1], azureColor[2]);
         doc.setLineWidth(0.2);
         doc.setFillColor(255, 255, 255);
@@ -330,14 +396,15 @@ export default function LearnerReportCard() {
         doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 80, 98);
 
         // Subjects Table
+        const subjects = report.subjects || [];
         const tableColumn = ["Subject", "Score", "Grade", "Remarks"];
-        const tableRows = report.subjects?.map(subject => {
+        const tableRows = subjects.map(subject => {
           const grade = getGradeFromScore(subject.score);
           return [subject.name, `${subject.score}%`, grade.letter, getGradeDescription(subject.score)];
-        }) || [];
+        });
 
         if (tableRows.length > 0) {
-          const avgScore = calculateAverage(report.subjects);
+          const avgScore = calculateAverage(subjects);
           const avgGrade = getGradeFromScore(avgScore);
           
           tableRows.push([
@@ -368,6 +435,26 @@ export default function LearnerReportCard() {
           });
         }
 
+        // Teacher's Comment
+        if (report.comment) {
+          const commentY = doc.lastAutoTable?.finalY + 10 || 200;
+          doc.setDrawColor(azureColor[0], azureColor[1], azureColor[2]);
+          doc.setFillColor(248, 250, 252);
+          doc.roundedRect(15, commentY, pageWidth - 30, 35, 2, 2, 'FD');
+          
+          doc.setFillColor(azureColor[0], azureColor[1], azureColor[2]);
+          doc.rect(15, commentY, 4, 35, 'F');
+          
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(azureColor[0], azureColor[1], azureColor[2]);
+          doc.text("Teacher's Remarks:", 22, commentY + 8);
+          
+          doc.setFont('helvetica', 'italic');
+          doc.setTextColor(navyColor[0], navyColor[1], navyColor[2]);
+          const splitComment = doc.splitTextToSize(report.comment, pageWidth - 50);
+          doc.text(splitComment, 22, commentY + 16);
+        }
+
         // Page number
         const footerY = pageHeight - 15;
         doc.setFontSize(8);
@@ -383,7 +470,7 @@ export default function LearnerReportCard() {
       toast.success('All reports downloaded successfully!');
     } catch (error) {
       console.error('PDF generation error:', error);
-      toast.error('Failed to generate PDFs');
+      toast.error('Failed to generate PDFs: ' + error.message);
     }
   };
 
@@ -476,7 +563,7 @@ export default function LearnerReportCard() {
               </div>
             </div>
 
-            {selectedReport && (
+            {selectedReport && selectedReport.subjects && selectedReport.subjects.length > 0 ? (
               <div ref={reportRef} className="bg-white rounded-xl border-2 border-[#00B0FF]/20 shadow-lg overflow-hidden relative group hover:border-[#00B0FF]/40 transition-all">
                 {/* Download Button */}
                 <button
@@ -489,7 +576,7 @@ export default function LearnerReportCard() {
                   <span className="text-sm hidden sm:inline">Download PDF</span>
                 </button>
 
-                {/* Report Header - UPDATED to show Form */}
+                {/* Report Header */}
                 <div className="bg-gradient-to-r from-[#1A237E] to-[#0D1240] text-white p-8">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
@@ -509,7 +596,7 @@ export default function LearnerReportCard() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                     <div className="bg-gray-50 p-4 rounded-xl border border-[#00B0FF]/20">
                       <p className="text-xs text-gray-500 mb-1">Subjects</p>
-                      <p className="text-2xl font-bold text-[#1A237E]">{selectedReport.subjects?.length || 0}</p>
+                      <p className="text-2xl font-bold text-[#1A237E]">{selectedReport.subjects.length}</p>
                       <div className="mt-2 h-1 bg-gray-200 rounded-full">
                         <div className="w-full h-1 bg-[#00B0FF] rounded-full"></div>
                       </div>
@@ -545,13 +632,13 @@ export default function LearnerReportCard() {
                           <th className="text-center py-3 text-sm font-semibold text-gray-700">Grade</th>
                           <th className="text-left py-3 text-sm font-semibold text-gray-700">Performance</th>
                          </tr>
-                         </thead>
+                      </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {selectedReport.subjects?.map((subject, index) => {
+                        {selectedReport.subjects.map((subject, index) => {
                           const grade = getGradeFromScore(subject.score);
                           return (
                             <tr key={index} className="hover:bg-gray-50 transition-colors">
-                              <td className="py-3 text-gray-900 font-medium">{subject.name}    </td>
+                              <td className="py-3 text-gray-900 font-medium">{subject.name}</td>
                               <td className="py-3 text-center">
                                 <span className="font-mono font-bold" style={{ color: grade.color }}>
                                   {subject.score}
@@ -597,6 +684,10 @@ export default function LearnerReportCard() {
                     </div>
                   )}
                 </div>
+              </div>
+            ) : (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-8 text-center">
+                <p className="text-yellow-700">Selected report has no subject data. Please contact your teacher.</p>
               </div>
             )}
           </>
