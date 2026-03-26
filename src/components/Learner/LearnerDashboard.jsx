@@ -59,27 +59,27 @@ const getGradeFromScore = (score) => {
   }
 };
 
-// Stat Card Component
+// Stat Card Component - Mobile responsive
 const StatCard = ({ emoji, value, label }) => (
-  <div className="bg-white rounded-xl border border-[#d4cfc6] p-4 lg:p-6 shadow-sm hover:shadow-md transition">
-    <div className="text-2xl lg:text-3xl mb-2 lg:mb-3">{emoji}</div>
-    <div className="text-xl lg:text-3xl font-bold text-[#0f1923] mb-1">{value}</div>
-    <div className="text-[10px] lg:text-xs text-gray-500 font-semibold uppercase">{label}</div>
+  <div className="bg-white rounded-xl border border-[#d4cfc6] p-3 sm:p-4 lg:p-6 shadow-sm hover:shadow-md transition">
+    <div className="text-xl sm:text-2xl lg:text-3xl mb-1 sm:mb-2 lg:mb-3">{emoji}</div>
+    <div className="text-lg sm:text-xl lg:text-3xl font-bold text-[#0f1923] mb-0.5 sm:mb-1">{value}</div>
+    <div className="text-[8px] sm:text-[10px] lg:text-xs text-gray-500 font-semibold uppercase">{label}</div>
   </div>
 );
 
-// Navigation Item Component
+// Navigation Item Component - Mobile responsive
 const NavItem = ({ icon, label, isActive, onClick }) => (
   <button
     onClick={onClick}
-    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-all duration-200 ${
+    className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-4 lg:px-5 py-2 sm:py-2.5 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm ${
       isActive
         ? 'bg-[#1A237E] text-white shadow-md'
         : 'text-gray-600 hover:bg-gray-100 hover:text-[#1A237E]'
     }`}
   >
-    <span className="text-lg">{icon}</span>
-    <span>{label}</span>
+    <span className="text-sm sm:text-lg">{icon}</span>
+    <span className="hidden xs:inline">{label}</span>
   </button>
 );
 
@@ -136,14 +136,13 @@ export default function LearnerDashboard() {
     try {
       console.log('Loading dashboard data for learner:', user.id);
       
-      // Fetch reports with better error handling
+      // Fetch reports
       let reportsData = [];
       try {
         console.log('Fetching reports from: /api/learner/reports');
         const reportsRes = await api.get('/api/learner/reports');
         console.log('Reports response:', reportsRes.data);
         
-        // Handle different response structures
         if (reportsRes.data && Array.isArray(reportsRes.data)) {
           reportsData = reportsRes.data;
         } else if (reportsRes.data && reportsRes.data.data && Array.isArray(reportsRes.data.data)) {
@@ -151,16 +150,15 @@ export default function LearnerDashboard() {
         } else if (reportsRes.data && reportsRes.data.reports && Array.isArray(reportsRes.data.reports)) {
           reportsData = reportsRes.data.reports;
         } else {
-          console.warn('Unexpected reports response structure:', reportsRes.data);
           reportsData = [];
         }
       } catch (reportError) {
         console.error('Error fetching reports:', reportError);
-        toast.error('Could not load reports: ' + (reportError.response?.data?.message || reportError.message));
+        toast.error('Could not load reports');
         reportsData = [];
       }
       
-      // Fetch attendance with better error handling
+      // Fetch attendance
       let attendanceData = { stats: {}, records: [] };
       try {
         console.log('Fetching attendance from: /api/learner/attendance');
@@ -180,11 +178,11 @@ export default function LearnerDashboard() {
         }
       } catch (attendanceError) {
         console.error('Error fetching attendance:', attendanceError);
-        toast.error('Could not load attendance: ' + (attendanceError.response?.data?.message || attendanceError.message));
+        toast.error('Could not load attendance');
         attendanceData = { stats: {}, records: [] };
       }
 
-      // Process reports to ensure subjects array is properly formatted
+      // Process reports
       const processedReports = reportsData.map(report => ({
         ...report,
         subjects: report.subjects || report.subjects_data || report.subject_scores || []
@@ -213,12 +211,10 @@ export default function LearnerDashboard() {
       let latest = null;
       
       if (processedReports.length > 0) {
-        // Sort reports by term or date if available
         const sortedReports = [...processedReports].sort((a, b) => {
           if (a.created_at && b.created_at) {
             return new Date(b.created_at) - new Date(a.created_at);
           }
-          // Fallback to term sorting
           const termOrder = { 'Term 1': 1, 'Term 2': 2, 'Term 3': 3 };
           const aTerm = termOrder[a.term] || 0;
           const bTerm = termOrder[b.term] || 0;
@@ -286,7 +282,7 @@ export default function LearnerDashboard() {
     } catch (error) {
       console.error('Dashboard error:', error);
       setError(error.message);
-      toast.error('Failed to load dashboard data. Please check your connection.');
+      toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
@@ -296,8 +292,6 @@ export default function LearnerDashboard() {
     if (user?.id) {
       loadDashboardData();
     } else {
-      console.log('No user found, waiting for auth...');
-      // Wait for auth to load
       const timer = setTimeout(() => {
         if (!user?.id) {
           setLoading(false);
@@ -600,8 +594,8 @@ export default function LearnerDashboard() {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: ICE_WHITE }}>
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#00B0FF] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500">Loading dashboard...</p>
+          <div className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-[#00B0FF] border-t-transparent rounded-full animate-spin mx-auto mb-3 sm:mb-4"></div>
+          <p className="text-sm sm:text-base text-gray-500">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -610,13 +604,13 @@ export default function LearnerDashboard() {
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: ICE_WHITE }}>
-        <div className="text-center max-w-md p-8 bg-white rounded-xl shadow-lg">
-          <div className="text-6xl mb-4">⚠️</div>
-          <h2 className="text-xl font-bold text-[#0f1923] mb-2">Error Loading Dashboard</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
+        <div className="text-center max-w-md p-6 sm:p-8 bg-white rounded-xl shadow-lg mx-3">
+          <div className="text-5xl sm:text-6xl mb-3 sm:mb-4">⚠️</div>
+          <h2 className="text-lg sm:text-xl font-bold text-[#0f1923] mb-2">Error Loading Dashboard</h2>
+          <p className="text-sm sm:text-base text-gray-600 mb-4">{error}</p>
           <button
             onClick={() => loadDashboardData()}
-            className="px-4 py-2 bg-[#c9933a] text-white rounded-lg hover:bg-[#b5822e] transition"
+            className="px-4 py-2 bg-[#c9933a] text-white rounded-lg hover:bg-[#b5822e] transition text-sm"
           >
             Retry
           </button>
@@ -627,59 +621,58 @@ export default function LearnerDashboard() {
 
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
-      {/* Header Section */}
+      {/* Header Section - Mobile Responsive */}
       <div 
-        className="w-full"
+        className="w-full sticky top-0 z-30"
         style={{
           background: `linear-gradient(135deg, ${NAVY_DARK}, #1E3A8A)`,
         }}
       >
-        <div className="container mx-auto px-4 lg:px-8 py-4">
+        <div className="container mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-4">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              {/* School Logo - Replace with actual image if needed */}
-              <div className="w-10 h-10 bg-[#c9933a] rounded-xl flex items-center justify-center">
-                <span className="text-xl font-bold text-[#0f1923]">P</span>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#c9933a] rounded-xl flex items-center justify-center">
+                <span className="text-lg sm:text-xl font-bold text-[#0f1923]">P</span>
               </div>
               <div>
-                <h1 className="text-xl font-serif font-bold text-white">PROGRESS SECONDARY SCHOOL</h1>
-                <p className="text-xs text-white/70 hidden sm:block">Scholastica, Excellentia et Disciplina</p>
+                <h1 className="text-base sm:text-xl font-serif font-bold text-white">PROGRESS</h1>
+                <p className="text-[10px] sm:text-xs text-white/70 hidden sm:block">Secondary School</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="hidden sm:flex items-center gap-3 bg-white/10 rounded-lg px-3 py-1.5">
-                <div className="w-8 h-8 bg-[#c9933a] rounded-full flex items-center justify-center text-sm">
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className="hidden sm:flex items-center gap-2 sm:gap-3 bg-white/10 rounded-lg px-2 sm:px-3 py-1 sm:py-1.5">
+                <div className="w-6 h-6 sm:w-8 sm:h-8 bg-[#c9933a] rounded-full flex items-center justify-center text-xs sm:text-sm">
                   🎓
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-white">{getUserName()}</div>
-                  <div className="text-xs text-white/70">Student</div>
+                  <div className="text-xs sm:text-sm font-semibold text-white">{getUserName()}</div>
+                  <div className="text-[10px] sm:text-xs text-white/70">Student</div>
                 </div>
               </div>
               <button
                 onClick={handleLogout}
-                className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm"
+                className="px-2 sm:px-3 py-1 sm:py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-xs sm:text-sm"
               >
                 Logout
               </button>
             </div>
           </div>
-          <div className="mt-4">
-            <p className="text-xs font-extrabold tracking-wider mb-1" style={{ color: AZURE_ACCENT }}>
+          <div className="mt-2 sm:mt-3 lg:mt-4">
+            <p className="text-[10px] sm:text-xs font-extrabold tracking-wider mb-0.5 sm:mb-1" style={{ color: AZURE_ACCENT }}>
               LEARNER PORTAL
             </p>
-            <h1 className="text-xl lg:text-2xl font-bold text-white">
+            <h1 className="text-base sm:text-xl lg:text-2xl font-bold text-white">
               Hello, {getUserName()}
             </h1>
-            <p className="text-sm text-white/70 mt-1">{getGreeting()}! Welcome back</p>
+            <p className="text-xs sm:text-sm text-white/70 mt-0.5 sm:mt-1">{getGreeting()}! Welcome back</p>
           </div>
         </div>
       </div>
 
-      {/* Navigation Bar */}
-      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 shadow-sm">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="flex gap-1 py-3">
+      {/* Navigation Bar - Mobile Responsive with horizontal scroll */}
+      <div className="sticky top-[72px] sm:top-[88px] lg:top-24 z-20 bg-white border-b border-gray-200 shadow-sm overflow-x-auto">
+        <div className="container mx-auto px-3 sm:px-4 lg:px-8">
+          <div className="flex gap-0.5 sm:gap-1 py-2 sm:py-3 min-w-max">
             <NavItem
               icon="📊"
               label="Overview"
@@ -688,7 +681,7 @@ export default function LearnerDashboard() {
             />
             <NavItem
               icon="📋"
-              label="Report Cards"
+              label="Reports"
               isActive={activeTab === 'reports'}
               onClick={() => setActiveTab('reports')}
             />
@@ -702,91 +695,91 @@ export default function LearnerDashboard() {
         </div>
       </div>
 
-      <main className="container mx-auto px-4 lg:px-8 py-8 max-w-7xl">
+      <main className="container mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6 lg:py-8 max-w-7xl">
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <>
-            <div className="mb-6 lg:mb-8">
-              <p className="text-sm text-gray-500">Track your academic progress and performance</p>
+            <div className="mb-4 sm:mb-6 lg:mb-8">
+              <p className="text-xs sm:text-sm text-gray-500">Track your academic progress and performance</p>
             </div>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-6 mb-6 lg:mb-8">
-              <StatCard emoji="📋" value={stats.reportsCount} label="Reports Available" />
-              <StatCard emoji="📅" value={stats.attendanceRate} label="Attendance Rate" />
-              <StatCard emoji="⭐" value={stats.averageScore} label="Average Score" />
-              <StatCard emoji="📆" value={stats.totalDays} label="Total Days" />
+            {/* Stats Grid - Responsive */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 lg:gap-6 mb-4 sm:mb-6 lg:mb-8">
+              <StatCard emoji="📋" value={stats.reportsCount} label="Reports" />
+              <StatCard emoji="📅" value={stats.attendanceRate} label="Attendance" />
+              <StatCard emoji="⭐" value={stats.averageScore} label="Average" />
+              <StatCard emoji="📆" value={stats.totalDays} label="Days" />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
               {/* Latest Report Card Section */}
               <div className="lg:col-span-2">
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden h-full">
-                  <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
-                    <div className="flex items-center justify-between">
-                      <h2 className="font-serif text-lg font-bold text-[#0f1923] flex items-center gap-2">
-                        <span className="text-[#c9933a] text-xl">📋</span>
-                        Latest Report Card
+                  <div className="px-3 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <h2 className="font-serif text-base sm:text-lg font-bold text-[#0f1923] flex items-center gap-2">
+                        <span className="text-[#c9933a] text-lg sm:text-xl">📋</span>
+                        Latest Report
                       </h2>
                       {latestReport && (
-                        <div className="flex items-center gap-3">
-                          <span className="px-3 py-1 bg-[#c9933a]/10 text-[#c9933a] rounded-full text-xs font-medium border border-[#c9933a]/30">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-[#c9933a]/10 text-[#c9933a] rounded-full text-[10px] sm:text-xs font-medium border border-[#c9933a]/30">
                             {latestReport.term || 'Current'}
                           </span>
                           <button
                             onClick={() => downloadReportPDF(latestReport)}
-                            className="p-2 text-[#c9933a] hover:bg-[#c9933a]/10 rounded-lg transition-all hover:scale-110 border border-[#d4cfc6] hover:border-[#c9933a]/40"
+                            className="p-1.5 sm:p-2 text-[#c9933a] hover:bg-[#c9933a]/10 rounded-lg transition-all hover:scale-110 border border-[#d4cfc6] hover:border-[#c9933a]/40"
                             title="Download PDF"
                           >
-                            <ArrowDownTrayIcon className="w-5 h-5" />
+                            <ArrowDownTrayIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                           </button>
                         </div>
                       )}
                     </div>
                   </div>
-                  <div className="p-4 lg:p-6">
+                  <div className="p-3 sm:p-4 lg:p-6">
                     {latestReport && latestReport.subjects && latestReport.subjects.length > 0 ? (
-                      <div className="space-y-4">
-                        {/* Performance Summary Cards */}
-                        <div className="grid grid-cols-3 gap-3 lg:gap-4 mb-4">
-                          <div className="bg-[#f7f4ef] p-3 lg:p-4 rounded-xl border border-[#d4cfc6]">
-                            <p className="text-[10px] lg:text-xs text-gray-500 mb-1">Subjects</p>
-                            <p className="text-xl lg:text-2xl font-bold text-[#0f1923]">{latestReport.subjects.length}</p>
+                      <div className="space-y-3 sm:space-y-4">
+                        {/* Performance Summary Cards - Responsive */}
+                        <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:gap-4 mb-3 sm:mb-4">
+                          <div className="bg-[#f7f4ef] p-2 sm:p-3 lg:p-4 rounded-xl border border-[#d4cfc6]">
+                            <p className="text-[8px] sm:text-[10px] lg:text-xs text-gray-500 mb-0.5 sm:mb-1">Subjects</p>
+                            <p className="text-sm sm:text-base lg:text-2xl font-bold text-[#0f1923]">{latestReport.subjects.length}</p>
                           </div>
-                          <div className="bg-[#f7f4ef] p-3 lg:p-4 rounded-xl border border-[#d4cfc6]">
-                            <p className="text-[10px] lg:text-xs text-gray-500 mb-1">Average Score</p>
-                            <p className="text-xl lg:text-2xl font-bold text-[#c9933a]">
+                          <div className="bg-[#f7f4ef] p-2 sm:p-3 lg:p-4 rounded-xl border border-[#d4cfc6]">
+                            <p className="text-[8px] sm:text-[10px] lg:text-xs text-gray-500 mb-0.5 sm:mb-1">Average</p>
+                            <p className="text-sm sm:text-base lg:text-2xl font-bold text-[#c9933a]">
                               {calculateAverage(latestReport.subjects)}%
                             </p>
-                            <div className="mt-2 w-full h-1 bg-gray-200 rounded-full">
+                            <div className="mt-1 sm:mt-2 w-full h-1 bg-gray-200 rounded-full">
                               <div 
                                 className="h-1 bg-[#c9933a] rounded-full" 
                                 style={{ width: `${calculateAverage(latestReport.subjects)}%` }}
                               />
                             </div>
                           </div>
-                          <div className="bg-[#f7f4ef] p-3 lg:p-4 rounded-xl border border-[#d4cfc6]">
-                            <p className="text-[10px] lg:text-xs text-gray-500 mb-1">Term</p>
-                            <p className="text-base lg:text-xl font-bold text-[#0f1923]">{latestReport.term || 'Current'}</p>
+                          <div className="bg-[#f7f4ef] p-2 sm:p-3 lg:p-4 rounded-xl border border-[#d4cfc6]">
+                            <p className="text-[8px] sm:text-[10px] lg:text-xs text-gray-500 mb-0.5 sm:mb-1">Term</p>
+                            <p className="text-xs sm:text-sm lg:text-xl font-bold text-[#0f1923]">{latestReport.term || 'Current'}</p>
                           </div>
                         </div>
 
-                        {/* Subject Grades */}
-                        <div className="bg-[#f7f4ef] rounded-xl p-4 border border-[#d4cfc6]">
-                          <h3 className="text-sm font-medium text-[#0f1923] mb-3 flex items-center gap-2">
-                            <span className="w-1 h-4 bg-[#c9933a] rounded-full" />
+                        {/* Subject Grades - Responsive */}
+                        <div className="bg-[#f7f4ef] rounded-xl p-3 sm:p-4 border border-[#d4cfc6] overflow-x-auto">
+                          <h3 className="text-xs sm:text-sm font-medium text-[#0f1923] mb-2 sm:mb-3 flex items-center gap-2">
+                            <span className="w-1 h-3 sm:h-4 bg-[#c9933a] rounded-full" />
                             Subject Performance
                           </h3>
-                          <div className="space-y-3">
+                          <div className="min-w-[280px] space-y-2 sm:space-y-3">
                             {latestReport.subjects.map((subject, index) => {
                               const grade = getGradeFromScore(subject.score);
                               return (
-                                <div key={index} className="flex items-center py-2 border-b border-[#ede9e1] last:border-0 group">
-                                  <div className="flex-1 text-sm text-gray-700 group-hover:text-[#0f1923] font-medium">
+                                <div key={index} className="flex items-center py-1.5 sm:py-2 border-b border-[#ede9e1] last:border-0 group">
+                                  <div className="flex-1 text-xs sm:text-sm text-gray-700 group-hover:text-[#0f1923] font-medium">
                                     {subject.name}
                                   </div>
-                                  <div className="flex-1 max-w-[200px] mx-4">
-                                    <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                  <div className="flex-1 max-w-[120px] sm:max-w-[200px] mx-2 sm:mx-4">
+                                    <div className="h-1.5 sm:h-2 bg-gray-200 rounded-full overflow-hidden">
                                       <div 
                                         className="h-full rounded-full transition-all duration-500" 
                                         style={{ 
@@ -796,10 +789,10 @@ export default function LearnerDashboard() {
                                       />
                                     </div>
                                   </div>
-                                  <div className="font-mono text-sm w-12 text-right font-bold" style={{ color: grade.color }}>
+                                  <div className="font-mono text-xs sm:text-sm w-10 sm:w-12 text-right font-bold" style={{ color: grade.color }}>
                                     {subject.score}
                                   </div>
-                                  <div className="w-8 text-center font-bold px-2 py-0.5 rounded ml-2" style={{ 
+                                  <div className="w-6 sm:w-8 text-center font-bold px-1 sm:px-2 py-0.5 rounded ml-1 sm:ml-2 text-xs sm:text-sm" style={{ 
                                     color: grade.color,
                                     backgroundColor: `${grade.color}10`
                                   }}>
@@ -813,18 +806,18 @@ export default function LearnerDashboard() {
 
                         {/* Teacher's Comment */}
                         {latestReport.comment && (
-                          <div className="bg-[#f7f4ef] p-4 rounded-xl border-l-4 border-[#c9933a]">
-                            <div className="text-[#c9933a] text-xs font-bold uppercase tracking-wider mb-2">
+                          <div className="bg-[#f7f4ef] p-3 sm:p-4 rounded-xl border-l-4 border-[#c9933a]">
+                            <div className="text-[#c9933a] text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1 sm:mb-2">
                               Teacher's Note
                             </div>
-                            <p className="text-sm text-gray-700 italic">"{latestReport.comment}"</p>
+                            <p className="text-xs sm:text-sm text-gray-700 italic">"{latestReport.comment}"</p>
                           </div>
                         )}
                         
                         {/* View Full Report Button */}
                         <button
                           onClick={() => setActiveTab('reports')}
-                          className="w-full mt-4 py-3 text-sm text-[#c9933a] font-medium transition-all 
+                          className="w-full mt-3 sm:mt-4 py-2 sm:py-3 text-xs sm:text-sm text-[#c9933a] font-medium transition-all 
                                      bg-[#c9933a]/5 hover:bg-[#c9933a]/10 rounded-lg border border-[#d4cfc6] 
                                      hover:border-[#c9933a]/60 flex items-center justify-center gap-2 group"
                         >
@@ -834,14 +827,14 @@ export default function LearnerDashboard() {
                         </button>
                       </div>
                     ) : (
-                      <div className="text-center py-16">
-                        <div className="w-20 h-20 mx-auto mb-4 bg-[#c9933a]/5 rounded-full flex items-center justify-center border-2 border-[#d4cfc6]">
-                          <DocumentTextIcon className="w-10 h-10 text-[#c9933a]" />
+                      <div className="text-center py-8 sm:py-12 lg:py-16">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-3 sm:mb-4 bg-[#c9933a]/5 rounded-full flex items-center justify-center border-2 border-[#d4cfc6]">
+                          <DocumentTextIcon className="w-8 h-8 sm:w-10 sm:h-10 text-[#c9933a]" />
                         </div>
-                        <div className="font-medium text-[#0f1923] mb-2">
+                        <div className="font-medium text-[#0f1923] mb-2 text-sm sm:text-base">
                           No Report Card Available
                         </div>
-                        <p className="text-sm text-gray-500 max-w-xs mx-auto">
+                        <p className="text-xs sm:text-sm text-gray-500 max-w-xs mx-auto">
                           Your teacher hasn't generated any reports yet. 
                           Check back after your next assessment.
                         </p>
@@ -852,68 +845,68 @@ export default function LearnerDashboard() {
               </div>
 
               {/* Side Panel */}
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {/* Attendance Summary Card */}
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
-                  <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
+                  <div className="px-3 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
                     <div className="flex items-center justify-between">
-                      <h2 className="font-serif text-lg font-bold text-[#0f1923] flex items-center gap-2">
+                      <h2 className="font-serif text-base sm:text-lg font-bold text-[#0f1923] flex items-center gap-2">
                         <span className="text-[#c9933a]">📊</span>
-                        Attendance Summary
+                        Attendance
                       </h2>
                       {attendanceRecords.length > 0 && (
                         <button
                           onClick={downloadAttendancePDF}
-                          className="p-2 text-[#c9933a] hover:bg-[#c9933a]/10 rounded-lg transition-all hover:scale-110 border border-[#d4cfc6] hover:border-[#c9933a]/40"
+                          className="p-1.5 sm:p-2 text-[#c9933a] hover:bg-[#c9933a]/10 rounded-lg transition-all hover:scale-110 border border-[#d4cfc6] hover:border-[#c9933a]/40"
                           title="Download Attendance PDF"
                         >
-                          <ArrowDownTrayIcon className="w-4 h-4" />
+                          <ArrowDownTrayIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </button>
                       )}
                     </div>
                   </div>
-                  <div className="p-4 lg:p-6">
-                    <div className="text-center mb-6">
-                      <div className="relative inline-flex items-center justify-center mb-4">
-                        <div className="w-24 h-24 rounded-full border-4 border-[#c9933a]/20 flex items-center justify-center">
-                          <span className="text-2xl font-bold text-[#c9933a]">{stats.attendanceRate}</span>
+                  <div className="p-3 sm:p-4 lg:p-6">
+                    <div className="text-center mb-4 sm:mb-6">
+                      <div className="relative inline-flex items-center justify-center mb-2 sm:mb-4">
+                        <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-[#c9933a]/20 flex items-center justify-center">
+                          <span className="text-xl sm:text-2xl font-bold text-[#c9933a]">{stats.attendanceRate}</span>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-600 bg-[#f7f4ef] py-2 px-4 rounded-full inline-block border border-[#d4cfc6]">
+                      <p className="text-xs sm:text-sm text-gray-600 bg-[#f7f4ef] py-1.5 sm:py-2 px-2 sm:px-4 rounded-full inline-block border border-[#d4cfc6]">
                         {getAttendanceMessage()}
                       </p>
                     </div>
                     
                     {stats.totalDays > 0 ? (
-                      <div className="grid grid-cols-3 gap-3 mt-4">
-                        <div className="text-center p-3 bg-green-50 rounded-xl border border-green-200">
-                          <div className="w-8 h-8 mx-auto mb-2 bg-green-100 rounded-lg flex items-center justify-center">
-                            <CheckCircleIcon className="w-5 h-5 text-green-600" />
+                      <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-3 sm:mt-4">
+                        <div className="text-center p-2 sm:p-3 bg-green-50 rounded-xl border border-green-200">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 sm:mb-2 bg-green-100 rounded-lg flex items-center justify-center">
+                            <CheckCircleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
                           </div>
-                          <div className="text-green-600 font-bold text-xl">{stats.presentCount}</div>
-                          <div className="text-xs text-gray-500">Present</div>
+                          <div className="text-green-600 font-bold text-base sm:text-xl">{stats.presentCount}</div>
+                          <div className="text-[10px] sm:text-xs text-gray-500">Present</div>
                         </div>
-                        <div className="text-center p-3 bg-[#c9933a]/5 rounded-xl border border-[#d4cfc6]">
-                          <div className="w-8 h-8 mx-auto mb-2 bg-[#c9933a]/10 rounded-lg flex items-center justify-center">
-                            <ClockIcon className="w-5 h-5 text-[#c9933a]" />
+                        <div className="text-center p-2 sm:p-3 bg-[#c9933a]/5 rounded-xl border border-[#d4cfc6]">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 sm:mb-2 bg-[#c9933a]/10 rounded-lg flex items-center justify-center">
+                            <ClockIcon className="w-4 h-4 sm:w-5 sm:h-5 text-[#c9933a]" />
                           </div>
-                          <div className="text-[#c9933a] font-bold text-xl">{stats.lateCount}</div>
-                          <div className="text-xs text-gray-500">Late</div>
+                          <div className="text-[#c9933a] font-bold text-base sm:text-xl">{stats.lateCount}</div>
+                          <div className="text-[10px] sm:text-xs text-gray-500">Late</div>
                         </div>
-                        <div className="text-center p-3 bg-red-50 rounded-xl border border-red-200">
-                          <div className="w-8 h-8 mx-auto mb-2 bg-red-100 rounded-lg flex items-center justify-center">
-                            <span className="text-red-600 text-xl font-bold">✕</span>
+                        <div className="text-center p-2 sm:p-3 bg-red-50 rounded-xl border border-red-200">
+                          <div className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-1 sm:mb-2 bg-red-100 rounded-lg flex items-center justify-center">
+                            <span className="text-red-600 text-base sm:text-xl font-bold">✕</span>
                           </div>
-                          <div className="text-red-600 font-bold text-xl">{stats.absentCount}</div>
-                          <div className="text-xs text-gray-500">Absent</div>
+                          <div className="text-red-600 font-bold text-base sm:text-xl">{stats.absentCount}</div>
+                          <div className="text-[10px] sm:text-xs text-gray-500">Absent</div>
                         </div>
                       </div>
                     ) : (
-                      <div className="text-center py-8">
-                        <div className="w-16 h-16 mx-auto mb-3 bg-[#f7f4ef] rounded-full flex items-center justify-center border-2 border-[#d4cfc6]">
-                          <CalendarIcon className="w-8 h-8 text-gray-400" />
+                      <div className="text-center py-6 sm:py-8">
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-2 sm:mb-3 bg-[#f7f4ef] rounded-full flex items-center justify-center border-2 border-[#d4cfc6]">
+                          <CalendarIcon className="w-6 h-6 sm:w-8 sm:h-8 text-gray-400" />
                         </div>
-                        <p className="text-sm text-gray-500">No attendance records yet</p>
+                        <p className="text-xs sm:text-sm text-gray-500">No attendance records yet</p>
                       </div>
                     )}
                   </div>
@@ -921,26 +914,26 @@ export default function LearnerDashboard() {
 
                 {/* Quick Actions Card */}
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
-                  <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
-                    <h2 className="font-serif text-lg font-bold text-[#0f1923] flex items-center gap-2">
+                  <div className="px-3 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
+                    <h2 className="font-serif text-base sm:text-lg font-bold text-[#0f1923] flex items-center gap-2">
                       <span className="text-[#c9933a]">⚡</span>
                       Quick Actions
                     </h2>
                   </div>
-                  <div className="p-4 lg:p-6 space-y-3">
+                  <div className="p-3 sm:p-4 lg:p-6 space-y-2 sm:space-y-3">
                     <button 
                       onClick={() => setActiveTab('reports')}
-                      className="w-full text-left p-4 bg-[#f7f4ef] rounded-xl hover:bg-[#ede9e1] transition-all group border border-[#d4cfc6] hover:border-[#c9933a]/30"
+                      className="w-full text-left p-3 sm:p-4 bg-[#f7f4ef] rounded-xl hover:bg-[#ede9e1] transition-all group border border-[#d4cfc6] hover:border-[#c9933a]/30"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-[#c9933a]/5 rounded-lg flex items-center justify-center group-hover:bg-[#c9933a]/10 border border-[#d4cfc6]">
-                          <DocumentTextIcon className="w-5 h-5 text-[#c9933a]" />
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#c9933a]/5 rounded-lg flex items-center justify-center group-hover:bg-[#c9933a]/10 border border-[#d4cfc6]">
+                          <DocumentTextIcon className="w-4 h-4 sm:w-5 sm:h-5 text-[#c9933a]" />
                         </div>
                         <div className="flex-1">
-                          <span className="font-medium text-[#0f1923] group-hover:text-[#c9933a] transition-colors">
+                          <span className="text-xs sm:text-sm font-medium text-[#0f1923] group-hover:text-[#c9933a] transition-colors">
                             View All Reports
                           </span>
-                          <p className="text-xs text-gray-500 mt-1">Access your complete academic history</p>
+                          <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">Access your complete academic history</p>
                         </div>
                       </div>
                     </button>
@@ -948,17 +941,17 @@ export default function LearnerDashboard() {
                     {stats.reportsCount > 0 && latestReport && (
                       <button 
                         onClick={() => downloadReportPDF(latestReport)}
-                        className="w-full text-left p-4 bg-[#c9933a]/5 rounded-xl hover:bg-[#c9933a]/10 transition-all group border border-[#c9933a]/30"
+                        className="w-full text-left p-3 sm:p-4 bg-[#c9933a]/5 rounded-xl hover:bg-[#c9933a]/10 transition-all group border border-[#c9933a]/30"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-[#c9933a] rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <ArrowDownTrayIcon className="w-5 h-5 text-white" />
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#c9933a] rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <ArrowDownTrayIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                           </div>
                           <div className="flex-1">
-                            <span className="font-medium text-[#c9933a]">
+                            <span className="text-xs sm:text-sm font-medium text-[#c9933a]">
                               Download Latest Report
                             </span>
-                            <p className="text-xs text-gray-500 mt-1">Save as PDF</p>
+                            <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">Save as PDF</p>
                           </div>
                         </div>
                       </button>
@@ -966,17 +959,17 @@ export default function LearnerDashboard() {
                     
                     <button 
                       onClick={() => setActiveTab('attendance')}
-                      className="w-full text-left p-4 bg-[#f7f4ef] rounded-xl hover:bg-[#ede9e1] transition-all group border border-[#d4cfc6] hover:border-[#c9933a]/30"
+                      className="w-full text-left p-3 sm:p-4 bg-[#f7f4ef] rounded-xl hover:bg-[#ede9e1] transition-all group border border-[#d4cfc6] hover:border-[#c9933a]/30"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-[#c9933a]/5 rounded-lg flex items-center justify-center group-hover:bg-[#c9933a]/10 border border-[#d4cfc6]">
-                          <CalendarIcon className="w-5 h-5 text-[#c9933a]" />
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#c9933a]/5 rounded-lg flex items-center justify-center group-hover:bg-[#c9933a]/10 border border-[#d4cfc6]">
+                          <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 text-[#c9933a]" />
                         </div>
                         <div className="flex-1">
-                          <span className="font-medium text-[#0f1923] group-hover:text-[#c9933a] transition-colors">
+                          <span className="text-xs sm:text-sm font-medium text-[#0f1923] group-hover:text-[#c9933a] transition-colors">
                             Attendance Details
                           </span>
-                          <p className="text-xs text-gray-500 mt-1">See your daily attendance record</p>
+                          <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">See your daily attendance record</p>
                         </div>
                       </div>
                     </button>
@@ -984,17 +977,17 @@ export default function LearnerDashboard() {
                     {attendanceRecords.length > 0 && (
                       <button 
                         onClick={downloadAttendancePDF}
-                        className="w-full text-left p-4 bg-[#f7f4ef] rounded-xl hover:bg-[#ede9e1] transition-all group border border-[#d4cfc6] hover:border-[#c9933a]/30"
+                        className="w-full text-left p-3 sm:p-4 bg-[#f7f4ef] rounded-xl hover:bg-[#ede9e1] transition-all group border border-[#d4cfc6] hover:border-[#c9933a]/30"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-[#c9933a]/5 rounded-lg flex items-center justify-center group-hover:bg-[#c9933a]/10 border border-[#d4cfc6]">
-                            <ArrowDownTrayIcon className="w-5 h-5 text-[#c9933a]" />
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#c9933a]/5 rounded-lg flex items-center justify-center group-hover:bg-[#c9933a]/10 border border-[#d4cfc6]">
+                            <ArrowDownTrayIcon className="w-4 h-4 sm:w-5 sm:h-5 text-[#c9933a]" />
                           </div>
                           <div className="flex-1">
-                            <span className="font-medium text-[#0f1923] group-hover:text-[#c9933a] transition-colors">
+                            <span className="text-xs sm:text-sm font-medium text-[#0f1923] group-hover:text-[#c9933a] transition-colors">
                               Download Attendance
                             </span>
-                            <p className="text-xs text-gray-500 mt-1">Save attendance record as PDF</p>
+                            <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">Save attendance record as PDF</p>
                           </div>
                         </div>
                       </button>
@@ -1005,8 +998,8 @@ export default function LearnerDashboard() {
                 {/* Recent Activity Card */}
                 {recentActivity.length > 0 && (
                   <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
-                    <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
-                      <h2 className="font-serif text-lg font-bold text-[#0f1923] flex items-center gap-2">
+                    <div className="px-3 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
+                      <h2 className="font-serif text-base sm:text-lg font-bold text-[#0f1923] flex items-center gap-2">
                         <span className="text-[#c9933a]">🕒</span>
                         Recent Activity
                       </h2>
@@ -1014,14 +1007,14 @@ export default function LearnerDashboard() {
                     <div className="p-0">
                       <div className="divide-y divide-[#ede9e1]">
                         {recentActivity.map((activity) => (
-                          <div key={activity.id} className="p-4 hover:bg-[#f7f4ef] transition-colors">
-                            <div className="flex items-center gap-3">
-                              <span className={`text-xl ${activity.color || 'text-[#c9933a]'}`}>{activity.icon}</span>
+                          <div key={activity.id} className="p-3 sm:p-4 hover:bg-[#f7f4ef] transition-colors">
+                            <div className="flex items-center gap-2 sm:gap-3">
+                              <span className={`text-lg sm:text-xl ${activity.color || 'text-[#c9933a]'}`}>{activity.icon}</span>
                               <div className="flex-1">
-                                <p className="text-sm font-medium text-[#0f1923]">{activity.title}</p>
-                                <p className="text-xs text-gray-500 mt-1">{activity.description}</p>
+                                <p className="text-xs sm:text-sm font-medium text-[#0f1923]">{activity.title}</p>
+                                <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1">{activity.description}</p>
                               </div>
-                              <span className="text-xs text-gray-400">
+                              <span className="text-[10px] sm:text-xs text-gray-400">
                                 {new Date(activity.date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
                               </span>
                             </div>
@@ -1036,40 +1029,40 @@ export default function LearnerDashboard() {
           </>
         )}
 
-        {/* Reports Tab */}
+        {/* Reports Tab - Mobile Responsive */}
         {activeTab === 'reports' && (
           <>
-            <div className="mb-6">
-              <h1 className="font-serif text-2xl lg:text-3xl font-bold text-[#0f1923] mb-1">Report Cards</h1>
-              <p className="text-sm text-gray-500">Your academic performance overview</p>
+            <div className="mb-4 sm:mb-6">
+              <h1 className="font-serif text-xl sm:text-2xl lg:text-3xl font-bold text-[#0f1923] mb-1">Report Cards</h1>
+              <p className="text-xs sm:text-sm text-gray-500">Your academic performance overview</p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
               {reports && reports.length > 0 ? (
                 reports.map(report => {
                   const avg = calculateAverage(report.subjects);
                   const grade = getGradeFromScore(avg);
                   return (
                     <div key={report.id} className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden hover:shadow-md transition">
-                      <div className="p-4 border-b flex justify-between items-center">
+                      <div className="p-3 sm:p-4 border-b flex justify-between items-center flex-wrap gap-2">
                         <div>
-                          <span className="font-bold text-[#0f1923]">{report.term || 'Report'}</span>
-                          <span className="ml-2 px-2 py-0.5 bg-[#c9933a]/10 text-[#c9933a] text-xs rounded-full">
+                          <span className="font-bold text-[#0f1923] text-sm sm:text-base">{report.term || 'Report'}</span>
+                          <span className="ml-2 px-1.5 sm:px-2 py-0.5 bg-[#c9933a]/10 text-[#c9933a] text-[10px] sm:text-xs rounded-full">
                             {report.form || user?.form || 'N/A'}
                           </span>
                         </div>
                         <div className="text-right">
-                          <span className="text-sm font-bold" style={{ color: grade.color }}>
+                          <span className="text-xs sm:text-sm font-bold" style={{ color: grade.color }}>
                             {avg}% ({grade.letter})
                           </span>
                         </div>
                       </div>
-                      <div className="p-4">
-                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                      <div className="p-3 sm:p-4">
+                        <div className="space-y-1.5 sm:space-y-2 max-h-40 sm:max-h-48 overflow-y-auto">
                           {report.subjects && report.subjects.map((s, idx) => {
                             const g = getGradeFromScore(s.score);
                             return (
-                              <div key={idx} className="flex justify-between items-center text-sm">
+                              <div key={idx} className="flex justify-between items-center text-xs sm:text-sm">
                                 <span>{s.name}</span>
                                 <span style={{ color: g.color }} className="font-mono font-medium">
                                   {s.score}% ({g.letter})
@@ -1079,22 +1072,22 @@ export default function LearnerDashboard() {
                           })}
                         </div>
                         {report.comment && (
-                          <div className="mt-3 p-2 bg-[#f7f4ef] rounded text-xs italic">
-                            💬 {report.comment.substring(0, 80)}{report.comment.length > 80 ? '…' : ''}
+                          <div className="mt-2 sm:mt-3 p-1.5 sm:p-2 bg-[#f7f4ef] rounded text-[10px] sm:text-xs italic">
+                            💬 {report.comment.substring(0, 60)}{report.comment.length > 60 ? '…' : ''}
                           </div>
                         )}
-                        <div className="mt-4 flex gap-2">
+                        <div className="mt-3 sm:mt-4 flex gap-2">
                           <button 
                             onClick={() => handleViewReport(report)} 
-                            className="flex-1 px-3 py-1.5 border border-[#c9933a] text-[#c9933a] rounded-lg text-sm hover:bg-[#c9933a]/10"
+                            className="flex-1 px-2 sm:px-3 py-1 sm:py-1.5 border border-[#c9933a] text-[#c9933a] rounded-lg text-xs sm:text-sm hover:bg-[#c9933a]/10"
                           >
                             Preview
                           </button>
                           <button 
                             onClick={() => downloadReportPDF(report)} 
-                            className="flex-1 px-3 py-1.5 bg-[#0f1923] text-white rounded-lg text-sm hover:bg-[#1a2d3f]"
+                            className="flex-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-[#0f1923] text-white rounded-lg text-xs sm:text-sm hover:bg-[#1a2d3f]"
                           >
-                            <ArrowDownTrayIcon className="w-4 h-4 inline mr-1" />
+                            <ArrowDownTrayIcon className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1" />
                             PDF
                           </button>
                         </div>
@@ -1103,72 +1096,72 @@ export default function LearnerDashboard() {
                   );
                 })
               ) : (
-                <div className="col-span-2 text-center py-12 bg-white rounded-xl border border-[#d4cfc6]">
-                  <DocumentTextIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No reports available yet</p>
-                  <p className="text-xs text-gray-400 mt-2">Reports will appear here once your teacher generates them</p>
+                <div className="col-span-2 text-center py-8 sm:py-12 bg-white rounded-xl border border-[#d4cfc6]">
+                  <DocumentTextIcon className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 mx-auto mb-2 sm:mb-3" />
+                  <p className="text-sm sm:text-base text-gray-500">No reports available yet</p>
+                  <p className="text-xs text-gray-400 mt-1 sm:mt-2">Reports will appear here once your teacher generates them</p>
                 </div>
               )}
             </div>
           </>
         )}
 
-        {/* Attendance Tab */}
+        {/* Attendance Tab - Mobile Responsive */}
         {activeTab === 'attendance' && (
           <>
-            <div className="mb-6">
-              <h1 className="font-serif text-2xl lg:text-3xl font-bold text-[#0f1923] mb-1">Attendance Records</h1>
-              <p className="text-sm text-gray-500">Your daily attendance history</p>
+            <div className="mb-4 sm:mb-6">
+              <h1 className="font-serif text-xl sm:text-2xl lg:text-3xl font-bold text-[#0f1923] mb-1">Attendance Records</h1>
+              <p className="text-xs sm:text-sm text-gray-500">Your daily attendance history</p>
             </div>
             
             <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
-              <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-[#d4cfc6] flex justify-between items-center flex-wrap gap-2">
-                <h2 className="font-semibold text-[#0f1923] text-sm lg:text-base">📅 Attendance Log</h2>
+              <div className="px-3 sm:px-4 lg:px-6 py-2 sm:py-3 lg:py-4 border-b border-[#d4cfc6] flex justify-between items-center flex-wrap gap-2">
+                <h2 className="font-semibold text-[#0f1923] text-xs sm:text-sm lg:text-base">📅 Attendance Log</h2>
                 {attendanceRecords.length > 0 && (
                   <button 
                     onClick={downloadAttendancePDF} 
-                    className="px-3 py-1.5 text-sm bg-[#c9933a] text-white rounded-lg hover:bg-[#b5822e] transition"
+                    className="px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm bg-[#c9933a] text-white rounded-lg hover:bg-[#b5822e] transition"
                   >
-                    <ArrowDownTrayIcon className="w-4 h-4 inline mr-1" />
-                    Download PDF
+                    <ArrowDownTrayIcon className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1" />
+                    PDF
                   </button>
                 )}
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[500px]">
+                <table className="w-full min-w-[400px] sm:min-w-[500px]">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Day</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[10px] sm:text-xs font-semibold text-gray-500 uppercase">Date</th>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[10px] sm:text-xs font-semibold text-gray-500 uppercase">Day</th>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[10px] sm:text-xs font-semibold text-gray-500 uppercase">Status</th>
                     </tr>
-                    </thead>
+                  </thead>
                   <tbody className="divide-y divide-gray-200">
                     {attendanceRecords && attendanceRecords.length > 0 ? (
                       [...attendanceRecords]
                         .sort((a, b) => new Date(b.date) - new Date(a.date))
                         .map(record => (
                           <tr key={record.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 text-sm">
+                            <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-[10px] sm:text-sm">
                               {new Date(record.date).toLocaleDateString('en', { year: 'numeric', month: 'short', day: 'numeric' })}
                             </td>
-                            <td className="px-4 py-3 text-sm">
+                            <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-[10px] sm:text-sm">
                               {new Date(record.date).toLocaleDateString('en', { weekday: 'long' })}
                             </td>
-                            <td className="px-4 py-3">
-                              <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                            <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
+                              <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-semibold ${
                                 record.status === 'present' ? 'bg-green-100 text-green-700' : 
                                 record.status === 'late' ? 'bg-yellow-100 text-yellow-700' : 
                                 'bg-red-100 text-red-700'
                               }`}>
-                                {record.status === 'present' ? 'Present' : record.status === 'late' ? 'Late' : 'Absent'}
+                                {record.status === 'present' ? 'P' : record.status === 'late' ? 'L' : 'A'}
                               </span>
                             </td>
                           </tr>
                         ))
                     ) : (
                       <tr>
-                        <td colSpan="3" className="px-4 py-8 text-center text-gray-500 text-sm">
+                        <td colSpan="3" className="px-3 sm:px-4 py-6 sm:py-8 text-center text-gray-500 text-xs sm:text-sm">
                           No attendance records yet
                         </td>
                       </tr>
@@ -1181,15 +1174,15 @@ export default function LearnerDashboard() {
         )}
       </main>
 
-      {/* View Report Modal */}
+      {/* View Report Modal - Mobile Responsive */}
       {showReportModal && selectedReport && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowReportModal(false)}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4" onClick={() => setShowReportModal(false)}>
           <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div dangerouslySetInnerHTML={{ __html: getReportHTML(selectedReport) }} />
-            <div className="mt-4 flex justify-end">
+            <div className="mt-3 sm:mt-4 flex justify-end">
               <button 
                 onClick={() => setShowReportModal(false)} 
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-sm"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-xs sm:text-sm"
               >
                 Close
               </button>

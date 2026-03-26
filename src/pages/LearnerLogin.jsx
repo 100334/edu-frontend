@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
@@ -11,10 +11,24 @@ const AZURE = '#00B0FF';
 const LearnerLogin = ({ serverStatus }) => {
   const [name, setName] = useState('');
   const [regNumber, setRegNumber] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const { learnerLogin } = useAuth();
   const navigate = useNavigate();
+
+  // Load saved credentials on mount if remember me was checked
+  useEffect(() => {
+    const savedName = localStorage.getItem('rememberedLearnerName');
+    const savedRegNumber = localStorage.getItem('rememberedLearnerRegNumber');
+    const remember = localStorage.getItem('rememberLearner') === 'true';
+    
+    if (remember && savedName && savedRegNumber) {
+      setName(savedName);
+      setRegNumber(savedRegNumber);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleLogin = async () => {
     if (!name || !regNumber) {
@@ -32,6 +46,17 @@ const LearnerLogin = ({ serverStatus }) => {
       });
       
       if (result.success) {
+        // Handle remember me
+        if (rememberMe) {
+          localStorage.setItem('rememberedLearnerName', name);
+          localStorage.setItem('rememberedLearnerRegNumber', regNumber.toUpperCase());
+          localStorage.setItem('rememberLearner', 'true');
+        } else {
+          localStorage.removeItem('rememberedLearnerName');
+          localStorage.removeItem('rememberedLearnerRegNumber');
+          localStorage.removeItem('rememberLearner');
+        }
+        
         toast.success(`Welcome back, ${result.user.name}!`, {
           icon: '🎒',
           duration: 4000
@@ -53,32 +78,21 @@ const LearnerLogin = ({ serverStatus }) => {
   return (
     <div className="min-h-screen bg-white">
       <div className="min-h-screen flex">
-        <div className="flex-1 overflow-auto px-6 py-4">
+        <div className="flex-1 overflow-auto px-4 sm:px-6 py-4 sm:py-6">
           <div className="max-w-[400px] mx-auto">
-            {/* Back button to home */}
-            <button
-              onClick={() => navigate('/')}
-              className="mb-5 flex items-center text-[#1A237E] hover:text-[#00B0FF] transition-colors group"
-            >
-              <svg className="w-4 h-4 mr-1 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              <span className="text-sm">Back to Home</span>
-            </button>
-
             {/* Logo and Title */}
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-[90px] h-[90px] bg-gradient-to-br from-[#1A237E] to-[#00B0FF] rounded-2xl shadow-lg mb-2">
-                <AcademicCapIcon className="w-12 h-12 text-white" />
+            <div className="text-center mb-6 sm:mb-8">
+              <div className="inline-flex items-center justify-center w-[70px] h-[70px] sm:w-[90px] sm:h-[90px] bg-gradient-to-br from-[#1A237E] to-[#00B0FF] rounded-2xl shadow-lg mb-2">
+                <AcademicCapIcon className="w-10 h-10 sm:w-12 sm:h-12 text-white" />
               </div>
-              <h1 className="text-xl font-bold text-[#1A237E] mt-2">
+              <h1 className="text-lg sm:text-xl font-bold text-[#1A237E] mt-2">
                 STUDENT LOGIN
               </h1>
-              <div className="w-10 h-1 bg-[#00B0FF] mx-auto mt-2"></div>
+              <div className="w-8 sm:w-10 h-1 bg-[#00B0FF] mx-auto mt-2"></div>
             </div>
 
             {/* Login Form */}
-            <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} className="space-y-6">
+            <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} className="space-y-5 sm:space-y-6">
               {/* Name Field */}
               <div className="space-y-1">
                 <label className="text-[10px] font-extrabold text-blue-600 tracking-wider">
@@ -97,7 +111,7 @@ const LearnerLogin = ({ serverStatus }) => {
                     onChange={(e) => setName(e.target.value)}
                     disabled={loading}
                     onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-                    className="w-full pl-7 pr-4 py-3 bg-transparent border-b-2 text-[#1A237E] font-semibold text-base
+                    className="w-full pl-7 pr-4 py-2.5 sm:py-3 bg-transparent border-b-2 text-[#1A237E] font-semibold text-sm sm:text-base
                              placeholder-gray-400 focus:outline-none transition-colors
                              border-[#1A237E] focus:border-[#00B0FF]"
                   />
@@ -123,11 +137,35 @@ const LearnerLogin = ({ serverStatus }) => {
                     style={{ fontFamily: 'monospace' }}
                     disabled={loading}
                     onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
-                    className="w-full pl-7 pr-4 py-3 bg-transparent border-b-2 text-[#1A237E] font-semibold text-base
+                    className="w-full pl-7 pr-4 py-2.5 sm:py-3 bg-transparent border-b-2 text-[#1A237E] font-semibold text-sm sm:text-base
                              placeholder-gray-400 focus:outline-none transition-colors uppercase
                              border-[#1A237E] focus:border-[#00B0FF]"
                   />
                 </div>
+              </div>
+
+              {/* Remember Me Checkbox */}
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="w-4 h-4 sm:w-5 sm:h-5 text-[#1A237E] border-gray-300 rounded focus:ring-[#00B0FF] cursor-pointer"
+                  />
+                  <span className="text-xs sm:text-sm text-gray-600 group-hover:text-[#1A237E] transition-colors">
+                    Remember me
+                  </span>
+                </label>
+                
+                {/* Optional: Forgot Password Link (if you have that feature) */}
+                <button
+                  type="button"
+                  onClick={() => toast.info('Contact your teacher for registration number assistance', { duration: 4000 })}
+                  className="text-xs sm:text-sm text-[#00B0FF] hover:text-[#1A237E] transition-colors"
+                >
+                  Forgot registration number?
+                </button>
               </div>
 
               {/* Login Button */}
@@ -139,12 +177,12 @@ const LearnerLogin = ({ serverStatus }) => {
                 <button
                   type="submit"
                   disabled={loading || serverStatus?.status === 'offline'}
-                  className="w-full h-[55px] bg-[#1A237E] text-white font-bold tracking-wider text-base
+                  className="w-full h-[48px] sm:h-[55px] bg-[#1A237E] text-white font-bold tracking-wider text-sm sm:text-base
                            hover:bg-[#00B0FF] transition-colors duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   style={{ borderRadius: '6px' }}
                   onClick={handleLogin}
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                   </svg>
                   SIGN IN AS STUDENT
@@ -155,8 +193,8 @@ const LearnerLogin = ({ serverStatus }) => {
             {error && (
               <div style={{ 
                 color: '#c0392b', 
-                fontSize: '13px', 
-                marginTop: '10px', 
+                fontSize: '12px', 
+                marginTop: '12px', 
                 textAlign: 'center' 
               }}>
                 {error}
@@ -169,7 +207,7 @@ const LearnerLogin = ({ serverStatus }) => {
                 padding: '10px', 
                 background: '#f8d7da', 
                 borderRadius: '8px',
-                fontSize: '12px',
+                fontSize: '11px',
                 color: '#721c24',
                 textAlign: 'center'
               }}>
@@ -177,17 +215,17 @@ const LearnerLogin = ({ serverStatus }) => {
               </div>
             )}
 
-            {/* Teacher Login Forward Link - With Enhanced Arrow */}
-            <div className="mt-8 text-center">
-              <div className="inline-flex items-center justify-center gap-3 px-6 py-3 bg-gray-50 rounded-xl border border-gray-200 hover:border-[#00B0FF] transition-all duration-300">
-                <span className="text-sm text-gray-600">Are you a teacher?</span>
+            {/* Teacher Login Forward Link */}
+            <div className="mt-6 sm:mt-8 text-center">
+              <div className="inline-flex items-center justify-center gap-2 sm:gap-3 px-4 sm:px-6 py-2 sm:py-3 bg-gray-50 rounded-xl border border-gray-200 hover:border-[#00B0FF] transition-all duration-300">
+                <span className="text-xs sm:text-sm text-gray-600">Are you a teacher?</span>
                 <button
                   onClick={() => navigate('/teacher/login')}
-                  className="flex items-center gap-2 text-[#00B0FF] font-semibold hover:gap-3 transition-all duration-300 group"
+                  className="flex items-center gap-1 sm:gap-2 text-[#00B0FF] font-semibold hover:gap-2 sm:hover:gap-3 transition-all duration-300 group"
                 >
-                  <span>Sign in here</span>
+                  <span className="text-xs sm:text-sm">Sign in here</span>
                   <svg 
-                    className="w-5 h-5 transform group-hover:translate-x-1 transition-transform duration-300" 
+                    className="w-4 h-4 sm:w-5 sm:h-5 transform group-hover:translate-x-1 transition-transform duration-300" 
                     fill="none" 
                     stroke="currentColor" 
                     viewBox="0 0 24 24"
@@ -199,14 +237,16 @@ const LearnerLogin = ({ serverStatus }) => {
             </div>
 
             {/* Security Note */}
-            <div className="mt-8 pt-4 text-center border-t border-gray-100">
-              <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="mt-6 sm:mt-8 pt-4 text-center border-t border-gray-100">
+              <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-2 text-[10px] sm:text-xs text-gray-400">
+                <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6-4h12a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6a2 2 0 012-2zm10-4V7a4 4 0 00-8 0v4h8z" />
                 </svg>
                 <span>Secure student portal</span>
-                <span>•</span>
+                <span className="hidden xs:inline">•</span>
                 <span>Personalized learning</span>
+                <span className="hidden xs:inline">•</span>
+                <span>Progress tracking</span>
               </div>
             </div>
           </div>
