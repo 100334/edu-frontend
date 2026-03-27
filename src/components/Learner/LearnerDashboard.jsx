@@ -59,7 +59,20 @@ const getGradeFromScore = (score) => {
   }
 };
 
-// Stat Card Component - Mobile responsive
+// Calculate average only from subjects with valid scores
+const calculateAverage = (subjects) => {
+  if (!subjects || subjects.length === 0) return 0;
+  
+  // Filter out subjects with null/undefined/empty scores
+  const validSubjects = subjects.filter(s => s && s.score !== undefined && s.score !== null && s.score !== '');
+  
+  if (validSubjects.length === 0) return 0;
+  
+  const sum = validSubjects.reduce((acc, subj) => acc + (subj.score || 0), 0);
+  return Math.round(sum / validSubjects.length);
+};
+
+// Stat Card Component
 const StatCard = ({ emoji, value, label }) => (
   <div className="bg-white rounded-xl border border-[#d4cfc6] p-3 sm:p-4 lg:p-6 shadow-sm hover:shadow-md transition">
     <div className="text-xl sm:text-2xl lg:text-3xl mb-1 sm:mb-2 lg:mb-3">{emoji}</div>
@@ -68,7 +81,7 @@ const StatCard = ({ emoji, value, label }) => (
   </div>
 );
 
-// Navigation Item Component - Mobile responsive
+// Navigation Item Component
 const NavItem = ({ icon, label, isActive, onClick }) => (
   <button
     onClick={onClick}
@@ -108,6 +121,13 @@ export default function LearnerDashboard() {
   const [latestReport, setLatestReport] = useState(null);
   const [recentActivity, setRecentActivity] = useState([]);
   
+  // Filter states
+  const [selectedYear, setSelectedYear] = useState(null);
+  const [selectedAssessment, setSelectedAssessment] = useState(null);
+  const [availableYears, setAvailableYears] = useState([]);
+  const [availableAssessments, setAvailableAssessments] = useState([]);
+  const [filteredReports, setFilteredReports] = useState([]);
+  
   // Modal state
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
@@ -117,11 +137,70 @@ export default function LearnerDashboard() {
     sessionStorage.setItem('learnerActiveTab', activeTab);
   }, [activeTab]);
 
-  const calculateAverage = useCallback((subjects) => {
-    if (!subjects || subjects.length === 0) return 0;
-    const sum = subjects.reduce((acc, subj) => acc + (subj.score || 0), 0);
-    return Math.round(sum / subjects.length);
-  }, []);
+  // Extract available years and assessments from reports
+  const extractFilters = useCallback((reportsData) => {
+    const years = new Set();
+    const assessments = new Set();
+    
+    reportsData.forEach(report => {
+      if (report.academic_year) {
+        years.add(report.academic_year);
+      } else if (report.created_at) {
+        years.add(new Date(report.created_at).getFullYear());
+      }
+      
+      if (report.term) {
+        assessments.add(report.term);
+      }
+    });
+    
+    const sortedYears = Array.from(years).sort((a, b) => b - a);
+    const sortedAssessments = Array.from(assessments).sort();
+    
+    setAvailableYears(sortedYears);
+    setAvailableAssessments(sortedAssessments);
+    
+    // Set default selections
+    if (sortedYears.length > 0 && !selectedYear) {
+      setSelectedYear(sortedYears[0]);
+    }
+    if (sortedAssessments.length > 0 && !selectedAssessment) {
+      setSelectedAssessment(sortedAssessments[0]);
+    }
+  }, [selectedYear, selectedAssessment]);
+
+  // Filter reports based on selected year and assessment
+  useEffect(() => {
+    if (reports.length > 0) {
+      let filtered = [...reports];
+      
+      if (selectedYear) {
+        filtered = filtered.filter(report => {
+          const reportYear = report.academic_year || (report.created_at ? new Date(report.created_at).getFullYear() : null);
+          return reportYear === selectedYear;
+        });
+      }
+      
+      if (selectedAssessment) {
+        filtered = filtered.filter(report => report.term === selectedAssessment);
+      }
+      
+      setFilteredReports(filtered);
+      
+      // Update latest report based on filters
+      if (filtered.length > 0) {
+        const sorted = [...filtered].sort((a, b) => {
+          if (a.created_at && b.created_at) {
+            return new Date(b.created_at) - new Date(a.created_at);
+          }
+          return 0;
+        });
+        setLatestReport(sorted[0]);
+      } else {
+        setLatestReport(null);
+      }
+    }
+  }, [reports, selectedYear, selectedAssessment]);
 
   const loadDashboardData = useCallback(async () => {
     if (!user?.id) {
@@ -182,13 +261,15 @@ export default function LearnerDashboard() {
         attendanceData = { stats: {}, records: [] };
       }
 
-      // Process reports
+      // Process reports - filter out invalid subjects
       const processedReports = reportsData.map(report => ({
         ...report,
-        subjects: report.subjects || report.subjects_data || report.subject_scores || []
+        academic_year: report.academic_year || (report.created_at ? new Date(report.created_at).getFullYear() : new Date().getFullYear()),
+        subjects: (report.subjects || report.subjects_data || report.subject_scores || []).filter(s => s && (s.score !== undefined || s.score !== null))
       }));
       
       setReports(processedReports);
+      extractFilters(processedReports);
 
       // Process attendance records
       const processedAttendance = (attendanceData.records || []).map(record => ({
@@ -208,21 +289,22 @@ export default function LearnerDashboard() {
                             attendanceData.stats?.percentage ? `${attendanceData.stats.percentage}%` : '—';
       
       let averageScore = '—';
-      let latest = null;
       
       if (processedReports.length > 0) {
-        const sortedReports = [...processedReports].sort((a, b) => {
-          if (a.created_at && b.created_at) {
-            return new Date(b.created_at) - new Date(a.created_at);
+        // Collect all valid subjects across all reports
+        let allValidSubjects = [];
+        processedReports.forEach(report => {
+          if (report.subjects && report.subjects.length > 0) {
+            const validSubjects = report.subjects.filter(s => s && s.score !== undefined && s.score !== null);
+            allValidSubjects = [...allValidSubjects, ...validSubjects];
           }
-          const termOrder = { 'Term 1': 1, 'Term 2': 2, 'Term 3': 3 };
-          const aTerm = termOrder[a.term] || 0;
-          const bTerm = termOrder[b.term] || 0;
-          return bTerm - aTerm;
         });
-        latest = sortedReports[0];
-        const avg = calculateAverage(latest.subjects);
-        averageScore = `${avg}%`;
+        
+        if (allValidSubjects.length > 0) {
+          const totalScore = allValidSubjects.reduce((sum, s) => sum + (s.score || 0), 0);
+          const avg = Math.round(totalScore / allValidSubjects.length);
+          averageScore = `${avg}%`;
+        }
       }
 
       setStats({
@@ -235,19 +317,22 @@ export default function LearnerDashboard() {
         absentCount: attendanceData.stats?.absent || 0
       });
 
-      if (latest) {
-        setLatestReport(latest);
-      }
-
       // Build recent activity
       const activity = [];
       
-      if (processedReports.length > 0 && latest) {
+      if (processedReports.length > 0) {
+        const latest = [...processedReports].sort((a, b) => {
+          if (a.created_at && b.created_at) {
+            return new Date(b.created_at) - new Date(a.created_at);
+          }
+          return 0;
+        })[0];
+        
         activity.push({
           id: 'latest-report',
           type: 'report',
           title: 'New Report Available',
-          description: `Your ${latest.term || 'latest'} report is ready`,
+          description: `Your ${latest.term || 'latest'} report (${latest.academic_year}) is ready`,
           date: latest.created_at || new Date().toISOString(),
           icon: '📋',
           color: 'text-[#c9933a]'
@@ -286,7 +371,7 @@ export default function LearnerDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [user, calculateAverage]);
+  }, [user, extractFilters]);
 
   useEffect(() => {
     if (user?.id) {
@@ -336,6 +421,9 @@ export default function LearnerDashboard() {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       
+      // Filter out subjects with no scores for the PDF
+      const validSubjects = (report.subjects || []).filter(s => s && s.score !== undefined && s.score !== null);
+      
       // Header
       doc.setFillColor(255, 255, 255);
       doc.rect(0, 0, pageWidth, 50, 'F');
@@ -368,18 +456,19 @@ export default function LearnerDashboard() {
       doc.text(`Name: ${user?.name || user?.full_name || 'N/A'}`, 25, 102);
       doc.text(`Registration: ${user?.reg_number || user?.registration_number || 'N/A'}`, 25, 109);
       doc.text(`Form: ${report?.form || user?.form || 'N/A'}`, 25, 116);
-      doc.text(`Term: ${report?.term || 'N/A'}`, pageWidth - 80, 102);
-      doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 80, 109);
+      doc.text(`Assessment: ${report?.term || 'N/A'}`, pageWidth - 80, 102);
+      doc.text(`Year: ${report?.academic_year || new Date().getFullYear()}`, pageWidth - 80, 109);
+      doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 80, 116);
 
-      // Subjects table
-      if (report.subjects && report.subjects.length > 0) {
+      // Subjects table - only show subjects with scores
+      if (validSubjects && validSubjects.length > 0) {
         const tableColumn = ["Subject", "Score", "Grade", "Remarks"];
-        const tableRows = report.subjects.map((subject) => {
+        const tableRows = validSubjects.map((subject) => {
           const grade = getGradeFromScore(subject.score);
           return [subject.name, subject.score.toString(), grade.letter, grade.description];
         });
 
-        const avgScore = calculateAverage(report.subjects);
+        const avgScore = calculateAverage(validSubjects);
         const avgGrade = getGradeFromScore(avgScore);
         
         tableRows.push([
@@ -435,7 +524,7 @@ export default function LearnerDashboard() {
       doc.setTextColor(156, 163, 175);
       doc.text('This is a computer-generated document.', pageWidth / 2, footerY, { align: 'center' });
 
-      const fileName = `${user?.name?.replace(/\s+/g, '_') || 'student'}_${report?.term?.replace(/\s+/g, '_') || 'report'}.pdf`;
+      const fileName = `${user?.name?.replace(/\s+/g, '_') || 'student'}_${report?.term?.replace(/\s+/g, '_') || 'report'}_${report?.academic_year || ''}.pdf`;
       doc.save(fileName);
       
       toast.success('Report downloaded successfully!');
@@ -538,7 +627,9 @@ export default function LearnerDashboard() {
   const getReportHTML = (report) => {
     if (!report || !report.subjects) return '<div>No report data</div>';
     
-    const avg = calculateAverage(report.subjects);
+    // Filter out subjects with no scores
+    const validSubjects = (report.subjects || []).filter(s => s && s.score !== undefined && s.score !== null);
+    const avg = calculateAverage(validSubjects);
     const avgGrade = getGradeFromScore(avg);
     
     return `
@@ -546,7 +637,7 @@ export default function LearnerDashboard() {
         <div style="background: #0f1923; color: white; padding: 20px 24px;">
           <div style="font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: #c9933a; margin-bottom: 4px;">PROGRESS SECONDARY SCHOOL</div>
           <div style="font-size: 12px; opacity: 0.6;">Scholastica, Excellentia et Disciplina</div>
-          <div style="font-size: 11px; opacity: 0.6; margin-top: 4px;">${report.term || 'Report'} · ${report.form || user?.form || 'N/A'}</div>
+          <div style="font-size: 11px; opacity: 0.6; margin-top: 4px;">${report.term || 'Report'} · ${report.academic_year || new Date().getFullYear()} · ${report.form || user?.form || 'N/A'}</div>
           <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
             <div style="font-weight: 600;">${user?.name || user?.full_name || 'Unknown'}</div>
             <div style="font-family: monospace; font-size: 11px; opacity: 0.6; margin-top: 2px;">${user?.reg_number || user?.registration_number || 'N/A'}</div>
@@ -566,7 +657,7 @@ export default function LearnerDashboard() {
               <div style="text-align: right;">Score</div>
               <div style="text-align: right;">Grade</div>
             </div>
-            ${report.subjects.map(s => {
+            ${validSubjects.map(s => {
               const grade = getGradeFromScore(s.score);
               return `
                 <div style="display: grid; grid-template-columns: 1fr 80px 50px; gap: 8px; align-items: center; padding: 10px 0; border-bottom: 1px solid #ede9e1;">
@@ -621,7 +712,7 @@ export default function LearnerDashboard() {
 
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
-      {/* Header Section - Mobile Responsive */}
+      {/* Header Section */}
       <div 
         className="w-full sticky top-0 z-30"
         style={{
@@ -669,7 +760,7 @@ export default function LearnerDashboard() {
         </div>
       </div>
 
-      {/* Navigation Bar - Mobile Responsive with horizontal scroll */}
+      {/* Navigation Bar */}
       <div className="sticky top-[72px] sm:top-[88px] lg:top-24 z-20 bg-white border-b border-gray-200 shadow-sm overflow-x-auto">
         <div className="container mx-auto px-3 sm:px-4 lg:px-8">
           <div className="flex gap-0.5 sm:gap-1 py-2 sm:py-3 min-w-max">
@@ -703,7 +794,6 @@ export default function LearnerDashboard() {
               <p className="text-xs sm:text-sm text-gray-500">Track your academic progress and performance</p>
             </div>
 
-            {/* Stats Grid - Responsive */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 lg:gap-6 mb-4 sm:mb-6 lg:mb-8">
               <StatCard emoji="📋" value={stats.reportsCount} label="Reports" />
               <StatCard emoji="📅" value={stats.attendanceRate} label="Attendance" />
@@ -719,12 +809,12 @@ export default function LearnerDashboard() {
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <h2 className="font-serif text-base sm:text-lg font-bold text-[#0f1923] flex items-center gap-2">
                         <span className="text-[#c9933a] text-lg sm:text-xl">📋</span>
-                        Latest Report
+                        Current Report
                       </h2>
                       {latestReport && (
                         <div className="flex items-center gap-2 sm:gap-3">
                           <span className="px-2 sm:px-3 py-0.5 sm:py-1 bg-[#c9933a]/10 text-[#c9933a] rounded-full text-[10px] sm:text-xs font-medium border border-[#c9933a]/30">
-                            {latestReport.term || 'Current'}
+                            {latestReport.term || 'Current'} {latestReport.academic_year ? `(${latestReport.academic_year})` : ''}
                           </span>
                           <button
                             onClick={() => downloadReportPDF(latestReport)}
@@ -740,7 +830,6 @@ export default function LearnerDashboard() {
                   <div className="p-3 sm:p-4 lg:p-6">
                     {latestReport && latestReport.subjects && latestReport.subjects.length > 0 ? (
                       <div className="space-y-3 sm:space-y-4">
-                        {/* Performance Summary Cards - Responsive */}
                         <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:gap-4 mb-3 sm:mb-4">
                           <div className="bg-[#f7f4ef] p-2 sm:p-3 lg:p-4 rounded-xl border border-[#d4cfc6]">
                             <p className="text-[8px] sm:text-[10px] lg:text-xs text-gray-500 mb-0.5 sm:mb-1">Subjects</p>
@@ -759,12 +848,11 @@ export default function LearnerDashboard() {
                             </div>
                           </div>
                           <div className="bg-[#f7f4ef] p-2 sm:p-3 lg:p-4 rounded-xl border border-[#d4cfc6]">
-                            <p className="text-[8px] sm:text-[10px] lg:text-xs text-gray-500 mb-0.5 sm:mb-1">Term</p>
-                            <p className="text-xs sm:text-sm lg:text-xl font-bold text-[#0f1923]">{latestReport.term || 'Current'}</p>
+                            <p className="text-[8px] sm:text-[10px] lg:text-xs text-gray-500 mb-0.5 sm:mb-1">Year</p>
+                            <p className="text-xs sm:text-sm lg:text-xl font-bold text-[#0f1923]">{latestReport.academic_year || new Date().getFullYear()}</p>
                           </div>
                         </div>
 
-                        {/* Subject Grades - Responsive */}
                         <div className="bg-[#f7f4ef] rounded-xl p-3 sm:p-4 border border-[#d4cfc6] overflow-x-auto">
                           <h3 className="text-xs sm:text-sm font-medium text-[#0f1923] mb-2 sm:mb-3 flex items-center gap-2">
                             <span className="w-1 h-3 sm:h-4 bg-[#c9933a] rounded-full" />
@@ -804,7 +892,6 @@ export default function LearnerDashboard() {
                           </div>
                         </div>
 
-                        {/* Teacher's Comment */}
                         {latestReport.comment && (
                           <div className="bg-[#f7f4ef] p-3 sm:p-4 rounded-xl border-l-4 border-[#c9933a]">
                             <div className="text-[#c9933a] text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-1 sm:mb-2">
@@ -814,7 +901,6 @@ export default function LearnerDashboard() {
                           </div>
                         )}
                         
-                        {/* View Full Report Button */}
                         <button
                           onClick={() => setActiveTab('reports')}
                           className="w-full mt-3 sm:mt-4 py-2 sm:py-3 text-xs sm:text-sm text-[#c9933a] font-medium transition-all 
@@ -1029,18 +1115,98 @@ export default function LearnerDashboard() {
           </>
         )}
 
-        {/* Reports Tab - Mobile Responsive */}
+        {/* Reports Tab - With Year and Assessment Dropdowns */}
         {activeTab === 'reports' && (
           <>
             <div className="mb-4 sm:mb-6">
-              <h1 className="font-serif text-xl sm:text-2xl lg:text-3xl font-bold text-[#0f1923] mb-1">Report Cards</h1>
-              <p className="text-xs sm:text-sm text-gray-500">Your academic performance overview</p>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-2">
+                <div>
+                  <h1 className="font-serif text-xl sm:text-2xl lg:text-3xl font-bold text-[#0f1923] mb-1">Report Cards</h1>
+                  <p className="text-xs sm:text-sm text-gray-500">Your academic performance overview</p>
+                </div>
+                
+                {/* Filter Section */}
+                <div className="flex flex-wrap gap-3">
+                  {availableYears.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-semibold text-gray-500 uppercase">Year:</label>
+                      <select
+                        value={selectedYear || ''}
+                        onChange={(e) => setSelectedYear(e.target.value ? parseInt(e.target.value) : null)}
+                        className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#c9933a] focus:border-transparent"
+                      >
+                        <option value="">All Years</option>
+                        {availableYears.map(year => (
+                          <option key={year} value={year}>{year}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  
+                  {availableAssessments.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-semibold text-gray-500 uppercase">Assessment:</label>
+                      <select
+                        value={selectedAssessment || ''}
+                        onChange={(e) => setSelectedAssessment(e.target.value || null)}
+                        className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#c9933a] focus:border-transparent"
+                      >
+                        <option value="">All Assessments</option>
+                        {availableAssessments.map(assessment => (
+                          <option key={assessment} value={assessment}>{assessment}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+              </div>
+              
+              {/* Selected Filter Indicator */}
+              {(selectedYear || selectedAssessment) && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span className="text-xs text-gray-500">Active filters:</span>
+                  {selectedYear && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-[#c9933a]/10 text-[#c9933a]">
+                      Year: {selectedYear}
+                      <button
+                        onClick={() => setSelectedYear(null)}
+                        className="ml-1 hover:text-[#b5822e]"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  )}
+                  {selectedAssessment && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs bg-[#c9933a]/10 text-[#c9933a]">
+                      {selectedAssessment}
+                      <button
+                        onClick={() => setSelectedAssessment(null)}
+                        className="ml-1 hover:text-[#b5822e]"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  )}
+                  {(selectedYear || selectedAssessment) && (
+                    <button
+                      onClick={() => {
+                        setSelectedYear(null);
+                        setSelectedAssessment(null);
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-800"
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
-              {reports && reports.length > 0 ? (
-                reports.map(report => {
-                  const avg = calculateAverage(report.subjects);
+              {filteredReports && filteredReports.length > 0 ? (
+                filteredReports.map(report => {
+                  const validSubjects = (report.subjects || []).filter(s => s && s.score !== undefined && s.score !== null);
+                  const avg = calculateAverage(validSubjects);
                   const grade = getGradeFromScore(avg);
                   return (
                     <div key={report.id} className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden hover:shadow-md transition">
@@ -1049,6 +1215,9 @@ export default function LearnerDashboard() {
                           <span className="font-bold text-[#0f1923] text-sm sm:text-base">{report.term || 'Report'}</span>
                           <span className="ml-2 px-1.5 sm:px-2 py-0.5 bg-[#c9933a]/10 text-[#c9933a] text-[10px] sm:text-xs rounded-full">
                             {report.form || user?.form || 'N/A'}
+                          </span>
+                          <span className="ml-2 px-1.5 sm:px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] sm:text-xs rounded-full">
+                            {report.academic_year || new Date().getFullYear()}
                           </span>
                         </div>
                         <div className="text-right">
@@ -1059,7 +1228,7 @@ export default function LearnerDashboard() {
                       </div>
                       <div className="p-3 sm:p-4">
                         <div className="space-y-1.5 sm:space-y-2 max-h-40 sm:max-h-48 overflow-y-auto">
-                          {report.subjects && report.subjects.map((s, idx) => {
+                          {validSubjects.map((s, idx) => {
                             const g = getGradeFromScore(s.score);
                             return (
                               <div key={idx} className="flex justify-between items-center text-xs sm:text-sm">
@@ -1098,7 +1267,22 @@ export default function LearnerDashboard() {
               ) : (
                 <div className="col-span-2 text-center py-8 sm:py-12 bg-white rounded-xl border border-[#d4cfc6]">
                   <DocumentTextIcon className="w-10 h-10 sm:w-12 sm:h-12 text-gray-300 mx-auto mb-2 sm:mb-3" />
-                  <p className="text-sm sm:text-base text-gray-500">No reports available yet</p>
+                  <p className="text-sm sm:text-base text-gray-500">
+                    {selectedYear || selectedAssessment 
+                      ? `No reports match your filters` 
+                      : 'No reports available yet'}
+                  </p>
+                  {(selectedYear || selectedAssessment) && (
+                    <button
+                      onClick={() => {
+                        setSelectedYear(null);
+                        setSelectedAssessment(null);
+                      }}
+                      className="mt-3 text-sm text-[#c9933a] hover:underline"
+                    >
+                      Clear filters
+                    </button>
+                  )}
                   <p className="text-xs text-gray-400 mt-1 sm:mt-2">Reports will appear here once your teacher generates them</p>
                 </div>
               )}
@@ -1106,7 +1290,7 @@ export default function LearnerDashboard() {
           </>
         )}
 
-        {/* Attendance Tab - Mobile Responsive */}
+        {/* Attendance Tab */}
         {activeTab === 'attendance' && (
           <>
             <div className="mb-4 sm:mb-6">
@@ -1134,8 +1318,8 @@ export default function LearnerDashboard() {
                       <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[10px] sm:text-xs font-semibold text-gray-500 uppercase">Date</th>
                       <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[10px] sm:text-xs font-semibold text-gray-500 uppercase">Day</th>
                       <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[10px] sm:text-xs font-semibold text-gray-500 uppercase">Status</th>
-                    </tr>
-                  </thead>
+                     </tr>
+                     </thead>
                   <tbody className="divide-y divide-gray-200">
                     {attendanceRecords && attendanceRecords.length > 0 ? (
                       [...attendanceRecords]
@@ -1144,10 +1328,10 @@ export default function LearnerDashboard() {
                           <tr key={record.id} className="hover:bg-gray-50">
                             <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-[10px] sm:text-sm">
                               {new Date(record.date).toLocaleDateString('en', { year: 'numeric', month: 'short', day: 'numeric' })}
-                            </td>
+                              </td>
                             <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-[10px] sm:text-sm">
                               {new Date(record.date).toLocaleDateString('en', { weekday: 'long' })}
-                            </td>
+                              </td>
                             <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
                               <span className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[8px] sm:text-[10px] font-semibold ${
                                 record.status === 'present' ? 'bg-green-100 text-green-700' : 
@@ -1156,8 +1340,8 @@ export default function LearnerDashboard() {
                               }`}>
                                 {record.status === 'present' ? 'P' : record.status === 'late' ? 'L' : 'A'}
                               </span>
-                            </td>
-                          </tr>
+                              </td>
+                            </tr>
                         ))
                     ) : (
                       <tr>
@@ -1174,7 +1358,7 @@ export default function LearnerDashboard() {
         )}
       </main>
 
-      {/* View Report Modal - Mobile Responsive */}
+      {/* View Report Modal */}
       {showReportModal && selectedReport && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-4" onClick={() => setShowReportModal(false)}>
           <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>

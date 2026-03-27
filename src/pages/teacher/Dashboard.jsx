@@ -238,23 +238,321 @@ export default function TeacherDashboard() {
   };
 
   // Remove learner from teacher's class
-  const handleRemoveLearner = async (learnerId, learnerName) => {
-    if (!window.confirm(`Remove ${learnerName} from your class?`)) return;
-    
+
+  import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import api from '../../services/api';
+import toast from 'react-hot-toast';
+
+// Theme constants - Matching Admin Dashboard
+const NAVY_DARK = '#0A192F';
+const NAVY_PRIMARY = '#1A237E';
+const AZURE_ACCENT = '#00B0FF';
+const ICE_WHITE = '#F8FAFC';
+
+const SUBJECTS = ["Mathematics", "English", "Science", "Social Studies", "Chichewa", "Creative Arts"];
+
+// Grade classification function
+const getGradeFromScore = (score) => {
+  if (score >= 75) {
+    return {
+      letter: 'A',
+      description: 'Excellent',
+      color: '#1e7e4a',
+      bgColor: '#e8f5e9'
+    };
+  } else if (score >= 65) {
+    return {
+      letter: 'B',
+      description: 'Very good',
+      color: '#2a9090',
+      bgColor: '#e0f2f1'
+    };
+  } else if (score >= 55) {
+    return {
+      letter: 'C',
+      description: 'Good',
+      color: '#c9933a',
+      bgColor: '#fff3e0'
+    };
+  } else if (score >= 40) {
+    return {
+      letter: 'D',
+      description: 'Pass',
+      color: '#f39c12',
+      bgColor: '#ffe6cc'
+    };
+  } else {
+    return {
+      letter: 'F',
+      description: 'Need improvement',
+      color: '#c0392b',
+      bgColor: '#ffebee'
+    };
+  }
+};
+
+// Stat Card Component
+const StatCard = ({ emoji, value, label, subtitle }) => (
+  <div className="bg-white rounded-xl border border-[#d4cfc6] p-4 lg:p-6 shadow-sm hover:shadow-md transition">
+    <div className="text-2xl lg:text-3xl mb-2 lg:mb-3">{emoji}</div>
+    <div className="text-xl lg:text-3xl font-bold text-[#0f1923] mb-1">{value}</div>
+    <div className="text-[10px] lg:text-xs text-gray-500 font-semibold uppercase">{label}</div>
+    {subtitle && <div className="text-[10px] text-gray-400 mt-1">{subtitle}</div>}
+  </div>
+);
+
+// Navigation Item Component
+const NavItem = ({ icon, label, isActive, onClick }) => (
+  <button
+    onClick={onClick}
+    className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-all duration-200 ${
+      isActive
+        ? 'bg-[#1A237E] text-white shadow-md'
+        : 'text-gray-600 hover:bg-gray-100 hover:text-[#1A237E]'
+    }`}
+  >
+    <span className="text-lg">{icon}</span>
+    <span>{label}</span>
+  </button>
+);
+
+export default function TeacherDashboard() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState(() => {
+    const saved = sessionStorage.getItem('teacherActiveTab');
+    return saved || 'overview';
+  });
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Data states
+  const [myLearners, setMyLearners] = useState([]); // Learners assigned to this teacher
+  const [allLearners, setAllLearners] = useState([]); // All learners for selection
+  const [reports, setReports] = useState([]);
+  const [attendance, setAttendance] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [stats, setStats] = useState({
+    totalLearners: 0,
+    totalReports: 0,
+    attendanceRate: 0
+  });
+  
+  // Modal states
+  const [showAddLearnersModal, setShowAddLearnersModal] = useState(false);
+  const [selectedLearners, setSelectedLearners] = useState([]);
+  const [availableLearners, setAvailableLearners] = useState([]);
+  
+  // Report form states
+  const [selectedLearnerId, setSelectedLearnerId] = useState('');
+  const [selectedLearner, setSelectedLearner] = useState(null);
+  const [reportTerm, setReportTerm] = useState('Term 1 – 2024');
+  const [reportForm, setReportForm] = useState('Form 1');
+  const [subjectScores, setSubjectScores] = useState({});
+  const [teacherComment, setTeacherComment] = useState('');
+  
+  // Attendance form states
+  const [attDate, setAttDate] = useState(new Date().toISOString().split('T')[0]);
+  const [attLearnerId, setAttLearnerId] = useState('');
+  const [attStatus, setAttStatus] = useState('present');
+  
+  // Modal states
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [selectedReport, setSelectedReport] = useState(null);
+
+  // Save active tab to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem('teacherActiveTab', activeTab);
+  }, [activeTab]);
+
+  // Load data on mount
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  // Fetch subjects when learner is selected for report
+  useEffect(() => {
+    if (selectedLearner && selectedLearner.class_id) {
+      fetchSubjectsForClass(selectedLearner.class_id);
+    }
+  }, [selectedLearner]);
+
+  const loadDashboardData = async () => {
+    setLoading(true);
     try {
-      const response = await api.delete(`/api/teacher/remove-learner/${learnerId}`);
+      // Use TEACHER endpoints, not ADMIN endpoints
+      const [myLearnersRes, allLearnersRes, reportsRes, attendanceRes, statsRes] = await Promise.all([
+        api.get('/api/teacher/my-learners'),
+        api.get('/api/teacher/all-learners'),
+        api.get('/api/teacher/reports'),
+        api.get('/api/teacher/attendance'),
+        api.get('/api/teacher/dashboard/stats')
+      ]);
       
-      if (response.data.success) {
-        toast.success('Learner removed from your class');
-        loadDashboardData();
-      } else {
-        toast.error(response.data.message || 'Failed to remove learner');
-      }
+      const myLearnersData = myLearnersRes.data?.learners || myLearnersRes.data || [];
+      const allLearnersData = allLearnersRes.data?.learners || allLearnersRes.data || [];
+      const reportsData = reportsRes.data?.data || reportsRes.data || [];
+      const attendanceData = attendanceRes.data?.data?.records || attendanceRes.data || [];
+      const statsData = statsRes.data?.data || statsRes.data || {};
+      
+      console.log('📊 My Learners:', myLearnersData.length);
+      console.log('📊 All Learners:', allLearnersData.length);
+      console.log('📊 Reports:', reportsData.length);
+      console.log('📊 Attendance:', attendanceData.length);
+      console.log('📊 Stats:', statsData);
+      
+      setMyLearners(myLearnersData);
+      setAllLearners(allLearnersData);
+      setReports(reportsData);
+      setAttendance(attendanceData);
+      
+      setStats({
+        totalLearners: statsData.totalLearners || myLearnersData.length,
+        totalReports: statsData.totalReports || reportsData.length,
+        attendanceRate: statsData.attendanceRate || 0
+      });
+      
+      // Set available learners (those not already assigned)
+      const assignedIds = new Set(myLearnersData.map(l => l.id));
+      const available = allLearnersData.filter(l => !assignedIds.has(l.id));
+      setAvailableLearners(available);
+      
     } catch (error) {
-      console.error('Error removing learner:', error);
-      toast.error('Failed to remove learner');
+      console.error('Error loading dashboard:', error);
+      toast.error('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
     }
   };
+
+  // Fetch subjects for a specific class
+  const fetchSubjectsForClass = async (classId) => {
+    if (!classId) return;
+    
+    try {
+      const response = await api.get(`/api/teacher/subjects/${classId}`);
+      const subjectsData = response.data || [];
+      setSubjects(subjectsData);
+      
+      const newScores = {};
+      subjectsData.forEach(subject => {
+        newScores[subject.name] = '';
+      });
+      setSubjectScores(newScores);
+    } catch (error) {
+      console.error('Error fetching subjects:', error);
+      setSubjects([]);
+    }
+  };
+
+  // Add selected learners to teacher's class
+  const handleAddLearners = async () => {
+    if (selectedLearners.length === 0) {
+      toast.error('Please select at least one learner');
+      return;
+    }
+    
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    
+    try {
+      const response = await api.post('/api/teacher/add-learners', {
+        learnerIds: selectedLearners
+      });
+      
+      if (response.data.success) {
+        toast.success(response.data.message);
+        setShowAddLearnersModal(false);
+        setSelectedLearners([]);
+        loadDashboardData();
+      } else {
+        toast.error(response.data.message || 'Failed to add learners');
+      }
+    } catch (error) {
+      console.error('Error adding learners:', error);
+      toast.error(error.response?.data?.message || 'Failed to add learners');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Remove learner from teacher's class
+  const loadDashboardData = async () => {
+  setLoading(true);
+  try {
+    // First, get teacher's assigned class info
+    const teacherInfoRes = await api.get('/api/teacher/debug-setup');
+    console.log('Teacher info:', teacherInfoRes.data);
+    
+    let teacherClassId = null;
+    let teacherClassName = null;
+    
+    if (teacherInfoRes.data.success && teacherInfoRes.data.current_teacher) {
+      teacherClassId = teacherInfoRes.data.current_teacher.class_id;
+      teacherClassName = teacherInfoRes.data.assigned_class?.name;
+      setTeacherClass(teacherInfoRes.data.assigned_class);
+      console.log('👨‍🏫 Teacher assigned to class:', teacherClassName, 'ID:', teacherClassId);
+    } else {
+      console.log('⚠️ Teacher has no class assigned');
+      setTeacherClass(null);
+    }
+    
+    const [myLearnersRes, allLearnersRes, reportsRes, attendanceRes, statsRes] = await Promise.all([
+      api.get('/api/teacher/my-learners'),
+      api.get('/api/teacher/all-learners'),
+      api.get('/api/teacher/reports'),
+      api.get('/api/teacher/attendance'),
+      api.get('/api/teacher/dashboard/stats')
+    ]);
+    
+    const myLearnersData = myLearnersRes.data?.learners || myLearnersRes.data || [];
+    const allLearnersData = allLearnersRes.data?.learners || allLearnersRes.data || [];
+    const reportsData = reportsRes.data?.data || reportsRes.data || [];
+    const attendanceData = attendanceRes.data?.data?.records || attendanceRes.data || [];
+    const statsData = statsRes.data?.data || statsRes.data || {};
+    
+    console.log('📊 My Learners:', myLearnersData.length);
+    console.log('📊 All Learners:', allLearnersData.length);
+    
+    setMyLearners(myLearnersData);
+    setAllLearners(allLearnersData);
+    setReports(reportsData);
+    setAttendance(attendanceData);
+    
+    setStats({
+      totalLearners: statsData.totalLearners || myLearnersData.length,
+      totalReports: statsData.totalReports || reportsData.length,
+      attendanceRate: statsData.attendanceRate || 0
+    });
+    
+    // 🔧 FIXED: Filter available learners - ONLY learners in the teacher's class
+    const assignedIds = new Set(myLearnersData.map(l => l.id));
+    let available = [];
+    
+    if (teacherClassId) {
+      // Show learners that are in the teacher's class (even if they have a class_id)
+      // This includes learners that were previously removed
+      available = allLearnersData.filter(l => 
+        !assignedIds.has(l.id) && 
+        l.class_id === teacherClassId
+      );
+      console.log(`📚 Found ${available.length} learners in ${teacherClassName} available to add`);
+    } else {
+      console.log('⚠️ Teacher has no class assigned - no learners available');
+      available = [];
+    }
+    
+    setAvailableLearners(available);
+    
+  } catch (error) {
+    console.error('Error loading dashboard:', error);
+    toast.error('Failed to load dashboard data');
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Handle learner selection for report card
   const handleLearnerSelect = async (learnerId) => {
