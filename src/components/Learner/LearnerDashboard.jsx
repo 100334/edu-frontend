@@ -21,53 +21,82 @@ const NAVY_PRIMARY = '#1A237E';
 const AZURE_ACCENT = '#00B0FF';
 const ICE_WHITE = '#F8FAFC';
 
-// Grade classification function
-const getGradeFromScore = (score) => {
-  if (score >= 75) {
-    return {
-      letter: 'A',
-      description: 'Excellent',
-      color: '#1e7e4a',
-      bgColor: '#e8f5e9'
-    };
-  } else if (score >= 65) {
-    return {
-      letter: 'B',
-      description: 'Very good',
-      color: '#2a9090',
-      bgColor: '#e0f2f1'
-    };
-  } else if (score >= 55) {
-    return {
-      letter: 'C',
-      description: 'Good',
-      color: '#c9933a',
-      bgColor: '#fff3e0'
-    };
-  } else if (score >= 40) {
-    return {
-      letter: 'D',
-      description: 'Pass',
-      color: '#f39c12',
-      bgColor: '#ffe6cc'
-    };
+// Grade classification function with dual system for Forms 3-4
+const getGradeFromScore = (score, form = 'Form 1') => {
+  const isUpperForm = form === 'Form 3' || form === 'Form 4';
+  
+  if (isUpperForm) {
+    // Points system for Form 3 and 4
+    if (score >= 85) return { letter: 'A*', points: 1, description: 'Distinction', color: '#1e7e4a', bgColor: '#e8f5e9' };
+    else if (score >= 75) return { letter: 'A', points: 2, description: 'Distinction', color: '#2a6e2a', bgColor: '#e8f5e9' };
+    else if (score >= 65) return { letter: 'B', points: 3, description: 'Credit', color: '#2a9090', bgColor: '#e0f2f1' };
+    else if (score >= 56) return { letter: 'C', points: 4, description: 'Credit', color: '#c9933a', bgColor: '#fff3e0' };
+    else if (score >= 50) return { letter: 'D', points: 5, description: 'Credit', color: '#f39c12', bgColor: '#ffe6cc' };
+    else if (score >= 45) return { letter: 'E', points: 6, description: 'Pass', color: '#f39c12', bgColor: '#ffe6cc' };
+    else if (score >= 40) return { letter: 'F', points: 7, description: 'Pass', color: '#f39c12', bgColor: '#ffe6cc' };
+    else if (score >= 35) return { letter: 'G', points: 8, description: 'Pass', color: '#f39c12', bgColor: '#ffe6cc' };
+    else return { letter: 'U', points: 9, description: 'Fail', color: '#c0392b', bgColor: '#ffebee' };
   } else {
-    return {
-      letter: 'F',
-      description: 'Need improvement',
-      color: '#c0392b',
-      bgColor: '#ffebee'
-    };
+    // Standard grading for Form 1 and Form 2
+    if (score >= 75) return { letter: 'A', description: 'Excellent', points: null, color: '#1e7e4a', bgColor: '#e8f5e9' };
+    else if (score >= 65) return { letter: 'B', description: 'Very good', points: null, color: '#2a9090', bgColor: '#e0f2f1' };
+    else if (score >= 55) return { letter: 'C', description: 'Good', points: null, color: '#c9933a', bgColor: '#fff3e0' };
+    else if (score >= 40) return { letter: 'D', description: 'Pass', points: null, color: '#f39c12', bgColor: '#ffe6cc' };
+    else return { letter: 'F', description: 'Need improvement', points: null, color: '#c0392b', bgColor: '#ffebee' };
   }
 };
 
 // Calculate average only from subjects with valid scores
-const calculateAverage = (subjects) => {
+const calculateAverage = (subjects, form = 'Form 1') => {
   if (!subjects || subjects.length === 0) return 0;
   const validSubjects = subjects.filter(s => s && s.score !== undefined && s.score !== null && s.score !== '');
   if (validSubjects.length === 0) return 0;
   const sum = validSubjects.reduce((acc, subj) => acc + (subj.score || 0), 0);
   return Math.round(sum / validSubjects.length);
+};
+
+// Calculate total points for Form 3/4
+const calculateTotalPoints = (subjects, form) => {
+  if (!subjects || subjects.length === 0) return 0;
+  const isUpperForm = form === 'Form 3' || form === 'Form 4';
+  if (!isUpperForm) return null;
+  
+  const totalPoints = subjects.reduce((sum, subject) => {
+    const grade = getGradeFromScore(subject.score, form);
+    return sum + (grade.points || 0);
+  }, 0);
+  return totalPoints;
+};
+
+// Calculate best 6 subjects for Form 3/4
+const calculateBestSubjects = (subjects, form) => {
+  const isUpperForm = form === 'Form 3' || form === 'Form 4';
+  if (!isUpperForm) return subjects;
+  
+  const subjectsWithPoints = subjects.map(subject => ({
+    ...subject,
+    points: getGradeFromScore(subject.score, form).points
+  }));
+  
+  const sortedSubjects = [...subjectsWithPoints].sort((a, b) => a.points - b.points);
+  return sortedSubjects.slice(0, Math.min(6, sortedSubjects.length));
+};
+
+// Get overall grade based on total points
+const getOverallGradeFromPoints = (totalPoints) => {
+  if (totalPoints <= 2) return { description: 'Distinction' };
+  if (totalPoints <= 6) return { description: 'Credit' };
+  if (totalPoints <= 12) return { description: 'Pass' };
+  return { description: 'Fail' };
+};
+
+// Get final status based on English pass/fail and total points
+const getFinalStatus = (englishPassed, totalPoints) => {
+  if (!englishPassed) return { status: 'FAIL', message: 'Failed English - Overall Result: FAIL', color: '#c0392b' };
+  if (totalPoints <= 2) return { status: 'DISTINCTION', message: 'Distinction - Excellent Performance!', color: '#1e7e4a' };
+  if (totalPoints <= 6) return { status: 'CREDIT', message: 'Credit - Good Performance!', color: '#2a9090' };
+  if (totalPoints <= 12) return { status: 'PASS', message: 'Pass - Satisfactory Performance', color: '#f39c12' };
+  return { status: 'FAIL', message: 'Fail - Needs Improvement', color: '#c0392b' };
 };
 
 // Stat Card Component - Enhanced mobile responsive
@@ -262,10 +291,11 @@ export default function LearnerDashboard() {
         toast.error('Could not load attendance');
       }
 
-      // Process reports
+      // Process reports - include form information
       const processedReports = reportsData.map(report => ({
         ...report,
         academic_year: report.academic_year || (report.created_at ? new Date(report.created_at).getFullYear() : new Date().getFullYear()),
+        form: report.form || user?.form || 'Form 1',
         subjects: (report.subjects || report.subjects_data || report.subject_scores || []).filter(s => s && (s.score !== undefined || s.score !== null))
       }));
       
@@ -421,6 +451,9 @@ export default function LearnerDashboard() {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const validSubjects = (report.subjects || []).filter(s => s && s.score !== undefined && s.score !== null);
+      const isUpperForm = report.form === 'Form 3' || report.form === 'Form 4';
+      const totalPoints = isUpperForm ? calculateTotalPoints(validSubjects, report.form) : null;
+      const bestSubjects = isUpperForm ? calculateBestSubjects(validSubjects, report.form) : validSubjects;
       
       doc.setFillColor(255, 255, 255);
       doc.rect(0, 0, pageWidth, 50, 'F');
@@ -456,22 +489,35 @@ export default function LearnerDashboard() {
       doc.text(`Year: ${report?.academic_year || new Date().getFullYear()}`, pageWidth - 80, 109);
       doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 80, 116);
 
-      if (validSubjects && validSubjects.length > 0) {
-        const tableColumn = ["Subject", "Score", "Grade", "Remarks"];
-        const tableRows = validSubjects.map((subject) => {
-          const grade = getGradeFromScore(subject.score);
-          return [subject.name, subject.score.toString(), grade.letter, grade.description];
+      if (bestSubjects && bestSubjects.length > 0) {
+        const tableColumn = isUpperForm ? ["Subject", "Score", "Points", "Grade"] : ["Subject", "Score", "Grade", "Remarks"];
+        const tableRows = bestSubjects.map((subject) => {
+          const grade = getGradeFromScore(subject.score, report.form);
+          if (isUpperForm) {
+            return [subject.name, subject.score.toString(), grade.points + ' pts', grade.letter];
+          } else {
+            return [subject.name, subject.score.toString(), grade.letter, grade.description];
+          }
         });
 
         const avgScore = calculateAverage(validSubjects);
-        const avgGrade = getGradeFromScore(avgScore);
+        const avgGrade = getGradeFromScore(avgScore, report.form);
         
-        tableRows.push([
-          'AVERAGE',
-          { content: avgScore.toString(), styles: { fontStyle: 'bold', textColor: [0, 127, 255] } },
-          { content: avgGrade.letter, styles: { fontStyle: 'bold', textColor: [0, 127, 255] } },
-          { content: avgGrade.description, styles: { fontStyle: 'bold' } }
-        ]);
+        if (isUpperForm) {
+          tableRows.push([
+            'BEST 6 TOTAL',
+            '',
+            { content: totalPoints + ' pts', styles: { fontStyle: 'bold', textColor: [0, 127, 255] } },
+            { content: getOverallGradeFromPoints(totalPoints).description, styles: { fontStyle: 'bold', textColor: [0, 127, 255] } }
+          ]);
+        } else {
+          tableRows.push([
+            'AVERAGE',
+            { content: avgScore.toString(), styles: { fontStyle: 'bold', textColor: [0, 127, 255] } },
+            { content: avgGrade.letter, styles: { fontStyle: 'bold', textColor: [0, 127, 255] } },
+            { content: avgGrade.description, styles: { fontStyle: 'bold' } }
+          ]);
+        }
 
         autoTable(doc, {
           startY: 135,
@@ -617,8 +663,17 @@ export default function LearnerDashboard() {
     if (!report || !report.subjects) return '<div>No report data</div>';
     
     const validSubjects = (report.subjects || []).filter(s => s && s.score !== undefined && s.score !== null);
+    const isUpperForm = report.form === 'Form 3' || report.form === 'Form 4';
+    const totalPoints = isUpperForm ? calculateTotalPoints(validSubjects, report.form) : null;
+    const bestSubjects = isUpperForm ? calculateBestSubjects(validSubjects, report.form) : validSubjects;
     const avg = calculateAverage(validSubjects);
-    const avgGrade = getGradeFromScore(avg);
+    const avgGrade = getGradeFromScore(avg, report.form);
+    const pointsGrade = isUpperForm && totalPoints ? getOverallGradeFromPoints(totalPoints) : null;
+    
+    // Check if English is in best subjects for Form 3/4
+    const englishInBest = isUpperForm ? bestSubjects.some(s => s.name.toLowerCase().includes('english')) : true;
+    const englishPassed = isUpperForm ? (validSubjects.find(s => s.name.toLowerCase().includes('english'))?.score >= 35) : true;
+    const finalStatus = isUpperForm ? getFinalStatus(englishPassed, totalPoints) : null;
     
     return `
       <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(15,25,35,0.1);">
@@ -636,34 +691,63 @@ export default function LearnerDashboard() {
             <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: #6b7280;">Academic Performance</div>
             <div style="text-align: right;">
               <div style="font-size: 18px; font-weight: bold; color: ${avgGrade.color};">${avg}%</div>
-              <div style="font-size: 11px; font-weight: 600; color: ${avgGrade.color};">${avgGrade.letter} - ${avgGrade.description}</div>
+              <div style="font-size: 11px; font-weight: 600; color: ${avgGrade.color};">${isUpperForm ? avgGrade.points + ' points' : avgGrade.letter + ' - ' + avgGrade.description}</div>
+              ${isUpperForm && totalPoints !== null ? `
+                <div style="font-size: 10px; font-weight: 500; color: #6b7280; margin-top: 4px;">
+                  Best ${bestSubjects.length} Subjects Total: ${totalPoints} pts (${pointsGrade?.description})
+                </div>
+                <div style="font-size: 10px; font-weight: ${finalStatus?.status === 'FAIL' ? 'bold' : '500'}; color: ${finalStatus?.color}; margin-top: 4px;">
+                  ${finalStatus?.status} - ${finalStatus?.message}
+                </div>
+              ` : ''}
             </div>
           </div>
           <div style="margin-bottom: 16px; overflow-x: auto;">
             <div style="min-width: 280px;">
-              <div style="display: grid; grid-template-columns: 1fr 70px 45px; gap: 8px; font-size: 11px; font-weight: 600; color: #6b7280; padding-bottom: 8px; border-bottom: 2px solid #ede9e1;">
+              <div style="display: grid; grid-template-columns: 1fr 70px ${isUpperForm ? '55px' : '45px'}; gap: 8px; font-size: 11px; font-weight: 600; color: #6b7280; padding-bottom: 8px; border-bottom: 2px solid #ede9e1;">
                 <div>Subject</div>
                 <div style="text-align: right;">Score</div>
-                <div style="text-align: right;">Grade</div>
+                <div style="text-align: right;">${isUpperForm ? 'Points' : 'Grade'}</div>
               </div>
-              ${validSubjects.map(s => {
-                const grade = getGradeFromScore(s.score);
+              ${bestSubjects.map(s => {
+                const grade = getGradeFromScore(s.score, report.form);
+                const isEnglish = s.name.toLowerCase().includes('english');
                 return `
-                  <div style="display: grid; grid-template-columns: 1fr 70px 45px; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid #ede9e1;">
-                    <div style="font-size: 13px; font-weight: 500;">${s.name}</div>
+                  <div style="display: grid; grid-template-columns: 1fr 70px ${isUpperForm ? '55px' : '45px'}; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid #ede9e1; ${isEnglish && isUpperForm && !englishPassed ? 'background-color: #ffebee;' : ''}">
+                    <div style="font-size: 13px; font-weight: 500; ${isEnglish && isUpperForm && !englishPassed ? 'color: #c0392b;' : ''}">${s.name}${isEnglish && isUpperForm ? ' ⭐' : ''}</div>
                     <div style="text-align: right; font-family: monospace; font-size: 13px; font-weight: 500; color: ${grade.color};">${s.score}%</div>
                     <div style="text-align: right;">
-                      <span style="display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 11px; font-weight: 600; background: ${grade.bgColor}; color: ${grade.color};">${grade.letter}</span>
+                      <span style="display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 11px; font-weight: 600; background: ${grade.bgColor}; color: ${grade.color};">
+                        ${isUpperForm ? grade.points + ' pts' : grade.letter}
+                      </span>
                     </div>
                   </div>
                 `;
               }).join('')}
             </div>
           </div>
+          ${isUpperForm && bestSubjects.length < validSubjects.length ? `
+            <div style="margin-bottom: 12px; padding: 6px; background: #f0f0f0; border-radius: 6px; text-align: center;">
+              <span style="font-size: 10px; color: #666;">* Best ${bestSubjects.length} subjects shown out of ${validSubjects.length} total subjects</span>
+            </div>
+          ` : ''}
           ${report.comment ? `
             <div style="margin-top: 12px; padding: 10px; background: #f7f4ef; border-radius: 8px; border-left: 3px solid #c9933a;">
               <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: #6b7280; margin-bottom: 4px;">Teacher's Comment</div>
               <div style="font-size: 12px; color: #0f1923;">${report.comment}</div>
+            </div>
+          ` : ''}
+          ${isUpperForm ? `
+            <div style="margin-top: 12px; padding: 10px; background: #e8f5e9; border-radius: 8px; border-left: 3px solid #1e7e4a;">
+              <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: #1e7e4a; margin-bottom: 4px;">Points System Guide</div>
+              <div style="font-size: 10px; color: #0f1923;">
+                <strong>Points Scale:</strong><br/>
+                85-100% = 1pt | 75-84% = 2pts | 65-74% = 3pts | 56-64% = 4pts<br/>
+                50-55% = 5pts | 45-49% = 6pts | 40-44% = 7pts | 35-39% = 8pts | Below 35% = 9pts<br/>
+                <strong>Best Subjects:</strong> The ${bestSubjects.length} subjects with lowest points are counted<br/>
+                <strong>English Requirement:</strong> Must pass English (score ≥ 35%) to qualify for overall pass<br/>
+                <strong>Overall: 1-2 pts = Distinction | 3-6 pts = Credit | 7-12 pts = Pass | 13+ pts = Fail</strong>
+              </div>
             </div>
           ` : ''}
         </div>
@@ -806,7 +890,7 @@ export default function LearnerDashboard() {
         </div>
       )}
 
-      {/* Navigation Bar - Desktop (hidden on mobile) */}
+      {/* Navigation Bar - Desktop */}
       <div className="hidden lg:block sticky top-[72px] sm:top-[88px] md:top-[96px] z-20 bg-white border-b border-gray-200 shadow-sm overflow-x-auto">
         <div className="container mx-auto px-3 sm:px-4 lg:px-6">
           <div className="flex gap-0.5 sm:gap-1 py-2 sm:py-3 min-w-max">
@@ -840,7 +924,6 @@ export default function LearnerDashboard() {
               <p className="text-xs sm:text-sm text-gray-500">Track your academic progress and performance</p>
             </div>
 
-            {/* Stats Grid - Responsive */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 md:gap-4 lg:gap-6 mb-4 sm:mb-6 md:mb-8">
               <StatCard emoji="📋" value={stats.reportsCount} label="Reports" />
               <StatCard emoji="📅" value={stats.attendanceRate} label="Attendance" />
@@ -907,7 +990,7 @@ export default function LearnerDashboard() {
                           </h3>
                           <div className="min-w-[280px] space-y-2 sm:space-y-3">
                             {latestReport.subjects.map((subject, index) => {
-                              const grade = getGradeFromScore(subject.score);
+                              const grade = getGradeFromScore(subject.score, latestReport.form);
                               return (
                                 <div key={index} className="flex items-center py-1.5 sm:py-2 border-b border-[#ede9e1] last:border-0 group">
                                   <div className="flex-1 text-[10px] sm:text-xs md:text-sm text-gray-700 group-hover:text-[#0f1923] font-medium truncate">
@@ -931,7 +1014,7 @@ export default function LearnerDashboard() {
                                     color: grade.color,
                                     backgroundColor: `${grade.color}10`
                                   }}>
-                                    {grade.letter}
+                                    {latestReport.form === 'Form 3' || latestReport.form === 'Form 4' ? grade.points + 'pts' : grade.letter}
                                   </div>
                                 </div>
                               );
@@ -978,7 +1061,7 @@ export default function LearnerDashboard() {
                 </div>
               </div>
 
-              {/* Side Panel */}
+              {/* Side Panel - Same as before */}
               <div className="space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6">
                 {/* Attendance Summary Card */}
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
@@ -1177,7 +1260,7 @@ export default function LearnerDashboard() {
                   <p className="text-[10px] sm:text-xs md:text-sm text-gray-500">Your academic performance overview</p>
                 </div>
                 
-                {/* Filter Section - Responsive */}
+                {/* Filter Section */}
                 <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                   {availableYears.length > 0 && (
                     <div className="flex items-center gap-1.5 sm:gap-2">
@@ -1248,8 +1331,12 @@ export default function LearnerDashboard() {
               {filteredReports && filteredReports.length > 0 ? (
                 filteredReports.map(report => {
                   const validSubjects = (report.subjects || []).filter(s => s && s.score !== undefined && s.score !== null);
+                  const isUpperForm = report.form === 'Form 3' || report.form === 'Form 4';
+                  const bestSubjects = isUpperForm ? calculateBestSubjects(validSubjects, report.form) : validSubjects;
                   const avg = calculateAverage(validSubjects);
-                  const grade = getGradeFromScore(avg);
+                  const grade = getGradeFromScore(avg, report.form);
+                  const totalPoints = isUpperForm ? calculateTotalPoints(validSubjects, report.form) : null;
+                  
                   return (
                     <div key={report.id} className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden hover:shadow-md transition">
                       <div className="p-2.5 sm:p-3 md:p-4 border-b flex justify-between items-center flex-wrap gap-2">
@@ -1264,26 +1351,31 @@ export default function LearnerDashboard() {
                         </div>
                         <div className="text-right">
                           <span className="text-[10px] sm:text-xs md:text-sm font-bold" style={{ color: grade.color }}>
-                            {avg}% ({grade.letter})
+                            {isUpperForm ? `${totalPoints} pts` : `${avg}% (${grade.letter})`}
                           </span>
                         </div>
                       </div>
                       <div className="p-2.5 sm:p-3 md:p-4">
                         <div className="space-y-1.5 sm:space-y-2 max-h-32 sm:max-h-36 md:max-h-40 overflow-y-auto">
-                          {validSubjects.slice(0, 5).map((s, idx) => {
-                            const g = getGradeFromScore(s.score);
+                          {bestSubjects.slice(0, 5).map((s, idx) => {
+                            const g = getGradeFromScore(s.score, report.form);
                             return (
                               <div key={idx} className="flex justify-between items-center text-[10px] sm:text-xs md:text-sm">
                                 <span className="truncate">{s.name}</span>
                                 <span style={{ color: g.color }} className="font-mono font-medium ml-2">
-                                  {s.score}% ({g.letter})
+                                  {s.score}% {isUpperForm ? `(${g.points} pts)` : `(${g.letter})`}
                                 </span>
                               </div>
                             );
                           })}
-                          {validSubjects.length > 5 && (
+                          {bestSubjects.length > 5 && (
                             <div className="text-[9px] sm:text-[10px] text-gray-400 text-center pt-1">
-                              +{validSubjects.length - 5} more subjects
+                              +{bestSubjects.length - 5} more subjects
+                            </div>
+                          )}
+                          {isUpperForm && bestSubjects.length < validSubjects.length && (
+                            <div className="text-[8px] sm:text-[9px] text-gray-400 text-center">
+                              * Best {bestSubjects.length} subjects shown
                             </div>
                           )}
                         </div>
@@ -1365,8 +1457,8 @@ export default function LearnerDashboard() {
                       <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase">Date</th>
                       <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Day</th>
                       <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase">Status</th>
-                    </tr>
-                  </thead>
+                     </tr>
+                     </thead>
                   <tbody className="divide-y divide-gray-200">
                     {attendanceRecords && attendanceRecords.length > 0 ? (
                       [...attendanceRecords]
@@ -1376,10 +1468,10 @@ export default function LearnerDashboard() {
                           <tr key={record.id} className="hover:bg-gray-50">
                             <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-[9px] sm:text-[10px] lg:text-sm whitespace-nowrap">
                               {new Date(record.date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
-                            </td>
+                              </td>
                             <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-[9px] sm:text-[10px] lg:text-sm hidden sm:table-cell">
                               {new Date(record.date).toLocaleDateString('en', { weekday: 'short' })}
-                            </td>
+                              </td>
                             <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
                               <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-semibold ${
                                 record.status === 'present' ? 'bg-green-100 text-green-700' : 
@@ -1388,8 +1480,8 @@ export default function LearnerDashboard() {
                               }`}>
                                 {record.status === 'present' ? 'P' : record.status === 'late' ? 'L' : 'A'}
                               </span>
-                            </td>
-                          </tr>
+                              </td>
+                            </tr>
                         ))
                     ) : (
                       <tr>
