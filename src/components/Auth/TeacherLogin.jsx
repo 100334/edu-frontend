@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { LockClosedIcon, UserGroupIcon } from '@heroicons/react/24/outline';
+import { 
+  LockClosedIcon, 
+  UserIcon, 
+  AcademicCapIcon,
+  ChevronRightIcon 
+} from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
-
-// Theme constants
-const DARK_BLUE = '#1A237E';
-const AZURE = '#00B0FF';
 
 export default function TeacherLogin() {
   const navigate = useNavigate();
@@ -20,30 +21,21 @@ export default function TeacherLogin() {
 
   const validateForm = () => {
     const newErrors = {};
-    
     if (!formData.username.trim()) {
       newErrors.username = 'Username is required';
     }
-    
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
     }
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-    
+    if (!validateForm()) return;
+
     setLoading(true);
-    
     try {
       const result = await teacherLogin({
         username: formData.username,
@@ -51,141 +43,122 @@ export default function TeacherLogin() {
       });
 
       if (result.success) {
-        toast.success(`Welcome back, ${result.user?.name || 'Teacher'}!`, {
-          icon: '👨‍🏫',
-          duration: 4000
+        toast.success(`Welcome back, ${result.user?.name || 'Educator'}!`, {
+          style: { background: '#0D1B2A', color: '#fff', borderRadius: '10px' }
         });
         navigate('/teacher/dashboard');
       } else {
         toast.error(result.message || 'Login failed');
       }
     } catch (error) {
-      console.error('Login error:', error);
-      toast.error(error.message || 'An error occurred during login');
+      toast.error('Connection error. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="min-h-screen flex">
-        <div className="flex-1 overflow-auto px-6 py-4">
-          <div className="max-w-[400px] mx-auto">
-            {/* Back button to home */}
-            <button
-              onClick={() => navigate('/')}
-              className="mb-5 flex items-center text-[#1A237E] hover:text-[#00B0FF] transition-colors group"
-            >
-              <svg className="w-4 h-4 mr-1 transition-transform group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              <span className="text-sm">Back to Home</span>
-            </button>
-
-            {/* Logo and Title */}
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-[90px] h-[90px] bg-gradient-to-br from-[#1A237E] to-[#00B0FF] rounded-2xl shadow-lg mb-2">
-                <UserGroupIcon className="w-12 h-12 text-white" />
-              </div>
-              <h1 className="text-xl font-bold text-[#1A237E] mt-2">
-                TEACHER LOGIN
-              </h1>
-              <div className="w-10 h-1 bg-[#00B0FF] mx-auto mt-2"></div>
-            </div>
-
-            {/* Login Form */}
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Username Field */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-extrabold text-blue-600 tracking-wider">
-                  USERNAME
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-0 flex items-center pointer-events-none">
-                    <svg className="w-5 h-5 text-[#1A237E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Enter your username"
-                    value={formData.username}
-                    onChange={(e) => {
-                      setFormData({...formData, username: e.target.value});
-                      if (errors.username) setErrors({...errors, username: null});
-                    }}
-                    className={`w-full pl-7 pr-4 py-3 bg-transparent border-b-2 text-[#1A237E] font-semibold text-base
-                             placeholder-gray-400 focus:outline-none transition-colors
-                             ${errors.username ? 'border-red-500' : 'border-[#1A237E] focus:border-[#00B0FF]'}`}
-                  />
-                </div>
-                {errors.username && (
-                  <p className="text-xs text-red-500 mt-1">{errors.username}</p>
-                )}
-              </div>
-
-              {/* Password Field */}
-              <div className="space-y-1">
-                <label className="text-[10px] font-extrabold text-blue-600 tracking-wider">
-                  PASSWORD
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-0 flex items-center pointer-events-none">
-                    <svg className="w-5 h-5 text-[#1A237E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6-4h12a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6a2 2 0 012-2zm10-4V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                  </div>
-                  <input
-                    type="password"
-                    placeholder="Enter your password"
-                    value={formData.password}
-                    onChange={(e) => {
-                      setFormData({...formData, password: e.target.value});
-                      if (errors.password) setErrors({...errors, password: null});
-                    }}
-                    className={`w-full pl-7 pr-4 py-3 bg-transparent border-b-2 text-[#1A237E] font-semibold text-base
-                             placeholder-gray-400 focus:outline-none transition-colors
-                             ${errors.password ? 'border-red-500' : 'border-[#1A237E] focus:border-[#00B0FF]'}`}
-                  />
-                </div>
-                {errors.password && (
-                  <p className="text-xs text-red-500 mt-1">{errors.password}</p>
-                )}
-              </div>
-
-              {/* Login Button */}
-              {loading ? (
-                <div className="flex justify-center py-3">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#1A237E]"></div>
-                </div>
-              ) : (
-                <button
-                  type="submit"
-                  className="w-full h-[55px] bg-[#1A237E] text-white font-bold tracking-wider text-base
-                           hover:bg-[#00B0FF] transition-colors duration-300 flex items-center justify-center gap-2"
-                  style={{ borderRadius: '6px' }}
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                  </svg>
-                  ACCESS DASHBOARD
-                </button>
-              )}
-            </form>
-
-            {/* Security Note */}
-            <div className="mt-8 pt-4 text-center border-t border-gray-100">
-              <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6-4h12a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6a2 2 0 012-2zm10-4V7a4 4 0 00-8 0v4h8z" />
-                </svg>
-                <span>Secure educator portal</span>
-                <span>•</span>
-                <span>Manage learners & reports</span>
-              </div>
+    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
+      <div className="w-full max-w-[340px]">
+        
+        {/* Header: Enlarged Logo & Teacher Branding */}
+        <div className="text-center mb-10">
+          <div className="relative inline-block mb-6">
+            <img 
+              src="/school-logo.jpeg" 
+              alt="Progress Schools" 
+              className="w-32 h-32 mx-auto object-contain transition-transform duration-500 hover:scale-105" 
+            />
+            {/* Educator Badge */}
+            <div className="absolute bottom-2 right-2 bg-[#00B0FF] p-1.5 rounded-full border-4 border-white shadow-lg">
+              <AcademicCapIcon className="w-4 h-4 text-white" />
             </div>
           </div>
+          
+          <h1 className="text-2xl font-black text-[#0D1B2A] tracking-tight uppercase">
+            Teacher <span className="text-[#00B0FF]">Login</span>
+          </h1>
+          <div className="w-10 h-1 bg-[#f6de94] mx-auto mt-2 rounded-full" />
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          
+          {/* Username Field */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">
+              Staff Username
+            </label>
+            <div className={`flex items-center bg-white border rounded-lg px-4 py-3.5 transition-all
+              ${errors.username ? 'border-red-500' : 'border-[#00B0FF]/40 focus-within:border-[#00B0FF] focus-within:ring-4 focus-within:ring-[#00B0FF]/5'}`}>
+              <UserIcon className="w-5 h-5 text-[#00B0FF] mr-3 opacity-60" />
+              <input
+                type="text"
+                placeholder="Enter username"
+                value={formData.username}
+                onChange={(e) => {
+                  setFormData({...formData, username: e.target.value});
+                  if (errors.username) setErrors({...errors, username: null});
+                }}
+                className="w-full bg-transparent outline-none text-[#0D1B2A] font-semibold text-sm placeholder:text-slate-300"
+              />
+            </div>
+          </div>
+
+          {/* Password Field */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">
+              Password
+            </label>
+            <div className={`flex items-center bg-white border rounded-lg px-4 py-3.5 transition-all
+              ${errors.password ? 'border-red-500' : 'border-[#00B0FF]/40 focus-within:border-[#00B0FF] focus-within:ring-4 focus-within:ring-[#00B0FF]/5'}`}>
+              <LockClosedIcon className="w-5 h-5 text-[#00B0FF] mr-3 opacity-60" />
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={formData.password}
+                onChange={(e) => {
+                  setFormData({...formData, password: e.target.value});
+                  if (errors.password) setErrors({...errors, password: null});
+                }}
+                className="w-full bg-transparent outline-none text-[#0D1B2A] font-semibold text-sm placeholder:text-slate-300"
+              />
+            </div>
+          </div>
+
+          {errors.username || errors.password ? (
+            <p className="text-red-500 text-[10px] font-bold text-center uppercase py-1">
+              {errors.username || errors.password}
+            </p>
+          ) : null}
+
+          {/* Button: Midnight Navy */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-4 bg-[#0D1B2A] text-white rounded-lg font-bold text-[11px] uppercase tracking-[0.2em] shadow-lg shadow-[#0D1B2A]/15 hover:bg-[#162a3f] active:transform active:scale-[0.98] transition-all disabled:opacity-40 flex items-center justify-center gap-2"
+          >
+            {loading ? (
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <>
+                Access Dashboard
+                <ChevronRightIcon className="w-3 h-3 stroke-[3px]" />
+              </>
+            )}
+          </button>
+        </form>
+
+        {/* Footer Security Note */}
+        <div className="mt-16 text-center space-y-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
+            <div className="w-1.5 h-1.5 bg-[#00B0FF] rounded-full animate-pulse" />
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+              Educator Portal Active
+            </span>
+          </div>
+          <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.3em]">
+            Progress Secondary School
+          </p>
         </div>
       </div>
     </div>
