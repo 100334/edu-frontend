@@ -1003,7 +1003,7 @@ export default function TeacherDashboard() {
                   <br />
                   <strong>Best Subjects:</strong> Only the 6 subjects with the lowest points are counted<br />
                   <strong>English Requirement:</strong> Must pass English (score ≥ 35%) to qualify for overall pass<br />
-                  <strong>Overall: 1-2pts = Distinction | 3-6pts = Credit | 7-12pts = Pass | 13+pts = Fail</strong>
+                  <strong>Overall: 1-2pts = Distinction | 3-6pts = Credit | 7-8pts = Pass | 9 pts = Fail</strong>
                 </p>
               </div>
             </div>
