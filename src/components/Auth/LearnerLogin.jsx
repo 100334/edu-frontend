@@ -86,7 +86,7 @@ const LearnerLogin = ({ serverStatus }) => {
               <IdentificationIcon className="w-5 h-5 text-[#00B0FF] mr-3 opacity-60" />
               <input
                 type="text"
-                placeholder="PSS/000/00"
+                placeholder="FRM1-26-XXXX"
                 value={regNumber}
                 onChange={(e) => setRegNumber(e.target.value.toUpperCase())}
                 className="w-full bg-transparent outline-none text-[#0D1B2A] font-mono font-bold text-sm placeholder:text-slate-300 tracking-wider"
