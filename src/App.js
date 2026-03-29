@@ -25,6 +25,7 @@ import RegisterTeacher from './components/Admin/RegisterTeacher';
 import AdminClassManagement from './components/Admin/AdminClassManagement';
 import AdminSubjectManagement from './components/Admin/AdminSubjectManagement';
 import SecurityLogs from './components/Admin/SecurityLogs';
+import QuizManagement from './components/Admin/QuizManagement'; // Add this import
 
 const LoadingScreen = () => (
   <div style={{
@@ -373,6 +374,18 @@ function AppContent() {
             <AdminRoute>
               <ErrorBoundary>
                 <AdminSubjectManagementWrapper />
+              </ErrorBoundary>
+            </AdminRoute>
+          } 
+        />
+        
+        {/* Admin Quiz Management */}
+        <Route 
+          path="/admin/quiz-management" 
+          element={
+            <AdminRoute>
+              <ErrorBoundary>
+                <QuizManagement />
               </ErrorBoundary>
             </AdminRoute>
           } 

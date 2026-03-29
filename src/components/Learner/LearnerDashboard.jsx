@@ -9,11 +9,18 @@ import {
   ClockIcon,
   CheckCircleIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  PlayIcon,
+  TrophyIcon,
+  BookOpenIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+
+// Import Quiz Components - FIXED PATHS
+import QuizList from './QuizList';  // Same directory
+import QuizTaking from './QuizTaking';  // Same directory
 
 // Theme constants
 const NAVY_DARK = '#0A192F';
@@ -149,6 +156,10 @@ export default function LearnerDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
+  // Quiz states
+  const [showQuiz, setShowQuiz] = useState(null);
+  const [quizResult, setQuizResult] = useState(null);
+  
   // Data states
   const [reports, setReports] = useState([]);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
@@ -159,7 +170,9 @@ export default function LearnerDashboard() {
     totalDays: 0,
     presentCount: 0,
     lateCount: 0,
-    absentCount: 0
+    absentCount: 0,
+    quizScore: '—',
+    quizzesCompleted: 0
   });
   const [latestReport, setLatestReport] = useState(null);
   const [recentActivity, setRecentActivity] = useState([]);
@@ -291,6 +304,27 @@ export default function LearnerDashboard() {
         toast.error('Could not load attendance');
       }
 
+      // Fetch quiz history
+      let quizHistoryData = [];
+      let totalQuizScore = 0;
+      let quizzesCompleted = 0;
+      try {
+        const quizRes = await api.get('/api/quiz/history');
+        if (quizRes.data && quizRes.data.attempts) {
+          quizHistoryData = quizRes.data.attempts;
+          quizzesCompleted = quizHistoryData.length;
+          if (quizzesCompleted > 0) {
+            const validScores = quizHistoryData.filter(q => q.percentage > 0);
+            if (validScores.length > 0) {
+              const avgQuizScore = validScores.reduce((sum, q) => sum + (q.percentage || 0), 0) / validScores.length;
+              totalQuizScore = Math.round(avgQuizScore);
+            }
+          }
+        }
+      } catch (quizError) {
+        console.error('Error fetching quiz history:', quizError);
+      }
+
       // Process reports - include form information
       const processedReports = reportsData.map(report => ({
         ...report,
@@ -344,7 +378,9 @@ export default function LearnerDashboard() {
         totalDays: attendanceData.stats?.total || 0,
         presentCount: attendanceData.stats?.present || 0,
         lateCount: attendanceData.stats?.late || 0,
-        absentCount: attendanceData.stats?.absent || 0
+        absentCount: attendanceData.stats?.absent || 0,
+        quizScore: totalQuizScore > 0 ? `${totalQuizScore}%` : '—',
+        quizzesCompleted
       });
 
       // Build recent activity
@@ -369,7 +405,21 @@ export default function LearnerDashboard() {
         });
       }
       
-      const recentRecords = processedAttendance.slice(0, 3);
+      // Add quiz activity
+      if (quizHistoryData.length > 0) {
+        const latestQuiz = quizHistoryData[0];
+        activity.push({
+          id: 'latest-quiz',
+          type: 'quiz',
+          title: `Quiz Completed: ${latestQuiz.quiz?.title || latestQuiz.subject}`,
+          description: `Score: ${Math.round(latestQuiz.percentage || 0)}%`,
+          date: latestQuiz.completed_at || new Date().toISOString(),
+          icon: '📝',
+          color: 'text-purple-600'
+        });
+      }
+      
+      const recentRecords = processedAttendance.slice(0, 2);
       recentRecords.forEach(record => {
         const statusDisplay = record.status === 'present' ? 'Present' : 
                               record.status === 'late' ? 'Late' : 'Absent';
@@ -659,6 +709,15 @@ export default function LearnerDashboard() {
     setShowReportModal(true);
   };
 
+  const handleQuizComplete = (result) => {
+  setQuizResult(result);
+  setShowQuiz(null);
+  toast.success(`Quiz submitted! Score: ${Math.round(result.percentage)}%`);
+  
+  // Re-fetch dashboard data so the "Quizzes Completed" stat updates
+  loadDashboardData(); 
+};
+
   const getReportHTML = (report) => {
     if (!report || !report.subjects) return '<div>No report data</div>';
     
@@ -671,7 +730,6 @@ export default function LearnerDashboard() {
     const pointsGrade = isUpperForm && totalPoints ? getOverallGradeFromPoints(totalPoints) : null;
     
     // Check if English is in best subjects for Form 3/4
-    const englishInBest = isUpperForm ? bestSubjects.some(s => s.name.toLowerCase().includes('english')) : true;
     const englishPassed = isUpperForm ? (validSubjects.find(s => s.name.toLowerCase().includes('english'))?.score >= 35) : true;
     const finalStatus = isUpperForm ? getFinalStatus(englishPassed, totalPoints) : null;
     
@@ -784,6 +842,23 @@ export default function LearnerDashboard() {
     );
   }
 
+  // If showing a quiz
+  if (showQuiz) {
+    return (
+      <div className="min-h-screen bg-[#f7f4ef]">
+        <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 md:py-8">
+          <button
+            onClick={() => setShowQuiz(null)}
+            className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
+          >
+            ← Back to Dashboard
+          </button>
+          <QuizTaking quizId={showQuiz} onComplete={handleQuizComplete} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
       {/* Header Section - Fully Responsive */}
@@ -865,6 +940,17 @@ export default function LearnerDashboard() {
               </button>
               <button
                 onClick={() => {
+                  setActiveTab('quizzes');
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${
+                  activeTab === 'quizzes' ? 'bg-[#1A237E] text-white' : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <span className="mr-2">📝</span> Quizzes
+              </button>
+              <button
+                onClick={() => {
                   setActiveTab('reports');
                   setMobileMenuOpen(false);
                 }}
@@ -901,6 +987,12 @@ export default function LearnerDashboard() {
               onClick={() => setActiveTab('overview')}
             />
             <NavItem
+              icon="📝"
+              label="Quizzes"
+              isActive={activeTab === 'quizzes'}
+              onClick={() => setActiveTab('quizzes')}
+            />
+            <NavItem
               icon="📋"
               label="Reports"
               isActive={activeTab === 'reports'}
@@ -928,7 +1020,7 @@ export default function LearnerDashboard() {
               <StatCard emoji="📋" value={stats.reportsCount} label="Reports" />
               <StatCard emoji="📅" value={stats.attendanceRate} label="Attendance" />
               <StatCard emoji="⭐" value={stats.averageScore} label="Average" />
-              <StatCard emoji="📆" value={stats.totalDays} label="Days" />
+              <StatCard emoji="📝" value={stats.quizzesCompleted} label="Quizzes" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
@@ -1061,8 +1153,51 @@ export default function LearnerDashboard() {
                 </div>
               </div>
 
-              {/* Side Panel - Same as before */}
+              {/* Side Panel */}
               <div className="space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6">
+                {/* Quiz Performance Card */}
+                <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
+                  <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
+                    <div className="flex items-center justify-between">
+                      <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0f1923] flex items-center gap-2">
+                        <span className="text-purple-600">📝</span>
+                        Quiz Performance
+                      </h2>
+                      <button
+                        onClick={() => setActiveTab('quizzes')}
+                        className="text-xs text-purple-600 hover:text-purple-700"
+                      >
+                        Take Quiz →
+                      </button>
+                    </div>
+                  </div>
+                  <div className="p-3 sm:p-4 md:p-5 lg:p-6">
+                    <div className="text-center mb-3 sm:mb-4">
+                      <div className="relative inline-flex items-center justify-center mb-2 sm:mb-3">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full border-4 border-purple-200 flex items-center justify-center">
+                          <span className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-purple-600">
+                            {stats.quizScore}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-[10px] sm:text-xs text-gray-600">
+                        {stats.quizzesCompleted > 0 
+                          ? `Completed ${stats.quizzesCompleted} quiz(zes)` 
+                          : "No quizzes taken yet"}
+                      </p>
+                    </div>
+                    {stats.quizzesCompleted === 0 && (
+                      <button
+                        onClick={() => setActiveTab('quizzes')}
+                        className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-xs sm:text-sm"
+                      >
+                        <PlayIcon className="w-4 h-4" />
+                        Start a Quiz
+                      </button>
+                    )}
+                  </div>
+                </div>
+
                 {/* Attendance Summary Card */}
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
                   <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
@@ -1135,11 +1270,28 @@ export default function LearnerDashboard() {
                   <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
                     <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0f1923] flex items-center gap-2">
                       <span className="text-[#c9933a]">⚡</span>
-                      <span className="hidden xs:inline">Quick Actions</span>
-                      <span className="xs:hidden">Actions</span>
+                      Quick Actions
                     </h2>
                   </div>
                   <div className="p-3 sm:p-4 md:p-5 lg:p-6 space-y-2 sm:space-y-2.5 md:space-y-3">
+                    <button 
+                      onClick={() => setActiveTab('quizzes')}
+                      className="w-full text-left p-2.5 sm:p-3 md:p-4 bg-purple-50 rounded-xl hover:bg-purple-100 transition-all group border border-purple-200 hover:border-purple-400"
+                    >
+                      <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200">
+                          <BookOpenIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-purple-600" />
+                        </div>
+                        <div className="flex-1">
+                          <span className="text-[11px] sm:text-xs md:text-sm font-medium text-purple-700 group-hover:text-purple-800 transition-colors">
+                            Take a Quiz
+                          </span>
+                          <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5 hidden sm:block">Test your knowledge</p>
+                        </div>
+                        <span className="text-xs text-gray-400 group-hover:translate-x-1 transition-transform">→</span>
+                      </div>
+                    </button>
+                    
                     <button 
                       onClick={() => setActiveTab('reports')}
                       className="w-full text-left p-2.5 sm:p-3 md:p-4 bg-[#f7f4ef] rounded-xl hover:bg-[#ede9e1] transition-all group border border-[#d4cfc6] hover:border-[#c9933a]/30"
@@ -1176,42 +1328,6 @@ export default function LearnerDashboard() {
                         </div>
                       </button>
                     )}
-                    
-                    <button 
-                      onClick={() => setActiveTab('attendance')}
-                      className="w-full text-left p-2.5 sm:p-3 md:p-4 bg-[#f7f4ef] rounded-xl hover:bg-[#ede9e1] transition-all group border border-[#d4cfc6] hover:border-[#c9933a]/30"
-                    >
-                      <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3">
-                        <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-[#c9933a]/5 rounded-lg flex items-center justify-center group-hover:bg-[#c9933a]/10 border border-[#d4cfc6]">
-                          <CalendarIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-[#c9933a]" />
-                        </div>
-                        <div className="flex-1">
-                          <span className="text-[11px] sm:text-xs md:text-sm font-medium text-[#0f1923] group-hover:text-[#c9933a] transition-colors">
-                            Attendance Details
-                          </span>
-                          <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5 hidden sm:block">See your daily attendance record</p>
-                        </div>
-                      </div>
-                    </button>
-
-                    {attendanceRecords.length > 0 && (
-                      <button 
-                        onClick={downloadAttendancePDF}
-                        className="w-full text-left p-2.5 sm:p-3 md:p-4 bg-[#f7f4ef] rounded-xl hover:bg-[#ede9e1] transition-all group border border-[#d4cfc6] hover:border-[#c9933a]/30"
-                      >
-                        <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3">
-                          <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-[#c9933a]/5 rounded-lg flex items-center justify-center group-hover:bg-[#c9933a]/10 border border-[#d4cfc6]">
-                            <ArrowDownTrayIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-[#c9933a]" />
-                          </div>
-                          <div className="flex-1">
-                            <span className="text-[11px] sm:text-xs md:text-sm font-medium text-[#0f1923] group-hover:text-[#c9933a] transition-colors">
-                              Download Attendance
-                            </span>
-                            <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5 hidden sm:block">Save attendance record as PDF</p>
-                          </div>
-                        </div>
-                      </button>
-                    )}
                   </div>
                 </div>
 
@@ -1221,8 +1337,7 @@ export default function LearnerDashboard() {
                     <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
                       <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0f1923] flex items-center gap-2">
                         <span className="text-[#c9933a]">🕒</span>
-                        <span className="hidden xs:inline">Recent Activity</span>
-                        <span className="xs:hidden">Activity</span>
+                        Recent Activity
                       </h2>
                     </div>
                     <div className="p-0">
@@ -1250,6 +1365,27 @@ export default function LearnerDashboard() {
           </>
         )}
 
+        {/* Quizzes Tab */}
+     {activeTab === 'quizzes' && (
+  <div className="space-y-6">
+    {!showQuiz ? (
+      /* 1. Show the list of available quizzes */
+      <QuizList 
+        onStartQuiz={(quiz) => setShowQuiz(quiz)} 
+      />
+    ) : (
+      /* 2. Show the active quiz player when a quiz is selected */
+      <QuizTaking 
+        quiz={showQuiz} 
+        onComplete={(result) => {
+          handleQuizComplete(result); // Defined in your main component
+          setShowQuiz(null);          // Go back to list after finishing
+        }}
+        onCancel={() => setShowQuiz(null)} // Option to exit
+      />
+    )}
+  </div>
+)}
         {/* Reports Tab */}
         {activeTab === 'reports' && (
           <>
@@ -1457,8 +1593,8 @@ export default function LearnerDashboard() {
                       <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase">Date</th>
                       <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Day</th>
                       <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase">Status</th>
-                     </tr>
-                     </thead>
+                    </tr>
+                  </thead>
                   <tbody className="divide-y divide-gray-200">
                     {attendanceRecords && attendanceRecords.length > 0 ? (
                       [...attendanceRecords]
@@ -1468,10 +1604,10 @@ export default function LearnerDashboard() {
                           <tr key={record.id} className="hover:bg-gray-50">
                             <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-[9px] sm:text-[10px] lg:text-sm whitespace-nowrap">
                               {new Date(record.date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
-                              </td>
+                            </td>
                             <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-[9px] sm:text-[10px] lg:text-sm hidden sm:table-cell">
                               {new Date(record.date).toLocaleDateString('en', { weekday: 'short' })}
-                              </td>
+                            </td>
                             <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
                               <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-semibold ${
                                 record.status === 'present' ? 'bg-green-100 text-green-700' : 
@@ -1480,8 +1616,8 @@ export default function LearnerDashboard() {
                               }`}>
                                 {record.status === 'present' ? 'P' : record.status === 'late' ? 'L' : 'A'}
                               </span>
-                              </td>
-                            </tr>
+                            </td>
+                          </tr>
                         ))
                     ) : (
                       <tr>

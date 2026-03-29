@@ -288,6 +288,57 @@ export const learnerAPI = {
   getDashboardStats: () => api.get('/api/learner/dashboard/stats'),
 };
 
+// ============================================
+// Quiz API Methods
+// ============================================
+
+export const quizAPI = {
+  // Learner Quiz Methods
+  getQuizzes: () => api.get('/api/quiz/quizzes'),
+  getQuizQuestions: (quizId) => api.get(`/api/quiz/${quizId}/questions`),
+  startQuiz: (quizId) => api.post(`/api/quiz/${quizId}/start`),
+  submitQuiz: (quizId, answers, timeTaken) => api.post(`/api/quiz/${quizId}/submit`, { 
+    answers, 
+    time_taken: timeTaken 
+  }),
+  getQuizHistory: () => api.get('/api/quiz/history'),
+  
+  // Admin Quiz Management Methods
+  adminGetQuizzes: () => api.get('/api/admin/quizzes'),
+  adminCreateQuiz: (quizData) => api.post('/api/admin/quizzes', quizData),
+  adminUpdateQuiz: (quizId, quizData) => api.put(`/api/admin/quizzes/${quizId}`, quizData),
+  adminDeleteQuiz: (quizId) => api.delete(`/api/admin/quizzes/${quizId}`),
+  adminAddQuestion: (quizId, questionData) => api.post(`/api/admin/quizzes/${quizId}/questions`, questionData),
+  adminUpdateQuestion: (questionId, questionData) => api.put(`/api/admin/questions/${questionId}`, questionData),
+  adminDeleteQuestion: (questionId) => api.delete(`/api/admin/questions/${questionId}`),
+};
+
+// ============================================
+// Admin API Methods
+// ============================================
+
+export const adminAPI = {
+  getStats: () => api.get('/api/admin/stats'),
+  getTeachers: () => api.get('/api/admin/teachers'),
+  registerTeacher: (data) => api.post('/api/admin/teachers', data),
+  updateTeacher: (id, data) => api.put(`/api/admin/teachers/${id}`, data),
+  deleteTeacher: (id) => api.delete(`/api/admin/teachers/${id}`),
+  getLearners: () => api.get('/api/admin/learners'),
+  registerLearner: (data) => api.post('/api/admin/learners', data),
+  updateLearner: (id, data) => api.put(`/api/admin/learners/${id}`, data),
+  deleteLearner: (id) => api.delete(`/api/admin/learners/${id}`),
+  getClasses: () => api.get('/api/admin/classes'),
+  createClass: (data) => api.post('/api/admin/classes', data),
+  updateClass: (id, data) => api.put(`/api/admin/classes/${id}`, data),
+  deleteClass: (id) => api.delete(`/api/admin/classes/${id}`),
+  getSubjects: (classId) => api.get(`/api/admin/subjects/${classId}`),
+  createSubject: (data) => api.post('/api/admin/subjects', data),
+  updateSubject: (id, data) => api.put(`/api/admin/subjects/${id}`, data),
+  deleteSubject: (id) => api.delete(`/api/admin/subjects/${id}`),
+  getAuditLogs: () => api.get('/api/admin/audit-logs'),
+  clearAuditLogs: () => api.delete('/api/admin/audit-logs/clear'),
+};
+
 // Export the API instance and helper functions
 export { api };
 export default api;

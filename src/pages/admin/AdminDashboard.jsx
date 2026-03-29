@@ -14,6 +14,7 @@ import RegisterTeacher from '../../components/Admin/RegisterTeacher';
 import AdminClassManagement from '../../components/Admin/AdminClassManagement';
 import AdminSubjectManagement from '../../components/Admin/AdminSubjectManagement';
 import SecurityLogs from '../../components/Admin/SecurityLogs';
+import QuizManagement from '../../components/Admin/QuizManagement'; // Add this import
 
 // Theme constants
 const NAVY_DARK = '#0A192F';
@@ -201,10 +202,11 @@ export default function AdminDashboard() {
   const [showRegisterLearnerModal, setShowRegisterLearnerModal] = useState(false);
   const [showRegisterTeacherModal, setShowRegisterTeacherModal] = useState(false);
 
-  // Navigation items for mobile drawer
+  // Navigation items for mobile drawer - UPDATED with Quiz Management
   const navItems = [
     { id: 'register-learner', icon: '📝', label: 'Register Learner' },
     { id: 'register-teacher', icon: '👨‍🏫', label: 'Register Teacher' },
+    { id: 'quiz-management', icon: '📋', label: 'Quiz Management' }, // Added Quiz Management
     { id: 'class-management', icon: '📚', label: 'Class Management' },
     { id: 'subject-management', icon: '📖', label: 'Subject Management' },
     { id: 'security-logs', icon: '🔒', label: 'Security Logs' },
@@ -311,13 +313,15 @@ export default function AdminDashboard() {
     loadStats();
   };
 
-  // Render content based on active navigation
+  // Render content based on active navigation - UPDATED with Quiz Management case
   const renderContent = () => {
     switch (activeNav) {
       case 'register-learner':
         return <RegisterLearner onSuccess={() => handleNavClick('learners-list')} />;
       case 'register-teacher':
         return <RegisterTeacher onSuccess={() => handleNavClick('teachers-list')} />;
+      case 'quiz-management':
+        return <QuizManagement />;
       case 'class-management':
         return <AdminClassManagement onManageSubjects={handleManageSubjects} />;
       case 'subject-management':
