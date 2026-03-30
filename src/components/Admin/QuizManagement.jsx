@@ -3,7 +3,8 @@ import {
   PlusIcon, PencilIcon, TrashIcon, EyeIcon, XMarkIcon, 
   DocumentTextIcon, ClockIcon, QuestionMarkCircleIcon, 
   TrophyIcon, ChevronRightIcon, ArchiveBoxIcon,
-  CheckCircleIcon, InformationCircleIcon
+  CheckCircleIcon, InformationCircleIcon, LockClosedIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -25,13 +26,16 @@ const QuizManagement = () => {
     title: '',
     description: '',
     duration: 30,
-    is_active: true
+    is_active: true,
+    target_form: 'All'  // Add target form
   });
   
   const [questionForm, setQuestionForm] = useState({
     question_text: '',
+    question_type: 'multiple_choice',
     options: ['', '', '', ''],
     correct_answer: 0,
+    expected_answer: '',
     explanation: '',
     marks: 1
   });
@@ -130,7 +134,8 @@ const QuizManagement = () => {
           title: '',
           description: '',
           duration: 30,
-          is_active: true
+          is_active: true,
+          target_form: 'All'
         });
         loadQuizzes();
       } else {
@@ -173,7 +178,8 @@ const QuizManagement = () => {
           title: '',
           description: '',
           duration: 30,
-          is_active: true
+          is_active: true,
+          target_form: 'All'
         });
         loadQuizzes();
       } else {
@@ -230,9 +236,17 @@ const QuizManagement = () => {
       return;
     }
     
-    if (questionForm.options.some(opt => !opt.trim())) {
-      toast.error('Please fill in all options');
-      return;
+    // Validate based on question type
+    if (questionForm.question_type === 'multiple_choice') {
+      if (questionForm.options.some(opt => !opt.trim())) {
+        toast.error('Please fill in all options');
+        return;
+      }
+    } else {
+      if (!questionForm.expected_answer.trim()) {
+        toast.error('Please enter an expected answer');
+        return;
+      }
     }
     
     const quizId = selectedQuiz.id;
@@ -244,13 +258,21 @@ const QuizManagement = () => {
     setSubmitting(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await api.post(`/api/admin/quizzes/${quizId}/questions`, {
+      const payload = {
         question_text: questionForm.question_text.trim(),
-        options: questionForm.options.map(opt => opt.trim()),
-        correct_answer: questionForm.correct_answer,
-        explanation: questionForm.explanation?.trim() || null,
-        marks: questionForm.marks
-      }, {
+        question_type: questionForm.question_type,
+        marks: questionForm.marks,
+        explanation: questionForm.explanation?.trim() || null
+      };
+      
+      if (questionForm.question_type === 'multiple_choice') {
+        payload.options = questionForm.options.map(opt => opt.trim());
+        payload.correct_answer = questionForm.correct_answer;
+      } else {
+        payload.expected_answer = questionForm.expected_answer.trim();
+      }
+      
+      const response = await api.post(`/api/admin/quizzes/${quizId}/questions`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -259,8 +281,10 @@ const QuizManagement = () => {
         setShowQuestionModal(false);
         setQuestionForm({
           question_text: '',
+          question_type: 'multiple_choice',
           options: ['', '', '', ''],
           correct_answer: 0,
+          expected_answer: '',
           explanation: '',
           marks: 1
         });
@@ -292,7 +316,8 @@ const QuizManagement = () => {
       title: quiz.title || '',
       description: quiz.description || '',
       duration: quiz.duration || 30,
-      is_active: quiz.is_active !== false
+      is_active: quiz.is_active !== false,
+      target_form: quiz.target_form || 'All'
     });
     setShowQuizModal(true);
   };
@@ -330,6 +355,14 @@ const QuizManagement = () => {
       'Chemistry': 'bg-pink-100 text-pink-700'
     };
     return colors[subjectName] || 'bg-gray-100 text-gray-700';
+  };
+
+  const getTargetFormColor = (targetForm) => {
+    if (targetForm === 'Form 4') return 'bg-purple-100 text-purple-700';
+    if (targetForm === 'Form 3') return 'bg-blue-100 text-blue-700';
+    if (targetForm === 'Form 2') return 'bg-green-100 text-green-700';
+    if (targetForm === 'Form 1') return 'bg-yellow-100 text-yellow-700';
+    return 'bg-gray-100 text-gray-700';
   };
 
   // Filter quizzes based on active tab
@@ -372,7 +405,8 @@ const QuizManagement = () => {
                 title: '', 
                 description: '', 
                 duration: 30, 
-                is_active: true 
+                is_active: true,
+                target_form: 'All'
               }); 
               setShowQuizModal(true); 
             }}
@@ -431,9 +465,14 @@ const QuizManagement = () => {
               <div className={`absolute top-0 right-0 w-1.5 h-full ${quiz.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`} />
               
               <div className="flex justify-between items-start mb-4">
-                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${getSubjectColor(quiz.subject_name)}`}>
-                  {quiz.subject_name || 'Unknown'}
-                </span>
+                <div className="flex gap-2">
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${getSubjectColor(quiz.subject_name)}`}>
+                    {quiz.subject_name || 'Unknown'}
+                  </span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${getTargetFormColor(quiz.target_form)}`}>
+                    {quiz.target_form === 'All' ? 'All Forms' : quiz.target_form}
+                  </span>
+                </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button onClick={() => openEditQuiz(quiz)} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
                     <PencilIcon className="w-5 h-5" />
@@ -522,18 +561,36 @@ const QuizManagement = () => {
                       <div className="flex justify-between gap-4">
                         <span className="font-mono text-indigo-300 text-lg font-bold">0{idx + 1}</span>
                         <div className="flex-1">
-                          <p className="font-semibold text-gray-800 mb-4 leading-relaxed">{q.question_text}</p>
-                          <div className="grid grid-cols-1 gap-2">
-                            {q.options && q.options.map((opt, oIdx) => (
-                              <div key={oIdx} className={`px-4 py-2 rounded-xl text-sm border ${
-                                oIdx === q.correct_answer 
-                                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-medium' 
-                                  : 'bg-white border-gray-200 text-gray-600'
-                              }`}>
-                                {String.fromCharCode(65 + oIdx)}. {opt}
-                              </div>
-                            ))}
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              q.question_type === 'multiple_choice' 
+                                ? 'bg-blue-100 text-blue-700' 
+                                : 'bg-purple-100 text-purple-700'
+                            }`}>
+                              {q.question_type === 'multiple_choice' ? 'Multiple Choice' : 'Short Answer'}
+                            </span>
                           </div>
+                          <p className="font-semibold text-gray-800 mb-4 leading-relaxed">{q.question_text}</p>
+                          {q.question_type === 'multiple_choice' && q.options && (
+                            <div className="grid grid-cols-1 gap-2">
+                              {q.options.map((opt, oIdx) => (
+                                <div key={oIdx} className={`px-4 py-2 rounded-xl text-sm border ${
+                                  oIdx === q.correct_answer 
+                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-medium' 
+                                    : 'bg-white border-gray-200 text-gray-600'
+                                }`}>
+                                  {String.fromCharCode(65 + oIdx)}. {opt}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {q.question_type === 'short_answer' && (
+                            <div className="mt-2 p-3 bg-purple-50 rounded-xl border border-purple-200">
+                              <p className="text-sm text-purple-700">
+                                <span className="font-medium">Expected Answer:</span> {q.expected_answer}
+                              </p>
+                            </div>
+                          )}
                           {q.explanation && (
                             <div className="mt-4 flex gap-2 p-3 bg-amber-50 rounded-xl border border-amber-100">
                               <InformationCircleIcon className="w-5 h-5 text-amber-500 shrink-0" />
@@ -615,6 +672,21 @@ const QuizManagement = () => {
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Target Form</label>
+                <select
+                  value={quizForm.target_form}
+                  onChange={(e) => setQuizForm({ ...quizForm, target_form: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="All">All Forms</option>
+                  <option value="Form 1">Form 1 Only</option>
+                  <option value="Form 2">Form 2 Only</option>
+                  <option value="Form 3">Form 3 Only</option>
+                  <option value="Form 4">Form 4 Only</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Select which form can access this quiz</p>
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
                 <input
                   type="number"
@@ -679,46 +751,84 @@ const QuizManagement = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
+              
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Options *</label>
-                <div className="space-y-2">
-                  {questionForm.options.map((opt, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <span className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-medium">
-                        {String.fromCharCode(65 + idx)}
-                      </span>
-                      <input
-                        type="text"
-                        value={opt}
-                        onChange={(e) => {
-                          const newOptions = [...questionForm.options];
-                          newOptions[idx] = e.target.value;
-                          setQuestionForm({ ...questionForm, options: newOptions });
-                        }}
-                        placeholder={`Option ${String.fromCharCode(65 + idx)}`}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                      {idx === questionForm.correct_answer && (
-                        <span className="text-green-600 text-sm font-medium">✓ Correct</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Correct Answer *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Question Type</label>
                 <select
-                  value={questionForm.correct_answer}
-                  onChange={(e) => setQuestionForm({ ...questionForm, correct_answer: parseInt(e.target.value) })}
+                  value={questionForm.question_type}
+                  onChange={(e) => {
+                    setQuestionForm({ 
+                      ...questionForm, 
+                      question_type: e.target.value,
+                      options: e.target.value === 'multiple_choice' ? ['', '', '', ''] : [],
+                      correct_answer: 0,
+                      expected_answer: ''
+                    });
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 >
-                  {questionForm.options.map((_, idx) => (
-                    <option key={idx} value={idx}>
-                      Option {String.fromCharCode(65 + idx)}: {questionForm.options[idx] || `Option ${String.fromCharCode(65 + idx)}`}
-                    </option>
-                  ))}
+                  <option value="multiple_choice">Multiple Choice</option>
+                  <option value="short_answer">Short Answer</option>
                 </select>
               </div>
+
+              {questionForm.question_type === 'multiple_choice' ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Options *</label>
+                    <div className="space-y-2">
+                      {questionForm.options.map((opt, idx) => (
+                        <div key={idx} className="flex items-center gap-2">
+                          <span className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-medium">
+                            {String.fromCharCode(65 + idx)}
+                          </span>
+                          <input
+                            type="text"
+                            value={opt}
+                            onChange={(e) => {
+                              const newOptions = [...questionForm.options];
+                              newOptions[idx] = e.target.value;
+                              setQuestionForm({ ...questionForm, options: newOptions });
+                            }}
+                            placeholder={`Option ${String.fromCharCode(65 + idx)}`}
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          />
+                          {idx === questionForm.correct_answer && (
+                            <span className="text-green-600 text-sm font-medium">✓ Correct</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Correct Answer *</label>
+                    <select
+                      value={questionForm.correct_answer}
+                      onChange={(e) => setQuestionForm({ ...questionForm, correct_answer: parseInt(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    >
+                      {questionForm.options.map((_, idx) => (
+                        <option key={idx} value={idx}>
+                          Option {String.fromCharCode(65 + idx)}: {questionForm.options[idx] || `Option ${String.fromCharCode(65 + idx)}`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Expected Answer *</label>
+                  <textarea
+                    value={questionForm.expected_answer}
+                    onChange={(e) => setQuestionForm({ ...questionForm, expected_answer: e.target.value })}
+                    rows="3"
+                    placeholder="Enter the expected answer (case insensitive)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Student's answer will be compared case-insensitively</p>
+                </div>
+              )}
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Explanation (Optional)</label>
                 <textarea

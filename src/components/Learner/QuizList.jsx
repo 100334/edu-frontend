@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { 
   ClockIcon, 
   TrophyIcon, 
-  PlayIcon,
   CheckCircleIcon,
-  StarIcon
+  StarIcon,
+  ShieldCheckIcon,
+  LockClosedIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -13,11 +15,34 @@ const QuizList = ({ onStartQuiz }) => {
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [quizHistory, setQuizHistory] = useState({});
+  const [verifyingQuiz, setVerifyingQuiz] = useState(null);
+  const [regNumber, setRegNumber] = useState('');
+  const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verificationError, setVerificationError] = useState('');
+  const [learnerForm, setLearnerForm] = useState('');
+  const [showFormInfo, setShowFormInfo] = useState(false);
 
   useEffect(() => {
     loadQuizzes();
     loadHistory();
+    getLearnerForm();
   }, []);
+
+  const getLearnerForm = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user.form) {
+          setLearnerForm(user.form);
+        }
+      }
+    } catch (error) {
+      console.error('Error getting learner form:', error);
+    }
+  };
 
   const loadQuizzes = async () => {
     try {
@@ -28,6 +53,9 @@ const QuizList = ({ onStartQuiz }) => {
       
       if (response.data.success) {
         setQuizzes(response.data.quizzes || []);
+        if (response.data.learner_form) {
+          setLearnerForm(response.data.learner_form);
+        }
       } else {
         setQuizzes([]);
       }
@@ -55,17 +83,57 @@ const QuizList = ({ onStartQuiz }) => {
       }
     } catch (error) {
       console.error('Error loading history:', error);
-      // Don't show toast for history errors
     }
   };
 
-  const getSubjectColor = (subject) => {
+  const handleStartQuiz = (quiz) => {
+    setVerifyingQuiz(quiz);
+    setShowVerificationModal(true);
+    setRegNumber('');
+    setVerificationError('');
+  };
+
+  const handleVerifyAndStart = async () => {
+    if (!regNumber.trim()) {
+      setVerificationError('Registration number required');
+      return;
+    }
+
+    setVerifying(true);
+    setVerificationError('');
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await api.post(`/api/quiz/${verifyingQuiz.id}/verify`, {
+        regNumber: regNumber.trim()
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (response.data.success) {
+        toast.success('Identity Verified', {
+          style: { background: '#fdf2f0', color: '#ff8a71' }
+        });
+        setShowVerificationModal(false);
+        onStartQuiz(verifyingQuiz.id);
+      } else {
+        setVerificationError(response.data.message || 'Verification failed');
+      }
+    } catch (error) {
+      setVerificationError('Security verification error');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  // --- THEME HELPERS ---
+  const getSubjectStyles = (subject) => {
     const subjectName = typeof subject === 'string' ? subject : subject?.name || '';
     switch(subjectName) {
-      case 'Geography': return 'bg-emerald-100 text-emerald-700';
-      case 'English': return 'bg-blue-100 text-blue-700';
-      case 'Biology': return 'bg-purple-100 text-purple-700';
-      default: return 'bg-gray-100 text-gray-700';
+      case 'Geography': return 'bg-cyan-50 text-cyan-700 border-cyan-100';
+      case 'English': return 'bg-blue-50 text-blue-700 border-blue-100';
+      case 'Biology': return 'bg-orange-50 text-orange-700 border-orange-100';
+      default: return 'bg-slate-50 text-slate-600 border-slate-100';
     }
   };
 
@@ -74,8 +142,8 @@ const QuizList = ({ onStartQuiz }) => {
     switch(subjectName) {
       case 'Geography': return '🌍';
       case 'English': return '📚';
-      case 'Biology': return '🔬';
-      default: return '📖';
+      case 'Biology': return '🧬';
+      default: return '📝';
     }
   };
 
@@ -85,106 +153,246 @@ const QuizList = ({ onStartQuiz }) => {
     return 'General';
   };
 
+  const getTargetFormColor = (targetForm) => {
+    if (targetForm === 'Form 4') return 'bg-purple-100 text-purple-700 border-purple-200';
+    if (targetForm === 'Form 3') return 'bg-blue-100 text-blue-700 border-blue-200';
+    if (targetForm === 'Form 2') return 'bg-green-100 text-green-700 border-green-200';
+    if (targetForm === 'Form 1') return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    return 'bg-gray-100 text-gray-600 border-gray-200';
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ff8a71]"></div>
       </div>
     );
   }
 
   if (!quizzes || quizzes.length === 0) {
     return (
-      <div className="bg-gray-50 rounded-xl p-12 text-center">
-        <div className="text-6xl mb-4">📝</div>
-        <h3 className="text-lg font-medium text-gray-700 mb-2">No Quizzes Available</h3>
-        <p className="text-gray-500">Check back later for new quizzes</p>
+      <div className="bg-[#f0f8ff] rounded-3xl p-12 text-center border border-blue-100">
+        <div className="text-5xl mb-4 opacity-50">✨</div>
+        <h3 className="text-sm font-bold text-slate-600 uppercase tracking-widest mb-2">No Quizzes</h3>
+        <p className="text-xs text-slate-400">The exam hall is currently empty.</p>
+        {learnerForm && (
+          <p className="text-xs text-slate-400 mt-3">Your Form: {learnerForm}</p>
+        )}
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-gray-800">Available Quizzes</h2>
-        <p className="text-sm text-gray-500 mt-1">Test your knowledge in different subjects</p>
+    <div className="bg-[#fcfdfe] min-h-screen">
+      <div className="space-y-6">
+        <div className="mb-8">
+          <div className="flex justify-between items-start flex-wrap gap-3">
+            <div>
+              <h2 className="text-lg font-black text-slate-800 tracking-tight">Available Assessments</h2>
+              <p className="text-xs text-slate-500 mt-1 uppercase tracking-wider font-semibold">Select a module to begin</p>
+            </div>
+            {learnerForm && (
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100">
+                <ShieldCheckIcon className="w-3.5 h-3.5" />
+                <span className="text-[10px] font-bold">Form: {learnerForm}</span>
+              </div>
+            )}
+          </div>
+          <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full border border-blue-100">
+            <ShieldCheckIcon className="w-3.5 h-3.5" />
+            <span className="text-[10px] font-bold">Encrypted Session Ready</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {quizzes.map((quiz) => {
+            const subjectName = getSubjectName(quiz);
+            const attempted = quizHistory[quiz.id];
+            const isCompleted = attempted?.status === 'completed';
+            const score = attempted?.percentage ? Math.round(attempted.percentage) : 0;
+            const isFormRestricted = quiz.target_form && quiz.target_form !== 'All' && quiz.target_form !== learnerForm;
+            
+            return (
+              <div key={quiz.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:border-blue-200 hover:shadow-md transition-all duration-300 group overflow-hidden relative">
+                {/* Form Restriction Overlay */}
+                {isFormRestricted && !isCompleted && (
+                  <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-10 flex items-center justify-center">
+                    <div className="bg-white rounded-xl p-3 text-center max-w-[85%] shadow-lg">
+                      <LockClosedIcon className="w-6 h-6 text-slate-400 mx-auto mb-1" />
+                      <p className="text-[10px] font-bold text-slate-700">Form Restricted</p>
+                      <p className="text-[8px] text-slate-500 mt-0.5">Only for {quiz.target_form}</p>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="p-5">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="w-10 h-10 rounded-xl bg-[#f0f8ff] flex items-center justify-center text-xl shadow-inner">
+                        {getSubjectIcon(subjectName)}
+                      </div>
+                      <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-tighter border ${getSubjectStyles(subjectName)}`}>
+                        {subjectName}
+                      </span>
+                      {quiz.target_form && quiz.target_form !== 'All' && (
+                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase tracking-tighter border ${getTargetFormColor(quiz.target_form)}`}>
+                          {quiz.target_form}
+                        </span>
+                      )}
+                    </div>
+                    {isCompleted && (
+                      <span className="flex items-center gap-1 text-emerald-600 text-[10px] font-bold uppercase">
+                        <CheckCircleIcon className="w-3.5 h-3.5" />
+                        Finalized
+                      </span>
+                    )}
+                  </div>
+                  
+                  <h3 className="text-sm font-bold text-slate-800 mb-1 leading-tight">{quiz.title || 'Untitled Assessment'}</h3>
+                  <p className="text-[11px] text-slate-400 mb-4 line-clamp-1">{quiz.description || 'Verified module content.'}</p>
+                  
+                  <div className="flex items-center gap-3 mb-5 py-2 border-y border-slate-50">
+                    <div className="flex items-center gap-1 text-slate-500">
+                      <ClockIcon className="w-3 h-3" />
+                      <span className="text-[10px] font-bold">{quiz.duration || 30}m</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-500">
+                      <TrophyIcon className="w-3 h-3" />
+                      <span className="text-[10px] font-bold">{quiz.question_count || 0} Qs</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-500">
+                      <StarIcon className="w-3 h-3" />
+                      <span className="text-[10px] font-bold">{quiz.total_points || 0} pts</span>
+                    </div>
+                  </div>
+                  
+                  {isCompleted ? (
+                    <div className="bg-[#fff8f6] rounded-xl p-3 border border-orange-100">
+                      <div className="flex justify-between items-center mb-1.5">
+                        <span className="text-[10px] font-black text-orange-700 uppercase tracking-widest">Efficiency</span>
+                        <span className="text-sm font-black text-orange-800">{score}%</span>
+                      </div>
+                      <div className="h-1.5 bg-white rounded-full overflow-hidden border border-orange-50">
+                        <div 
+                          className="h-full bg-orange-500 rounded-full transition-all duration-500 shadow-sm"
+                          style={{ width: `${score}%` }}
+                        />
+                      </div>
+                      <div className="mt-2 text-[9px] text-slate-500">
+                        Earned: {attempted?.earned_points || 0} / {attempted?.total_points || 0} pts
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleStartQuiz(quiz)}
+                      disabled={isFormRestricted}
+                      className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl transition-all active:scale-95 text-xs font-bold ${
+                        isFormRestricted
+                          ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                          : 'bg-[#ff8a71] text-white hover:bg-[#ff6b4a] shadow-lg shadow-orange-100'
+                      }`}
+                    >
+                      <LockClosedIcon className="w-3.5 h-3.5" />
+                      {isFormRestricted ? 'Not Available' : 'Unlock & Start'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {quizzes.map((quiz) => {
-          const subjectName = getSubjectName(quiz);
-          const attempted = quizHistory[quiz.id];
-          const isCompleted = attempted?.status === 'completed';
-          const score = attempted?.percentage ? Math.round(attempted.percentage) : 0;
-          
-          return (
-            <div key={quiz.id} className="bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition">
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">{getSubjectIcon(subjectName)}</span>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getSubjectColor(subjectName)}`}>
-                      {subjectName}
-                    </span>
-                  </div>
-                  {isCompleted && (
-                    <span className="flex items-center gap-1 text-green-600 text-sm">
-                      <CheckCircleIcon className="w-4 h-4" />
-                      Completed
+      {/* Verification Modal */}
+      {showVerificationModal && verifyingQuiz && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-[2rem] max-w-sm w-full shadow-2xl border border-blue-100 overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-8">
+              <div className="flex flex-col items-center text-center mb-6">
+                <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mb-4 border border-blue-100">
+                  <ShieldCheckIcon className="w-7 h-7 text-blue-600" />
+                </div>
+                <h3 className="text-lg font-black text-slate-800 tracking-tight">Identity Check</h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Access Protocol Required</p>
+                <div className="mt-3 flex gap-2">
+                  <span className={`px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase border ${getSubjectStyles(verifyingQuiz.subject_name)}`}>
+                    {getSubjectName(verifyingQuiz)}
+                  </span>
+                  {verifyingQuiz.target_form && verifyingQuiz.target_form !== 'All' && (
+                    <span className={`px-2 py-0.5 rounded-lg text-[9px] font-bold uppercase border ${getTargetFormColor(verifyingQuiz.target_form)}`}>
+                      {verifyingQuiz.target_form}
                     </span>
                   )}
                 </div>
-                
-                <h3 className="text-lg font-bold text-gray-800 mb-2">{quiz.title || 'Untitled Quiz'}</h3>
-                <p className="text-sm text-gray-500 mb-4">{quiz.description || 'Test your knowledge'}</p>
-                
-                <div className="flex items-center gap-4 mb-4 text-sm text-gray-600">
-                  <div className="flex items-center gap-1">
-                    <ClockIcon className="w-4 h-4" />
-                    <span>{quiz.duration || 30} min</span>
+              </div>
+              
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 px-1">
+                    Registration No.
+                  </label>
+                  <input
+                    type="text"
+                    value={regNumber}
+                    onChange={(e) => {
+                      setRegNumber(e.target.value.toUpperCase());
+                      setVerificationError('');
+                    }}
+                    onKeyPress={(e) => e.key === 'Enter' && handleVerifyAndStart()}
+                    placeholder="E.G., PSS/2026/001"
+                    className="w-full px-4 py-3 bg-[#fcfdfe] border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 font-mono text-xs uppercase transition-all"
+                    autoFocus
+                  />
+                  {verificationError && (
+                    <p className="mt-2 text-[10px] text-orange-600 font-bold flex items-center gap-1 px-1">
+                      <InformationCircleIcon className="w-3 h-3" /> {verificationError}
+                    </p>
+                  )}
+                </div>
+
+                {verifyingQuiz.target_form === 'Form 4' && (
+                  <div className="bg-purple-50 rounded-2xl p-4 border border-purple-100">
+                    <div className="flex gap-3">
+                      <TrophyIcon className="w-4 h-4 text-purple-600 shrink-0" />
+                      <div>
+                        <p className="text-[10px] text-purple-800 font-bold mb-1">⭐ Form 4 Assessment</p>
+                        <p className="text-[9px] text-purple-700 leading-relaxed">
+                          This is a Form 4 quiz. Good luck with your final examinations preparation!
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <TrophyIcon className="w-4 h-4" />
-                    <span>{quiz.question_count || 0} Questions</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <StarIcon className="w-4 h-4" />
-                    <span>{quiz.total_points || 0} pts</span>
+                )}
+
+                <div className="bg-blue-50 rounded-2xl p-4 border border-blue-100">
+                  <div className="flex gap-3">
+                    <InformationCircleIcon className="w-4 h-4 text-blue-600 shrink-0" />
+                    <p className="text-[10px] text-blue-800 leading-relaxed font-medium">
+                      Your unique ID ensures assessment integrity and secures your progress record.
+                    </p>
                   </div>
                 </div>
-                
-                {isCompleted ? (
-                  <div className="bg-gray-50 rounded-lg p-3 mb-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-gray-600">Your Score:</span>
-                      <span className="text-lg font-bold text-indigo-600">{score}%</span>
-                    </div>
-                    <div className="mt-2 h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full rounded-full ${
-                          score >= 70 ? 'bg-green-500' : score >= 50 ? 'bg-yellow-500' : 'bg-red-500'
-                        }`}
-                        style={{ width: `${score}%` }}
-                      />
-                    </div>
-                    <div className="mt-2 text-xs text-gray-500">
-                      Earned: {attempted?.earned_points || 0} / {attempted?.total_points || 0} points
-                    </div>
-                  </div>
-                ) : (
+
+                <div className="flex flex-col gap-2 pt-2">
                   <button
-                    onClick={() => onStartQuiz(quiz.id)}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                    onClick={handleVerifyAndStart}
+                    disabled={verifying}
+                    className="w-full py-3 bg-[#ff8a71] text-white rounded-xl hover:bg-[#ff6b4a] transition-all font-black text-xs shadow-lg shadow-orange-100 flex items-center justify-center gap-2 disabled:opacity-50"
                   >
-                    <PlayIcon className="w-4 h-4" />
-                    Start Quiz
+                    {verifying ? 'Validating...' : 'Verify Identity'}
                   </button>
-                )}
+                  <button
+                    onClick={() => setShowVerificationModal(false)}
+                    className="w-full py-3 bg-white text-slate-400 rounded-xl hover:text-slate-600 transition-all font-bold text-xs"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
-          );
-        })}
-      </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
