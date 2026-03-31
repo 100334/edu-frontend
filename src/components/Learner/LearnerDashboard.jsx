@@ -18,9 +18,9 @@ import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-// Import Quiz Components - FIXED PATHS
-import QuizList from './QuizList';  // Same directory
-import QuizTaking from './QuizTaking';  // Same directory
+// Import Quiz Components
+import QuizList from './QuizList';
+import QuizTaking from './QuizTaking';
 
 // Theme constants
 const NAVY_DARK = '#0A192F';
@@ -33,7 +33,6 @@ const getGradeFromScore = (score, form = 'Form 1') => {
   const isUpperForm = form === 'Form 3' || form === 'Form 4';
   
   if (isUpperForm) {
-    // Points system for Form 3 and 4
     if (score >= 85) return { letter: 'A*', points: 1, description: 'Distinction', color: '#1e7e4a', bgColor: '#e8f5e9' };
     else if (score >= 75) return { letter: 'A', points: 2, description: 'Distinction', color: '#2a6e2a', bgColor: '#e8f5e9' };
     else if (score >= 65) return { letter: 'B', points: 3, description: 'Credit', color: '#2a9090', bgColor: '#e0f2f1' };
@@ -44,7 +43,6 @@ const getGradeFromScore = (score, form = 'Form 1') => {
     else if (score >= 35) return { letter: 'G', points: 8, description: 'Pass', color: '#f39c12', bgColor: '#ffe6cc' };
     else return { letter: 'U', points: 9, description: 'Fail', color: '#c0392b', bgColor: '#ffebee' };
   } else {
-    // Standard grading for Form 1 and Form 2
     if (score >= 75) return { letter: 'A', description: 'Excellent', points: null, color: '#1e7e4a', bgColor: '#e8f5e9' };
     else if (score >= 65) return { letter: 'B', description: 'Very good', points: null, color: '#2a9090', bgColor: '#e0f2f1' };
     else if (score >= 55) return { letter: 'C', description: 'Good', points: null, color: '#c9933a', bgColor: '#fff3e0' };
@@ -53,7 +51,7 @@ const getGradeFromScore = (score, form = 'Form 1') => {
   }
 };
 
-// Calculate average only from subjects with valid scores
+// Calculate average
 const calculateAverage = (subjects, form = 'Form 1') => {
   if (!subjects || subjects.length === 0) return 0;
   const validSubjects = subjects.filter(s => s && s.score !== undefined && s.score !== null && s.score !== '');
@@ -97,7 +95,7 @@ const getOverallGradeFromPoints = (totalPoints) => {
   return { description: 'Fail' };
 };
 
-// Get final status based on English pass/fail and total points
+// Get final status
 const getFinalStatus = (englishPassed, totalPoints) => {
   if (!englishPassed) return { status: 'FAIL', message: 'Failed English - Overall Result: FAIL', color: '#c0392b' };
   if (totalPoints <= 2) return { status: 'DISTINCTION', message: 'Distinction - Excellent Performance!', color: '#1e7e4a' };
@@ -106,7 +104,7 @@ const getFinalStatus = (englishPassed, totalPoints) => {
   return { status: 'FAIL', message: 'Fail - Needs Improvement', color: '#c0392b' };
 };
 
-// Stat Card Component - Enhanced mobile responsive
+// Stat Card Component
 const StatCard = ({ emoji, value, label }) => (
   <div className="bg-white rounded-xl border border-[#d4cfc6] p-2.5 sm:p-3 md:p-4 lg:p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
     <div className="text-xl sm:text-2xl md:text-3xl mb-1 sm:mb-2">{emoji}</div>
@@ -115,7 +113,7 @@ const StatCard = ({ emoji, value, label }) => (
   </div>
 );
 
-// Navigation Item Component - Touch optimized
+// Navigation Item Component
 const NavItem = ({ icon, label, isActive, onClick }) => (
   <button
     onClick={onClick}
@@ -325,7 +323,7 @@ export default function LearnerDashboard() {
         console.error('Error fetching quiz history:', quizError);
       }
 
-      // Process reports - include form information
+      // Process reports
       const processedReports = reportsData.map(report => ({
         ...report,
         academic_year: report.academic_year || (report.created_at ? new Date(report.created_at).getFullYear() : new Date().getFullYear()),
@@ -491,6 +489,8 @@ export default function LearnerDashboard() {
     return 'Please focus on regular attendance ⚠️';
   };
 
+  // REDESIGNED REPORT CARD PDF DOWNLOAD
+   // REDESIGNED REPORT CARD PDF DOWNLOAD - SINGLE PAGE WITH LOGO
   const downloadReportPDF = (report) => {
     if (!report) {
       toast.error('No report data available');
@@ -498,121 +498,271 @@ export default function LearnerDashboard() {
     }
 
     try {
-      const doc = new jsPDF();
+      const doc = new jsPDF({
+        unit: 'mm',
+        format: 'a4',
+        orientation: 'portrait'
+      });
       const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
       const validSubjects = (report.subjects || []).filter(s => s && s.score !== undefined && s.score !== null);
       const isUpperForm = report.form === 'Form 3' || report.form === 'Form 4';
       const totalPoints = isUpperForm ? calculateTotalPoints(validSubjects, report.form) : null;
       const bestSubjects = isUpperForm ? calculateBestSubjects(validSubjects, report.form) : validSubjects;
+      const avgScore = calculateAverage(validSubjects);
+      const avgGrade = getGradeFromScore(avgScore, report.form);
       
-      doc.setFillColor(255, 255, 255);
+      // Colors
+      const navy = [26, 35, 126];
+      const gold = [201, 147, 58];
+      const lightGray = [248, 250, 252];
+      const darkGray = [15, 25, 35];
+      
+      let currentY = 10; // Start position tracker
+      
+      // 1. Header with Logo Area and Gradient Effect
+      doc.setFillColor(navy[0], navy[1], navy[2]);
       doc.rect(0, 0, pageWidth, 50, 'F');
-      doc.setFillColor(0, 127, 255);
-      doc.rect(0, 50, pageWidth, 2, 'F');
-      doc.setTextColor(10, 25, 47);
+      
+      // Decorative gold bar
+      doc.setFillColor(gold[0], gold[1], gold[2]);
+      doc.rect(0, 47, pageWidth, 3, 'F');
+      
+      // Logo Area (Placeholder Circle with P)
+      doc.setFillColor(255, 255, 255);
+      doc.circle(25, 25, 8, 'F');
+      doc.setTextColor(navy[0], navy[1], navy[2]);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('P', 25, 29, { align: 'center' });
+      
+      // School Name
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PROGRESS SECONDARY SCHOOL', pageWidth / 2, 22, { align: 'center' });
+      
+      // Motto
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(220, 220, 220);
+      doc.text('Scholastica, Excellentia et Disciplina', pageWidth / 2, 30, { align: 'center' });
+      
+      // Report Title
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(gold[0], gold[1], gold[2]);
+      doc.text('ACADEMIC REPORT CARD', pageWidth / 2, 40, { align: 'center' });
+      
+      currentY = 58;
+      
+      // 2. Student Information Card (Compact)
+      doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+      doc.roundedRect(15, currentY, pageWidth - 30, 32, 3, 3, 'F');
+      doc.setDrawColor(gold[0], gold[1], gold[2]);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(15, currentY, pageWidth - 30, 32, 3, 3, 'S');
+      
+      // Student Info - Two column layout
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text('STUDENT INFORMATION', 20, currentY + 8);
+      
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      // Left column
+      doc.text(`Name: ${user?.name || user?.full_name || 'N/A'}`, 20, currentY + 16);
+      doc.text(`Registration: ${user?.reg_number || user?.registration_number || 'N/A'}`, 20, currentY + 22);
+      doc.text(`Form: ${report?.form || user?.form || 'N/A'}`, 20, currentY + 28);
+      
+      // Right column
+      doc.text(`Assessment: ${report?.term || 'N/A'}`, pageWidth - 65, currentY + 16);
+      doc.text(`Year: ${report?.academic_year || new Date().getFullYear()}`, pageWidth - 65, currentY + 22);
+      doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 65, currentY + 28);
+      
+      currentY += 38;
+      
+      // 3. Performance Summary Cards (Compact)
+      const cardWidth = (pageWidth - 45) / 3;
+      const cardSpacing = 7;
+      const summaryY = currentY;
+      const cardHeight = 38;
+      
+      // Card 1: Average Score
+      doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+      doc.roundedRect(15, summaryY, cardWidth, cardHeight, 3, 3, 'F');
+      doc.setDrawColor(gold[0], gold[1], gold[2]);
+      doc.roundedRect(15, summaryY, cardWidth, cardHeight, 3, 3, 'S');
+      
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.text('AVERAGE SCORE', 20, summaryY + 10);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(gold[0], gold[1], gold[2]);
+      doc.text(`${avgScore}%`, 20, summaryY + 28);
+      
+      // Card 2: Grade
+      doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+      doc.roundedRect(15 + cardWidth + cardSpacing, summaryY, cardWidth, cardHeight, 3, 3, 'F');
+      doc.setDrawColor(gold[0], gold[1], gold[2]);
+      doc.roundedRect(15 + cardWidth + cardSpacing, summaryY, cardWidth, cardHeight, 3, 3, 'S');
+      
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.text('GRADE', 20 + cardWidth + cardSpacing, summaryY + 10);
       doc.setFontSize(24);
       doc.setFont('helvetica', 'bold');
-      doc.text('PROGRESS SECONDARY SCHOOL', pageWidth / 2, 25, { align: 'center' });
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(100, 116, 139);
-      doc.text('Scholastica, Excellentia et Disciplina', pageWidth / 2, 35, { align: 'center' });
-      doc.setTextColor(0, 127, 255);
-      doc.setFontSize(18);
-      doc.text('STUDENT REPORT CARD', pageWidth / 2, 70, { align: 'center' });
-
-      doc.setFillColor(248, 250, 252);
-      doc.roundedRect(20, 80, pageWidth - 40, 45, 3, 3, 'F');
-      doc.setDrawColor(0, 127, 255);
-      doc.setLineWidth(0.5);
-      doc.roundedRect(20, 80, pageWidth - 40, 45, 3, 3, 'S');
-      doc.setTextColor(10, 25, 47);
+      doc.setTextColor(gold[0], gold[1], gold[2]);
+      doc.text(avgGrade.letter, 20 + cardWidth + cardSpacing, summaryY + 32);
+      
+      // Card 3: Status
+      doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+      doc.roundedRect(15 + (cardWidth + cardSpacing) * 2, summaryY, cardWidth, cardHeight, 3, 3, 'F');
+      doc.setDrawColor(gold[0], gold[1], gold[2]);
+      doc.roundedRect(15 + (cardWidth + cardSpacing) * 2, summaryY, cardWidth, cardHeight, 3, 3, 'S');
+      
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.text('STATUS', 20 + (cardWidth + cardSpacing) * 2, summaryY + 10);
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text('Student Information', 25, 92);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      doc.text(`Name: ${user?.name || user?.full_name || 'N/A'}`, 25, 102);
-      doc.text(`Registration: ${user?.reg_number || user?.registration_number || 'N/A'}`, 25, 109);
-      doc.text(`Form: ${report?.form || user?.form || 'N/A'}`, 25, 116);
-      doc.text(`Assessment: ${report?.term || 'N/A'}`, pageWidth - 80, 102);
-      doc.text(`Year: ${report?.academic_year || new Date().getFullYear()}`, pageWidth - 80, 109);
-      doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 80, 116);
-
-      if (bestSubjects && bestSubjects.length > 0) {
-        const tableColumn = isUpperForm ? ["Subject", "Score", "Points", "Grade"] : ["Subject", "Score", "Grade", "Remarks"];
-        const tableRows = bestSubjects.map((subject) => {
-          const grade = getGradeFromScore(subject.score, report.form);
-          if (isUpperForm) {
-            return [subject.name, subject.score.toString(), grade.points + ' pts', grade.letter];
-          } else {
-            return [subject.name, subject.score.toString(), grade.letter, grade.description];
-          }
-        });
-
-        const avgScore = calculateAverage(validSubjects);
-        const avgGrade = getGradeFromScore(avgScore, report.form);
-        
+      const statusColor = avgScore >= 50 ? [30, 126, 74] : [192, 57, 43];
+      doc.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
+      doc.text(avgScore >= 50 ? 'PASS' : 'FAIL', 20 + (cardWidth + cardSpacing) * 2, summaryY + 30);
+      
+      currentY = summaryY + cardHeight + 10;
+      
+      // 4. Subjects Table (Compact with smaller fonts)
+      const tableColumn = isUpperForm ? ["Subject", "Score", "Points", "Grade"] : ["Subject", "Score", "Grade", "Remarks"];
+      const tableRows = bestSubjects.map((subject) => {
+        const grade = getGradeFromScore(subject.score, report.form);
         if (isUpperForm) {
-          tableRows.push([
-            'BEST 6 TOTAL',
-            '',
-            { content: totalPoints + ' pts', styles: { fontStyle: 'bold', textColor: [0, 127, 255] } },
-            { content: getOverallGradeFromPoints(totalPoints).description, styles: { fontStyle: 'bold', textColor: [0, 127, 255] } }
-          ]);
+          return [subject.name, `${subject.score}%`, grade.points + ' pts', grade.letter];
         } else {
-          tableRows.push([
-            'AVERAGE',
-            { content: avgScore.toString(), styles: { fontStyle: 'bold', textColor: [0, 127, 255] } },
-            { content: avgGrade.letter, styles: { fontStyle: 'bold', textColor: [0, 127, 255] } },
-            { content: avgGrade.description, styles: { fontStyle: 'bold' } }
-          ]);
+          return [subject.name, `${subject.score}%`, grade.letter, grade.description];
         }
-
-        autoTable(doc, {
-          startY: 135,
-          head: [tableColumn],
-          body: tableRows,
-          theme: 'grid',
-          headStyles: {
-            fillColor: [0, 127, 255],
-            textColor: [255, 255, 255],
-            fontStyle: 'bold',
-            halign: 'center',
-            fontSize: 11
-          },
-          bodyStyles: {
-            textColor: [10, 25, 47],
-            fontSize: 10
-          },
-          alternateRowStyles: {
-            fillColor: [248, 250, 252]
-          }
-        });
+      });
+      
+      // Add Summary Row
+      if (isUpperForm && totalPoints !== null) {
+        tableRows.push([
+          { content: 'BEST 6 TOTAL', styles: { fontStyle: 'bold', fillColor: [255, 248, 225] } },
+          { content: '', styles: { fontStyle: 'bold' } },
+          { content: totalPoints + ' pts', styles: { fontStyle: 'bold', textColor: gold } },
+          { content: getOverallGradeFromPoints(totalPoints).description, styles: { fontStyle: 'bold', textColor: gold } }
+        ]);
+      } else {
+        tableRows.push([
+          { content: 'OVERALL AVERAGE', styles: { fontStyle: 'bold', fillColor: [255, 248, 225] } },
+          { content: `${avgScore}%`, styles: { fontStyle: 'bold', textColor: gold } },
+          { content: avgGrade.letter, styles: { fontStyle: 'bold', textColor: gold } },
+          { content: avgGrade.description, styles: { fontStyle: 'bold' } }
+        ]);
       }
-
+      
+      // Calculate available space for table
+      const remainingSpace = pageHeight - currentY - 35; // Reserve space for comment and footer
+      const tableStartY = currentY;
+      
+      autoTable(doc, {
+        startY: tableStartY,
+        margin: { left: 15, right: 15 },
+        head: [tableColumn],
+        body: tableRows,
+        theme: 'grid',
+        headStyles: {
+          fillColor: navy,
+          textColor: 255,
+          fontStyle: 'bold',
+          halign: 'center',
+          fontSize: 8,
+          cellPadding: 3
+        },
+        bodyStyles: {
+          textColor: darkGray,
+          fontSize: 7,
+          cellPadding: 2.5
+        },
+        alternateRowStyles: {
+          fillColor: lightGray
+        },
+        columnStyles: {
+          0: { cellWidth: 70, fontStyle: 'bold' },
+          1: { halign: 'center', cellWidth: 30 },
+          2: { halign: 'center', cellWidth: 30 },
+          3: { halign: 'center' }
+        },
+        didDrawPage: (data) => {
+          // Store final Y for comment placement
+          window.tableFinalY = data.cursor.y;
+        }
+      });
+      
+      const finalTableY = window.tableFinalY || (currentY + (tableRows.length * 8) + 15);
+      currentY = finalTableY + 8;
+      
+      // 5. Teacher's Comment (Compact)
       if (report?.comment) {
-        const finalY = doc.lastAutoTable?.finalY + 15 || 200;
-        doc.setFillColor(248, 250, 252);
-        doc.roundedRect(20, finalY, pageWidth - 40, 40, 3, 3, 'F');
-        doc.setFillColor(0, 127, 255);
-        doc.rect(20, finalY, 4, 40, 'F');
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(0, 127, 255);
-        doc.text("Teacher's Comment", 30, finalY + 10);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(10, 25, 47);
-        doc.setFontSize(9);
-        const splitComment = doc.splitTextToSize(report.comment, pageWidth - 70);
-        doc.text(splitComment, 30, finalY + 20);
+        const commentHeight = 35;
+        if (currentY + commentHeight + 25 <= pageHeight) {
+          doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+          doc.roundedRect(15, currentY, pageWidth - 30, commentHeight, 3, 3, 'F');
+          doc.setDrawColor(gold[0], gold[1], gold[2]);
+          doc.setLineWidth(0.3);
+          doc.roundedRect(15, currentY, pageWidth - 30, commentHeight, 3, 3, 'S');
+          
+          // Gold accent bar
+          doc.setFillColor(gold[0], gold[1], gold[2]);
+          doc.rect(15, currentY, 3, commentHeight, 'F');
+          
+          doc.setFontSize(7);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(gold[0], gold[1], gold[2]);
+          doc.text("Teacher's Remarks", 23, currentY + 8);
+          
+          doc.setFontSize(7);
+          doc.setFont('helvetica', 'italic');
+          doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+          const splitComment = doc.splitTextToSize(report.comment, pageWidth - 55);
+          // Limit comment to fit within available space
+          const maxLines = Math.floor(commentHeight / 5) - 1;
+          const displayComment = splitComment.slice(0, maxLines);
+          doc.text(displayComment, 23, currentY + 16);
+          
+          currentY += commentHeight + 8;
+        } else {
+          // If not enough space, skip comment or add a note
+          doc.setFontSize(6);
+          doc.setTextColor(gold[0], gold[1], gold[2]);
+          doc.text('* Teacher\'s comment available in full report', pageWidth / 2, pageHeight - 25, { align: 'center' });
+        }
       }
-
-      const footerY = doc.internal.pageSize.getHeight() - 15;
-      doc.setFontSize(8);
-      doc.setTextColor(156, 163, 175);
-      doc.text('This is a computer-generated document.', pageWidth / 2, footerY, { align: 'center' });
-
+      
+      // 6. Footer (Always at bottom)
+      const footerY = pageHeight - 12;
+      doc.setDrawColor(gold[0], gold[1], gold[2]);
+      doc.setLineWidth(0.2);
+      doc.line(15, footerY - 5, pageWidth - 15, footerY - 5);
+      
+      doc.setFontSize(6);
+      doc.setTextColor(150, 150, 150);
+      doc.text('This is an official academic document. Results are final.', pageWidth / 2, footerY, { align: 'center' });
+      doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, footerY + 4, { align: 'center' });
+      
+      // Add points system guide for upper form if space allows
+      if (isUpperForm && currentY < pageHeight - 28) {
+        doc.setFontSize(6);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Points Guide: 85-100%=1pt | 75-84%=2pts | 65-74%=3pts | 56-64%=4pts | 50-55%=5pts | 45-49%=6pts | 40-44%=7pts | 35-39%=8pts | <35%=9pts', 
+                 pageWidth / 2, pageHeight - 22, { align: 'center' });
+      }
+      
+      // Save PDF
       const fileName = `${user?.name?.replace(/\s+/g, '_') || 'student'}_${report?.term?.replace(/\s+/g, '_') || 'report'}_${report?.academic_year || ''}.pdf`;
       doc.save(fileName);
       
@@ -632,42 +782,55 @@ export default function LearnerDashboard() {
     try {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
+      const navy = [26, 35, 126];
+      const gold = [201, 147, 58];
+      const lightGray = [248, 250, 252];
       
-      doc.setFillColor(255, 255, 255);
+      // Header
+      doc.setFillColor(navy[0], navy[1], navy[2]);
       doc.rect(0, 0, pageWidth, 50, 'F');
-      doc.setFillColor(0, 127, 255);
-      doc.rect(0, 50, pageWidth, 2, 'F');
-      doc.setTextColor(10, 25, 47);
+      
+      doc.setTextColor(255, 255, 255);
       doc.setFontSize(24);
       doc.setFont('helvetica', 'bold');
       doc.text('PROGRESS SECONDARY SCHOOL', pageWidth / 2, 25, { align: 'center' });
+      
       doc.setFontSize(11);
-      doc.text('Attendance Record', pageWidth / 2, 35, { align: 'center' });
-
-      doc.setFillColor(248, 250, 252);
-      doc.roundedRect(20, 65, pageWidth - 40, 40, 3, 3, 'F');
-      doc.setTextColor(10, 25, 47);
-      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(200, 200, 200);
+      doc.text('Attendance Record', pageWidth / 2, 38, { align: 'center' });
+      
+      // Student Info
+      doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+      doc.roundedRect(20, 65, pageWidth - 40, 45, 3, 3, 'F');
+      doc.setDrawColor(gold[0], gold[1], gold[2]);
+      doc.roundedRect(20, 65, pageWidth - 40, 45, 3, 3, 'S');
+      
+      doc.setTextColor(15, 25, 35);
+      doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
       doc.text('Student Information', 25, 78);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.text(`Name: ${user?.name || user?.full_name || 'N/A'}`, 25, 88);
       doc.text(`Registration: ${user?.reg_number || user?.registration_number || 'N/A'}`, 25, 95);
-      doc.text(`Form: ${user?.form || 'N/A'}`, pageWidth - 80, 88);
-      doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 80, 95);
-
-      let yPos = 115;
+      doc.text(`Form: ${user?.form || 'N/A'}`, pageWidth - 85, 88);
+      doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 85, 95);
+      
+      // Stats
+      let yPos = 125;
       doc.setFontSize(10);
-      doc.setTextColor(0, 127, 255);
+      doc.setTextColor(gold[0], gold[1], gold[2]);
+      doc.setFont('helvetica', 'bold');
       doc.text(`Total Days: ${stats.totalDays}`, 20, yPos);
       doc.text(`Attendance Rate: ${stats.attendanceRate}`, 20, yPos + 7);
       doc.text(`Present: ${stats.presentCount}`, 20, yPos + 14);
       doc.text(`Late: ${stats.lateCount}`, 20, yPos + 21);
       doc.text(`Absent: ${stats.absentCount}`, 20, yPos + 28);
       
-      yPos += 40;
+      yPos += 45;
       
+      // Attendance Table
       const tableRows = attendanceRecords.map(record => [
         new Date(record.date).toLocaleDateString('en', { year: 'numeric', month: 'short', day: 'numeric' }),
         new Date(record.date).toLocaleDateString('en', { weekday: 'long' }),
@@ -676,18 +839,29 @@ export default function LearnerDashboard() {
 
       autoTable(doc, {
         startY: yPos,
+        margin: { left: 20, right: 20 },
         head: [['Date', 'Day', 'Status']],
         body: tableRows,
         theme: 'grid',
         headStyles: {
-          fillColor: [0, 127, 255],
-          textColor: [255, 255, 255],
-          fontStyle: 'bold'
+          fillColor: navy,
+          textColor: 255,
+          fontStyle: 'bold',
+          halign: 'center'
         },
         alternateRowStyles: {
-          fillColor: [248, 250, 252]
+          fillColor: lightGray
         }
       });
+
+      // Footer
+      const footerY = doc.internal.pageSize.getHeight() - 15;
+      doc.setDrawColor(gold[0], gold[1], gold[2]);
+      doc.setLineWidth(0.3);
+      doc.line(20, footerY - 5, pageWidth - 20, footerY - 5);
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text('Official Attendance Record', pageWidth / 2, footerY, { align: 'center' });
 
       doc.save(`${user?.name?.replace(/\s+/g, '_') || 'student'}_Attendance_Record.pdf`);
       toast.success('Attendance record downloaded successfully!');
@@ -710,13 +884,11 @@ export default function LearnerDashboard() {
   };
 
   const handleQuizComplete = (result) => {
-  setQuizResult(result);
-  setShowQuiz(null);
-  toast.success(`Quiz submitted! Score: ${Math.round(result.percentage)}%`);
-  
-  // Re-fetch dashboard data so the "Quizzes Completed" stat updates
-  loadDashboardData(); 
-};
+    setQuizResult(result);
+    setShowQuiz(null);
+    toast.success(`Quiz submitted! Score: ${Math.round(result.percentage)}%`);
+    loadDashboardData(); 
+  };
 
   const getReportHTML = (report) => {
     if (!report || !report.subjects) return '<div>No report data</div>';
@@ -728,83 +900,83 @@ export default function LearnerDashboard() {
     const avg = calculateAverage(validSubjects);
     const avgGrade = getGradeFromScore(avg, report.form);
     const pointsGrade = isUpperForm && totalPoints ? getOverallGradeFromPoints(totalPoints) : null;
-    
-    // Check if English is in best subjects for Form 3/4
     const englishPassed = isUpperForm ? (validSubjects.find(s => s.name.toLowerCase().includes('english'))?.score >= 35) : true;
     const finalStatus = isUpperForm ? getFinalStatus(englishPassed, totalPoints) : null;
     
     return `
       <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(15,25,35,0.1);">
-        <div style="background: #0f1923; color: white; padding: 16px 20px;">
-          <div style="font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700; color: #c9933a; margin-bottom: 4px;">PROGRESS SECONDARY SCHOOL</div>
-          <div style="font-size: 11px; opacity: 0.6;">Scholastica, Excellentia et Disciplina</div>
+        <div style="background: linear-gradient(135deg, #0f1923, #1a2d3f); color: white; padding: 20px;">
+          <div style="font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: #c9933a; margin-bottom: 4px;">PROGRESS SECONDARY SCHOOL</div>
+          <div style="font-size: 11px; opacity: 0.7;">Scholastica, Excellentia et Disciplina</div>
           <div style="font-size: 10px; opacity: 0.6; margin-top: 4px;">${report.term || 'Report'} · ${report.academic_year || new Date().getFullYear()} · ${report.form || user?.form || 'N/A'}</div>
           <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
-            <div style="font-weight: 600; font-size: 13px;">${user?.name || user?.full_name || 'Unknown'}</div>
-            <div style="font-family: monospace; font-size: 10px; opacity: 0.6; margin-top: 2px;">${user?.reg_number || user?.registration_number || 'N/A'}</div>
+            <div style="font-weight: 600; font-size: 14px;">${user?.name || user?.full_name || 'Unknown'}</div>
+            <div style="font-family: monospace; font-size: 10px; opacity: 0.7; margin-top: 2px;">${user?.reg_number || user?.registration_number || 'N/A'}</div>
           </div>
         </div>
-        <div style="padding: 16px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
-            <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: #6b7280;">Academic Performance</div>
-            <div style="text-align: right;">
-              <div style="font-size: 18px; font-weight: bold; color: ${avgGrade.color};">${avg}%</div>
-              <div style="font-size: 11px; font-weight: 600; color: ${avgGrade.color};">${isUpperForm ? avgGrade.points + ' points' : avgGrade.letter + ' - ' + avgGrade.description}</div>
-              ${isUpperForm && totalPoints !== null ? `
-                <div style="font-size: 10px; font-weight: 500; color: #6b7280; margin-top: 4px;">
-                  Best ${bestSubjects.length} Subjects Total: ${totalPoints} pts (${pointsGrade?.description})
-                </div>
-                <div style="font-size: 10px; font-weight: ${finalStatus?.status === 'FAIL' ? 'bold' : '500'}; color: ${finalStatus?.color}; margin-top: 4px;">
-                  ${finalStatus?.status} - ${finalStatus?.message}
-                </div>
-              ` : ''}
+        <div style="padding: 20px;">
+          <!-- Performance Summary -->
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px;">
+            <div style="background: #f8fafc; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0;">
+              <div style="font-size: 11px; color: #64748b; font-weight: 600;">AVERAGE</div>
+              <div style="font-size: 24px; font-weight: bold; color: #c9933a;">${avg}%</div>
+            </div>
+            <div style="background: #f8fafc; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0;">
+              <div style="font-size: 11px; color: #64748b; font-weight: 600;">GRADE</div>
+              <div style="font-size: 32px; font-weight: bold; color: #c9933a;">${avgGrade.letter}</div>
+            </div>
+            <div style="background: #f8fafc; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0;">
+              <div style="font-size: 11px; color: #64748b; font-weight: 600;">STATUS</div>
+              <div style="font-size: 16px; font-weight: bold; color: ${avg >= 50 ? '#10b981' : '#ef4444'};">${avg >= 50 ? 'PASS' : 'FAIL'}</div>
             </div>
           </div>
-          <div style="margin-bottom: 16px; overflow-x: auto;">
-            <div style="min-width: 280px;">
-              <div style="display: grid; grid-template-columns: 1fr 70px ${isUpperForm ? '55px' : '45px'}; gap: 8px; font-size: 11px; font-weight: 600; color: #6b7280; padding-bottom: 8px; border-bottom: 2px solid #ede9e1;">
-                <div>Subject</div>
-                <div style="text-align: right;">Score</div>
-                <div style="text-align: right;">${isUpperForm ? 'Points' : 'Grade'}</div>
-              </div>
-              ${bestSubjects.map(s => {
-                const grade = getGradeFromScore(s.score, report.form);
-                const isEnglish = s.name.toLowerCase().includes('english');
-                return `
-                  <div style="display: grid; grid-template-columns: 1fr 70px ${isUpperForm ? '55px' : '45px'}; gap: 8px; align-items: center; padding: 8px 0; border-bottom: 1px solid #ede9e1; ${isEnglish && isUpperForm && !englishPassed ? 'background-color: #ffebee;' : ''}">
-                    <div style="font-size: 13px; font-weight: 500; ${isEnglish && isUpperForm && !englishPassed ? 'color: #c0392b;' : ''}">${s.name}${isEnglish && isUpperForm ? ' ⭐' : ''}</div>
-                    <div style="text-align: right; font-family: monospace; font-size: 13px; font-weight: 500; color: ${grade.color};">${s.score}%</div>
-                    <div style="text-align: right;">
-                      <span style="display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 11px; font-weight: 600; background: ${grade.bgColor}; color: ${grade.color};">
-                        ${isUpperForm ? grade.points + ' pts' : grade.letter}
-                      </span>
-                    </div>
-                  </div>
-                `;
-              }).join('')}
-            </div>
+          
+          <!-- Subjects Table -->
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+                  <th style="padding: 10px; text-align: left; font-size: 12px; font-weight: 600;">Subject</th>
+                  <th style="padding: 10px; text-align: center; font-size: 12px; font-weight: 600;">Score</th>
+                  <th style="padding: 10px; text-align: center; font-size: 12px; font-weight: 600;">Grade</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${bestSubjects.map(s => {
+                  const grade = getGradeFromScore(s.score, report.form);
+                  return `
+                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                      <td style="padding: 10px; font-size: 13px; font-weight: 500;">${s.name}</td>
+                      <td style="padding: 10px; text-align: center; font-family: monospace; font-weight: 600; color: ${grade.color};">${s.score}%</td>
+                      <td style="padding: 10px; text-align: center;">
+                        <span style="display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: ${grade.bgColor}; color: ${grade.color};">${grade.letter}</span>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+                <tr style="background: #fef9e6; border-top: 2px solid #c9933a;">
+                  <td style="padding: 10px; font-weight: 700;">${isUpperForm ? 'BEST 6 TOTAL' : 'OVERALL AVERAGE'}</td>
+                  <td style="padding: 10px; text-align: center; font-weight: 700; color: #c9933a;">${isUpperForm ? `${totalPoints} pts` : `${avg}%`}</td>
+                  <td style="padding: 10px; text-align: center;">
+                    <span style="display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: #c9933a15; color: #c9933a;">${isUpperForm ? pointsGrade?.description : avgGrade.description}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-          ${isUpperForm && bestSubjects.length < validSubjects.length ? `
-            <div style="margin-bottom: 12px; padding: 6px; background: #f0f0f0; border-radius: 6px; text-align: center;">
-              <span style="font-size: 10px; color: #666;">* Best ${bestSubjects.length} subjects shown out of ${validSubjects.length} total subjects</span>
-            </div>
-          ` : ''}
+          
           ${report.comment ? `
-            <div style="margin-top: 12px; padding: 10px; background: #f7f4ef; border-radius: 8px; border-left: 3px solid #c9933a;">
-              <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: #6b7280; margin-bottom: 4px;">Teacher's Comment</div>
-              <div style="font-size: 12px; color: #0f1923;">${report.comment}</div>
+            <div style="margin-top: 20px; padding: 16px; background: #fef9e6; border-radius: 12px; border-left: 4px solid #c9933a;">
+              <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: #c9933a; margin-bottom: 6px;">Teacher's Comment</div>
+              <div style="font-size: 12px; color: #334155; line-height: 1.5;">${report.comment}</div>
             </div>
           ` : ''}
+          
           ${isUpperForm ? `
-            <div style="margin-top: 12px; padding: 10px; background: #e8f5e9; border-radius: 8px; border-left: 3px solid #1e7e4a;">
-              <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: #1e7e4a; margin-bottom: 4px;">Points System Guide</div>
-              <div style="font-size: 10px; color: #0f1923;">
-                <strong>Points Scale:</strong><br/>
-                85-100% = 1pt | 75-84% = 2pts | 65-74% = 3pts | 56-64% = 4pts<br/>
-                50-55% = 5pts | 45-49% = 6pts | 40-44% = 7pts | 35-39% = 8pts | Below 35% = 9pts<br/>
-                <strong>Best Subjects:</strong> The ${bestSubjects.length} subjects with lowest points are counted<br/>
-                <strong>English Requirement:</strong> Must pass English (score ≥ 35%) to qualify for overall pass<br/>
-                <strong>Overall: 1-2 pts = Distinction | 3-6 pts = Credit | 7-12 pts = Pass | 13+ pts = Fail</strong>
+            <div style="margin-top: 16px; padding: 12px; background: #f0fdf4; border-radius: 8px; border-left: 3px solid #10b981;">
+              <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: #10b981;">Points System Guide</div>
+              <div style="font-size: 9px; color: #166534; margin-top: 6px;">
+                85-100% = 1pt | 75-84% = 2pts | 65-74% = 3pts | 56-64% = 4pts | 50-55% = 5pts | 45-49% = 6pts | 40-44% = 7pts | 35-39% = 8pts | Below 35% = 9pts
               </div>
             </div>
           ` : ''}
@@ -861,7 +1033,7 @@ export default function LearnerDashboard() {
 
   return (
     <div className="min-h-screen bg-[#f7f4ef]">
-      {/* Header Section - Fully Responsive */}
+      {/* Header Section */}
       <div 
         className="w-full sticky top-0 z-30"
         style={{
@@ -1153,7 +1325,7 @@ export default function LearnerDashboard() {
                 </div>
               </div>
 
-              {/* Side Panel */}
+              {/* Side Panel - Quiz Performance Card, Attendance Summary, Quick Actions, Recent Activity */}
               <div className="space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6">
                 {/* Quiz Performance Card */}
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
@@ -1366,26 +1538,29 @@ export default function LearnerDashboard() {
         )}
 
         {/* Quizzes Tab */}
-     {activeTab === 'quizzes' && (
-  <div className="space-y-6">
-    {!showQuiz ? (
-      /* 1. Show the list of available quizzes */
-      <QuizList 
-        onStartQuiz={(quiz) => setShowQuiz(quiz)} 
-      />
-    ) : (
-      /* 2. Show the active quiz player when a quiz is selected */
-      <QuizTaking 
-        quiz={showQuiz} 
-        onComplete={(result) => {
-          handleQuizComplete(result); // Defined in your main component
-          setShowQuiz(null);          // Go back to list after finishing
-        }}
-        onCancel={() => setShowQuiz(null)} // Option to exit
-      />
-    )}
-  </div>
-)}
+        {activeTab === 'quizzes' && (
+          <div className="space-y-6">
+            {!showQuiz ? (
+              <QuizList 
+                onStartQuiz={(quizId) => setShowQuiz(quizId)} 
+              />
+            ) : (
+              <div>
+                <button
+                  onClick={() => setShowQuiz(null)}
+                  className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
+                >
+                  ← Back to Quizzes
+                </button>
+                <QuizTaking 
+                  quizId={showQuiz} 
+                  onComplete={handleQuizComplete}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Reports Tab */}
         {activeTab === 'reports' && (
           <>
@@ -1396,7 +1571,6 @@ export default function LearnerDashboard() {
                   <p className="text-[10px] sm:text-xs md:text-sm text-gray-500">Your academic performance overview</p>
                 </div>
                 
-                {/* Filter Section */}
                 <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                   {availableYears.length > 0 && (
                     <div className="flex items-center gap-1.5 sm:gap-2">
@@ -1432,7 +1606,6 @@ export default function LearnerDashboard() {
                 </div>
               </div>
               
-              {/* Selected Filter Indicator */}
               {(selectedYear || selectedAssessment) && (
                 <div className="mt-2 flex flex-wrap gap-1.5 sm:gap-2">
                   <span className="text-[9px] sm:text-[10px] text-gray-500">Active filters:</span>
