@@ -7,7 +7,8 @@ import {
   FlagIcon,
   PaperAirplaneIcon,
   ExclamationCircleIcon,
-  DocumentCheckIcon
+  DocumentCheckIcon,
+  PhotoIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -29,7 +30,7 @@ const QuizTaking = ({ quizId, onComplete }) => {
 
   useEffect(() => {
     if (timeLeft === 0 && !submitting) {
-      submitQuiz(); // Auto-submit when time hits zero
+      submitQuiz();
     }
     
     const timer = setInterval(() => {
@@ -108,7 +109,7 @@ const QuizTaking = ({ quizId, onComplete }) => {
       });
       
       if (response.data.success) {
-        toast.success(`Complete`, { icon: '🏆' });
+        toast.success(`Complete! Score: ${Math.round(response.data.percentage)}%`, { icon: '🏆' });
         if (onComplete) onComplete(response.data);
         else navigate('/learner/dashboard');
       }
@@ -125,11 +126,29 @@ const QuizTaking = ({ quizId, onComplete }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Helper to render images
+  const QuestionImage = ({ imageUrl, alt }) => {
+    if (!imageUrl) return null;
+    return (
+      <div className="my-4 p-3 bg-slate-50 rounded-xl border border-slate-200">
+        <img 
+          src={imageUrl} 
+          alt={alt || "Question diagram"} 
+          className="max-w-full h-auto max-h-64 mx-auto rounded-lg"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = 'https://via.placeholder.com/400x200?text=Image+Not+Found';
+          }}
+        />
+      </div>
+    );
+  };
+
   if (!quiz || questions.length === 0) {
     return (
       <div className="min-h-[300px] flex flex-col items-center justify-center space-y-3">
-        <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-slate-500 text-xs font-medium animate-pulse">Initializing Environment...</p>
+        <div className="w-8 h-8 border-2 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-slate-500 text-xs font-medium animate-pulse">Loading Assessment...</p>
       </div>
     );
   }
@@ -140,6 +159,9 @@ const QuizTaking = ({ quizId, onComplete }) => {
     progress: ((currentQuestion + 1) / questions.length) * 100
   };
 
+  const currentQ = questions[currentQuestion];
+  const hasDiagram = currentQ?.question_image;
+
   return (
     <div className="max-w-4xl mx-auto px-3 pb-16 font-sans text-slate-900">
       
@@ -147,11 +169,11 @@ const QuizTaking = ({ quizId, onComplete }) => {
       <div className="sticky top-0 z-30 mb-6 py-3 backdrop-blur-md bg-white/80 border-b border-slate-200">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <div className={`p-2 rounded-xl transition-colors ${timeLeft < 60 ? 'bg-red-50 text-red-600 animate-pulse' : 'bg-slate-900 text-white'}`}>
+            <div className={`p-2 rounded-xl transition-colors ${timeLeft < 60 ? 'bg-red-50 text-red-600 animate-pulse' : 'bg-teal-600 text-white'}`}>
               <ClockIcon className="w-4 h-4" />
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Remaining Time</p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Time Remaining</p>
               <p className={`text-base font-mono font-bold ${timeLeft < 60 ? 'text-red-600' : 'text-slate-900'}`}>
                 {formatTime(timeLeft)}
               </p>
@@ -165,7 +187,7 @@ const QuizTaking = ({ quizId, onComplete }) => {
             </div>
             <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
               <div 
-                className="h-full bg-indigo-600 transition-all duration-500 shadow-[0_0_6px_rgba(79,70,229,0.3)]"
+                className="h-full bg-teal-600 transition-all duration-500 shadow-[0_0_6px_rgba(13,148,136,0.3)]"
                 style={{ width: `${(stats.answered / stats.total) * 100}%` }}
               />
             </div>
@@ -174,11 +196,11 @@ const QuizTaking = ({ quizId, onComplete }) => {
           <button
             onClick={handleSubmit}
             disabled={submitting}
-            className="group relative flex items-center gap-1.5 px-3.5 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold shadow hover:bg-indigo-700 active:scale-95 transition-all disabled:opacity-50"
+            className="group relative flex items-center gap-1.5 px-3.5 py-2 bg-teal-600 text-white rounded-xl text-xs font-bold shadow hover:bg-teal-700 active:scale-95 transition-all disabled:opacity-50"
           >
             {submitting ? 'Processing' : (
               <>
-                Finish
+                Submit
                 <PaperAirplaneIcon className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
               </>
             )}
@@ -192,53 +214,95 @@ const QuizTaking = ({ quizId, onComplete }) => {
           <div className="bg-white rounded-2xl border border-slate-200 shadow shadow-slate-200/50 p-6 min-h-[300px] relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-slate-50">
                 <div 
-                    className="h-full bg-indigo-500 transition-all duration-300" 
+                    className="h-full bg-teal-500 transition-all duration-300" 
                     style={{ width: `${stats.progress}%` }}
                 />
             </div>
 
-            <div className="flex items-start justify-between mb-6">
-              <span className="px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
-                Question {currentQuestion + 1}
-              </span>
+            <div className="flex items-start justify-between mb-4 flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-1 bg-teal-50 text-teal-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                  Question {currentQuestion + 1}
+                </span>
+                {hasDiagram && (
+                  <span className="px-2.5 py-1 bg-cyan-50 text-cyan-700 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                    <PhotoIcon className="w-3 h-3" />
+                    Diagram
+                  </span>
+                )}
+              </div>
               <span className="text-slate-400 text-xs font-medium">
-                {questions[currentQuestion]?.points || 1} pts
+                {currentQ?.points || 1} pts
               </span>
             </div>
 
-            <h2 className="text-xl font-bold text-slate-800 leading-snug mb-8">
-              {questions[currentQuestion]?.question_text}
-            </h2>
+            {/* Question Text */}
+            {currentQ?.question_text && (
+              <h2 className="text-xl font-bold text-slate-800 leading-snug mb-6">
+                {currentQ.question_text}
+              </h2>
+            )}
 
+            {/* Question Diagram */}
+            {currentQ?.question_image && (
+              <QuestionImage imageUrl={currentQ.question_image} alt="Question diagram" />
+            )}
+
+            {/* Answer Area */}
             <div className="space-y-3">
-              {questions[currentQuestion]?.options ? (
-                questions[currentQuestion].options.map((option, idx) => (
+              {currentQ?.options ? (
+                currentQ.options.map((option, idx) => (
                   <button
                     key={idx}
                     onClick={() => handleAnswer(currentQuestion, idx)}
                     className={`w-full flex items-center gap-3 p-3.5 rounded-xl border-2 text-left transition-all duration-150 ${
                       answers[currentQuestion] === idx
-                        ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-50'
-                        : 'border-slate-100 hover:border-slate-300 hover:bg-slate-50'
+                        ? 'border-teal-600 bg-teal-50/50 ring-2 ring-teal-50'
+                        : 'border-slate-100 hover:border-teal-300 hover:bg-slate-50'
                     }`}
                   >
                     <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${
-                      answers[currentQuestion] === idx ? 'border-indigo-600 bg-indigo-600' : 'border-slate-300'
+                      answers[currentQuestion] === idx ? 'border-teal-600 bg-teal-600' : 'border-slate-300'
                     }`}>
                       {answers[currentQuestion] === idx && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
                     </div>
-                    <span className={`text-sm font-semibold ${answers[currentQuestion] === idx ? 'text-indigo-900' : 'text-slate-600'}`}>
-                      {option}
-                    </span>
+                    <div className="flex-1">
+                      <span className={`text-sm font-semibold ${answers[currentQuestion] === idx ? 'text-teal-900' : 'text-slate-600'}`}>
+                        {option}
+                      </span>
+                      {/* Option Image (if available) */}
+                      {currentQ.option_images?.[idx] && (
+                        <div className="mt-2">
+                          <img 
+                            src={currentQ.option_images[idx]} 
+                            alt={`Option ${String.fromCharCode(65 + idx)}`}
+                            className="max-h-24 rounded-lg border border-slate-200"
+                          />
+                        </div>
+                      )}
+                    </div>
                   </button>
                 ))
               ) : (
-                <textarea
-                  value={answers[currentQuestion] || ''}
-                  onChange={(e) => handleShortAnswer(currentQuestion, e.target.value)}
-                  placeholder="Draft your response..."
-                  className="w-full p-4 border-2 border-slate-100 rounded-xl focus:border-indigo-500 focus:ring-0 min-h-[150px] text-base placeholder:text-slate-300 transition-colors"
-                />
+                <div className="space-y-3">
+                  {/* Answer Reference Image (for short answer) */}
+                  {currentQ?.answer_image && (
+                    <div className="mb-4 p-3 bg-cyan-50 rounded-xl border border-cyan-200">
+                      <p className="text-xs font-medium text-cyan-700 mb-2">Reference Image:</p>
+                      <img 
+                        src={currentQ.answer_image} 
+                        alt="Answer reference"
+                        className="max-h-32 rounded-lg mx-auto"
+                      />
+                    </div>
+                  )}
+                  <textarea
+                    value={answers[currentQuestion] || ''}
+                    onChange={(e) => handleShortAnswer(currentQuestion, e.target.value)}
+                    placeholder="Type your answer here..."
+                    className="w-full p-4 border-2 border-slate-100 rounded-xl focus:border-teal-500 focus:ring-0 min-h-[150px] text-base placeholder:text-slate-300 transition-colors"
+                  />
+                </div>
               )}
             </div>
           </div>
@@ -251,7 +315,7 @@ const QuizTaking = ({ quizId, onComplete }) => {
               className="flex items-center gap-1.5 px-3 py-1.5 text-white text-xs font-bold disabled:opacity-30 hover:bg-white/10 rounded-lg transition"
             >
               <ArrowLeftIcon className="w-3.5 h-3.5" />
-              Back
+              Previous
             </button>
             <div className="text-white/40 text-xs font-mono tracking-wider hidden sm:block">
                {String(currentQuestion + 1).padStart(2, '0')} / {String(questions.length).padStart(2, '0')}
@@ -272,16 +336,16 @@ const QuizTaking = ({ quizId, onComplete }) => {
           <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
             <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-1.5">
               <DocumentCheckIcon className="w-4 h-4" />
-              Map
+              Question Navigator
             </h4>
             <div className="grid grid-cols-4 gap-2">
-              {questions.map((_, idx) => (
+              {questions.map((q, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentQuestion(idx)}
                   className={`aspect-square rounded-lg text-xs font-bold transition-all ${
                     currentQuestion === idx
-                      ? 'bg-indigo-600 text-white shadow shadow-indigo-200 scale-105 z-10'
+                      ? 'bg-teal-600 text-white shadow shadow-teal-200 scale-105 z-10'
                       : answers[idx] !== undefined
                       ? 'bg-emerald-100 text-emerald-700'
                       : 'bg-slate-50 text-slate-400 hover:bg-slate-100'
@@ -297,16 +361,24 @@ const QuizTaking = ({ quizId, onComplete }) => {
                     <div className="w-2.5 h-2.5 bg-emerald-100 rounded-sm" /> Answered
                 </div>
                 <div className="flex items-center gap-2 text-[10px] font-bold text-slate-500">
-                    <div className="w-2.5 h-2.5 bg-indigo-600 rounded-sm" /> Current
+                    <div className="w-2.5 h-2.5 bg-teal-600 rounded-sm" /> Current
                 </div>
+                {hasDiagram && (
+                  <div className="flex items-center gap-2 text-[10px] font-bold text-cyan-600">
+                    <PhotoIcon className="w-3 h-3" /> Has Diagram
+                  </div>
+                )}
             </div>
           </div>
 
-          <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl">
-            <ExclamationCircleIcon className="w-6 h-6 text-indigo-400 mb-2" />
-            <h5 className="font-bold text-indigo-900 mb-0.5 text-xs">Help</h5>
-            <p className="text-[10px] text-indigo-700 leading-relaxed font-medium">
-              Saved automatically. Refresh to resume if disconnected.
+          <div className="p-4 bg-teal-50 border border-teal-100 rounded-2xl">
+            <ExclamationCircleIcon className="w-6 h-6 text-teal-400 mb-2" />
+            <h5 className="font-bold text-teal-900 mb-0.5 text-xs">Assessment Tips</h5>
+            <p className="text-[10px] text-teal-700 leading-relaxed font-medium">
+              {hasDiagram 
+                ? "Study the diagram carefully. Your answers will be evaluated against the reference material."
+                : "Answers are auto-saved. You can resume if disconnected."
+              }
             </p>
           </div>
         </div>
@@ -322,12 +394,12 @@ const QuizTaking = ({ quizId, onComplete }) => {
             </div>
             <h3 className="text-xl font-extrabold text-slate-900 text-center mb-2">Incomplete</h3>
             <p className="text-slate-500 text-center text-sm mb-6 font-medium leading-relaxed">
-              <span className="text-indigo-600 font-bold">{questions.length - stats.answered} questions</span> unanswered. Submit anyway?
+              <span className="text-teal-600 font-bold">{questions.length - stats.answered} questions</span> unanswered. Submit anyway?
             </p>
             <div className="flex flex-col gap-2">
               <button
                 onClick={submitQuiz}
-                className="w-full py-2.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition"
+                className="w-full py-2.5 bg-teal-600 text-white rounded-xl text-xs font-bold hover:bg-teal-700 transition"
               >
                 Yes, Submit
               </button>
@@ -335,7 +407,7 @@ const QuizTaking = ({ quizId, onComplete }) => {
                 onClick={() => setShowConfirmDialog(false)}
                 className="w-full py-2.5 bg-slate-50 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-100 transition"
               >
-                Cancel
+                Continue
               </button>
             </div>
           </div>

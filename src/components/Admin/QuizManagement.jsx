@@ -4,16 +4,17 @@ import {
   DocumentTextIcon, ClockIcon, QuestionMarkCircleIcon, 
   TrophyIcon, ChevronRightIcon, ArchiveBoxIcon,
   CheckCircleIcon, InformationCircleIcon, LockClosedIcon,
-  ShieldCheckIcon
+  ShieldCheckIcon, PhotoIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import ImageUploader from '../common/ImageUploader';
 
 const QuizManagement = () => {
   const [quizzes, setQuizzes] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('all'); // 'all', 'active', 'draft'
+  const [activeTab, setActiveTab] = useState('all');
   const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [showQuizModal, setShowQuizModal] = useState(false);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
@@ -27,15 +28,18 @@ const QuizManagement = () => {
     description: '',
     duration: 30,
     is_active: true,
-    target_form: 'All'  // Add target form
+    target_form: 'All'
   });
   
   const [questionForm, setQuestionForm] = useState({
     question_text: '',
+    question_image: '',
     question_type: 'multiple_choice',
     options: ['', '', '', ''],
+    option_images: ['', '', '', ''],
     correct_answer: 0,
     expected_answer: '',
+    answer_image: '',
     explanation: '',
     marks: 1
   });
@@ -44,18 +48,6 @@ const QuizManagement = () => {
     loadQuizzes();
     loadSubjects();
   }, []);
-
-  // Helper function to ensure ID is valid
-  const ensureValidId = (id) => {
-    if (!id) return null;
-    if (typeof id === 'string' && id.includes('-')) return id;
-    if (typeof id === 'number') return id;
-    if (typeof id === 'string') {
-      const parsed = parseInt(id);
-      return isNaN(parsed) ? id : parsed;
-    }
-    return null;
-  };
 
   const loadSubjects = async () => {
     try {
@@ -231,8 +223,8 @@ const QuizManagement = () => {
       return;
     }
     
-    if (!questionForm.question_text.trim()) {
-      toast.error('Please enter a question');
+    if (!questionForm.question_text && !questionForm.question_image) {
+      toast.error('Please enter a question text or upload a diagram');
       return;
     }
     
@@ -243,8 +235,8 @@ const QuizManagement = () => {
         return;
       }
     } else {
-      if (!questionForm.expected_answer.trim()) {
-        toast.error('Please enter an expected answer');
+      if (!questionForm.expected_answer.trim() && !questionForm.answer_image) {
+        toast.error('Please enter an expected answer or upload an answer image');
         return;
       }
     }
@@ -259,7 +251,8 @@ const QuizManagement = () => {
     try {
       const token = localStorage.getItem('token');
       const payload = {
-        question_text: questionForm.question_text.trim(),
+        question_text: questionForm.question_text.trim() || null,
+        question_image: questionForm.question_image || null,
         question_type: questionForm.question_type,
         marks: questionForm.marks,
         explanation: questionForm.explanation?.trim() || null
@@ -267,9 +260,11 @@ const QuizManagement = () => {
       
       if (questionForm.question_type === 'multiple_choice') {
         payload.options = questionForm.options.map(opt => opt.trim());
+        payload.option_images = questionForm.option_images.map(img => img || null);
         payload.correct_answer = questionForm.correct_answer;
       } else {
-        payload.expected_answer = questionForm.expected_answer.trim();
+        payload.expected_answer = questionForm.expected_answer.trim() || null;
+        payload.answer_image = questionForm.answer_image || null;
       }
       
       const response = await api.post(`/api/admin/quizzes/${quizId}/questions`, payload, {
@@ -281,10 +276,13 @@ const QuizManagement = () => {
         setShowQuestionModal(false);
         setQuestionForm({
           question_text: '',
+          question_image: '',
           question_type: 'multiple_choice',
           options: ['', '', '', ''],
+          option_images: ['', '', '', ''],
           correct_answer: 0,
           expected_answer: '',
+          answer_image: '',
           explanation: '',
           marks: 1
         });
@@ -365,14 +363,12 @@ const QuizManagement = () => {
     return 'bg-gray-100 text-gray-700';
   };
 
-  // Filter quizzes based on active tab
   const filteredQuizzes = quizzes.filter(q => {
     if (activeTab === 'active') return q.is_active;
     if (activeTab === 'draft') return !q.is_active;
     return true;
   });
 
-  // Calculate stats
   const stats = {
     total: quizzes.length,
     active: quizzes.filter(q => q.is_active).length,
@@ -382,7 +378,7 @@ const QuizManagement = () => {
   if (loading) {
     return (
       <div className="flex h-96 items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent"></div>
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-teal-600 border-t-transparent"></div>
       </div>
     );
   }
@@ -390,7 +386,7 @@ const QuizManagement = () => {
   return (
     <div className="max-w-7xl mx-auto pb-12 space-y-8 animate-in fade-in duration-500">
       
-      {/* 1. Header & Stats Hub */}
+      {/* Header & Stats Hub */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Quiz Curriculum</h1>
@@ -410,7 +406,7 @@ const QuizManagement = () => {
               }); 
               setShowQuizModal(true); 
             }}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 shadow-sm transition-all active:scale-95"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 shadow-sm transition-all active:scale-95"
           >
             <PlusIcon className="w-5 h-5 stroke-2" />
             New Quiz
@@ -421,7 +417,7 @@ const QuizManagement = () => {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { label: 'Total Quizzes', value: stats.total, icon: DocumentTextIcon, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'Total Quizzes', value: stats.total, icon: DocumentTextIcon, color: 'text-teal-600', bg: 'bg-teal-50' },
           { label: 'Live Assessments', value: stats.active, icon: CheckCircleIcon, color: 'text-emerald-600', bg: 'bg-emerald-50' },
           { label: 'Total Questions', value: stats.questions, icon: QuestionMarkCircleIcon, color: 'text-amber-600', bg: 'bg-amber-50' },
         ].map((stat, i) => (
@@ -437,14 +433,14 @@ const QuizManagement = () => {
         ))}
       </div>
 
-      {/* 2. Filter Tabs */}
+      {/* Filter Tabs */}
       <div className="flex items-center gap-2 bg-gray-100/50 p-1 rounded-xl w-fit">
         {['all', 'active', 'draft'].map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold capitalize transition-all ${
-              activeTab === tab ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              activeTab === tab ? 'bg-white text-teal-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             {tab}
@@ -452,7 +448,7 @@ const QuizManagement = () => {
         ))}
       </div>
 
-      {/* 3. Quiz Grid */}
+      {/* Quiz Grid */}
       {filteredQuizzes.length === 0 ? (
         <div className="bg-white rounded-3xl border-2 border-dashed border-gray-200 py-20 text-center">
           <ArchiveBoxIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
@@ -461,11 +457,11 @@ const QuizManagement = () => {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {filteredQuizzes.map((quiz) => (
-            <div key={quiz.id} className="group bg-white border border-gray-200 rounded-2xl p-6 hover:border-indigo-300 hover:shadow-xl hover:shadow-indigo-500/5 transition-all duration-300 relative overflow-hidden">
+            <div key={quiz.id} className="group bg-white border border-gray-200 rounded-2xl p-6 hover:border-teal-300 hover:shadow-xl hover:shadow-teal-500/5 transition-all duration-300 relative overflow-hidden">
               <div className={`absolute top-0 right-0 w-1.5 h-full ${quiz.is_active ? 'bg-emerald-500' : 'bg-gray-300'}`} />
               
               <div className="flex justify-between items-start mb-4">
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${getSubjectColor(quiz.subject_name)}`}>
                     {quiz.subject_name || 'Unknown'}
                   </span>
@@ -474,7 +470,7 @@ const QuizManagement = () => {
                   </span>
                 </div>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => openEditQuiz(quiz)} className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                  <button onClick={() => openEditQuiz(quiz)} className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors">
                     <PencilIcon className="w-5 h-5" />
                   </button>
                   <button onClick={() => handleDeleteQuiz(quiz)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
@@ -483,7 +479,7 @@ const QuizManagement = () => {
                 </div>
               </div>
 
-              <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-indigo-600 transition-colors">{quiz.title}</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-teal-600 transition-colors">{quiz.title}</h3>
               <p className="text-gray-500 text-sm line-clamp-2 mb-6 h-10">{quiz.description || 'No description provided for this assessment.'}</p>
               
               <div className="flex items-center justify-between pt-4 border-t border-gray-50">
@@ -503,7 +499,7 @@ const QuizManagement = () => {
                 </div>
                 <button 
                   onClick={() => viewQuizDetails(quiz)}
-                  className="flex items-center gap-1 text-sm font-bold text-indigo-600 hover:gap-2 transition-all"
+                  className="flex items-center gap-1 text-sm font-bold text-teal-600 hover:gap-2 transition-all"
                 >
                   Manage Content <ChevronRightIcon className="w-4 h-4 stroke-2" />
                 </button>
@@ -513,7 +509,7 @@ const QuizManagement = () => {
         </div>
       )}
 
-      {/* 4. Side Panel for Quiz Details */}
+      {/* Side Panel for Quiz Details */}
       {selectedQuiz && (
         <div className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out border-l border-gray-200">
           <div className="h-full flex flex-col">
@@ -531,13 +527,13 @@ const QuizManagement = () => {
               <div className="flex justify-between items-center">
                 <h3 className="font-bold text-gray-800 flex items-center gap-2">
                   Questions 
-                  <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-md text-xs">
+                  <span className="px-2 py-0.5 bg-teal-100 text-teal-700 rounded-md text-xs">
                     {selectedQuiz.questions?.length || 0}
                   </span>
                 </h3>
                 <button 
                   onClick={() => setShowQuestionModal(true)}
-                  className="text-sm font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1"
+                  className="text-sm font-bold text-teal-600 hover:text-teal-700 flex items-center gap-1"
                 >
                   <PlusIcon className="w-4 h-4 stroke-2" /> Add New
                 </button>
@@ -549,7 +545,7 @@ const QuizManagement = () => {
                   <p className="text-gray-500">No questions added yet</p>
                   <button 
                     onClick={() => setShowQuestionModal(true)}
-                    className="mt-3 text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+                    className="mt-3 text-teal-600 hover:text-teal-700 text-sm font-medium"
                   >
                     + Add your first question
                   </button>
@@ -557,11 +553,11 @@ const QuizManagement = () => {
               ) : (
                 <div className="space-y-4">
                   {selectedQuiz.questions.map((q, idx) => (
-                    <div key={q.id || idx} className="bg-gray-50 rounded-2xl p-5 border border-gray-100 hover:border-indigo-200 transition-colors">
+                    <div key={q.id || idx} className="bg-gray-50 rounded-2xl p-5 border border-gray-100 hover:border-teal-200 transition-colors">
                       <div className="flex justify-between gap-4">
-                        <span className="font-mono text-indigo-300 text-lg font-bold">0{idx + 1}</span>
+                        <span className="font-mono text-teal-300 text-lg font-bold">0{idx + 1}</span>
                         <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                               q.question_type === 'multiple_choice' 
                                 ? 'bg-blue-100 text-blue-700' 
@@ -569,34 +565,80 @@ const QuizManagement = () => {
                             }`}>
                               {q.question_type === 'multiple_choice' ? 'Multiple Choice' : 'Short Answer'}
                             </span>
+                            {q.question_image && (
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-700">
+                                📷 Has Diagram
+                              </span>
+                            )}
                           </div>
-                          <p className="font-semibold text-gray-800 mb-4 leading-relaxed">{q.question_text}</p>
+                          
+                          {/* Question Text */}
+                          <p className="font-semibold text-gray-800 mb-3 leading-relaxed">{q.question_text || 'Analyze the diagram below'}</p>
+                          
+                          {/* Question Diagram */}
+                          {q.question_image && (
+                            <div className="mb-4 p-3 bg-white rounded-lg border border-gray-200">
+                              <img 
+                                src={q.question_image} 
+                                alt="Question diagram" 
+                                className="max-h-48 rounded-lg mx-auto"
+                                onError={(e) => {
+                                  e.target.onerror = null;
+                                  e.target.src = 'https://via.placeholder.com/400x200?text=Image+Not+Found';
+                                }}
+                              />
+                            </div>
+                          )}
+                          
+                          {/* Options with Images */}
                           {q.question_type === 'multiple_choice' && q.options && (
-                            <div className="grid grid-cols-1 gap-2">
+                            <div className="space-y-2 mb-3">
                               {q.options.map((opt, oIdx) => (
-                                <div key={oIdx} className={`px-4 py-2 rounded-xl text-sm border ${
-                                  oIdx === q.correct_answer 
-                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-medium' 
-                                    : 'bg-white border-gray-200 text-gray-600'
-                                }`}>
-                                  {String.fromCharCode(65 + oIdx)}. {opt}
+                                <div key={oIdx} className="flex items-start gap-2">
+                                  {q.option_images?.[oIdx] && (
+                                    <img src={q.option_images[oIdx]} alt="Option" className="w-10 h-10 rounded object-cover border border-gray-200" />
+                                  )}
+                                  <div className={`flex-1 px-4 py-2 rounded-xl text-sm border ${
+                                    oIdx === q.correct_answer 
+                                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700 font-medium' 
+                                      : 'bg-white border-gray-200 text-gray-600'
+                                  }`}>
+                                    {String.fromCharCode(65 + oIdx)}. {opt}
+                                  </div>
                                 </div>
                               ))}
                             </div>
                           )}
+                          
+                          {/* Short Answer with Image */}
                           {q.question_type === 'short_answer' && (
-                            <div className="mt-2 p-3 bg-purple-50 rounded-xl border border-purple-200">
-                              <p className="text-sm text-purple-700">
-                                <span className="font-medium">Expected Answer:</span> {q.expected_answer}
-                              </p>
+                            <div className="space-y-2">
+                              {q.answer_image && (
+                                <div className="p-3 bg-purple-50 rounded-xl border border-purple-200">
+                                  <p className="text-xs text-purple-600 mb-2">Reference Image:</p>
+                                  <img 
+                                    src={q.answer_image} 
+                                    alt="Answer reference" 
+                                    className="max-h-32 rounded-lg mx-auto"
+                                  />
+                                </div>
+                              )}
+                              <div className="p-3 bg-purple-50 rounded-xl border border-purple-200">
+                                <p className="text-sm text-purple-700">
+                                  <span className="font-medium">Expected Answer:</span> {q.expected_answer}
+                                </p>
+                              </div>
                             </div>
                           )}
+                          
+                          {/* Explanation */}
                           {q.explanation && (
                             <div className="mt-4 flex gap-2 p-3 bg-amber-50 rounded-xl border border-amber-100">
                               <InformationCircleIcon className="w-5 h-5 text-amber-500 shrink-0" />
                               <p className="text-xs text-amber-800 leading-normal">{q.explanation}</p>
                             </div>
                           )}
+                          
                           <div className="mt-3 flex justify-end">
                             <span className="text-xs text-gray-400">{q.marks || 1} point{q.marks !== 1 ? 's' : ''}</span>
                           </div>
@@ -640,8 +682,7 @@ const QuizManagement = () => {
                 <select
                   value={quizForm.subject_id}
                   onChange={(e) => setQuizForm({ ...quizForm, subject_id: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 >
                   <option value="">Select a subject</option>
                   {subjects.map(subject => (
@@ -658,7 +699,7 @@ const QuizManagement = () => {
                   value={quizForm.title}
                   onChange={(e) => setQuizForm({ ...quizForm, title: e.target.value })}
                   placeholder="e.g., African Geography Basics"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 />
               </div>
               <div>
@@ -668,7 +709,7 @@ const QuizManagement = () => {
                   onChange={(e) => setQuizForm({ ...quizForm, description: e.target.value })}
                   rows="3"
                   placeholder="Describe what this quiz covers..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 />
               </div>
               <div>
@@ -676,7 +717,7 @@ const QuizManagement = () => {
                 <select
                   value={quizForm.target_form}
                   onChange={(e) => setQuizForm({ ...quizForm, target_form: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 >
                   <option value="All">All Forms</option>
                   <option value="Form 1">Form 1 Only</option>
@@ -684,7 +725,6 @@ const QuizManagement = () => {
                   <option value="Form 3">Form 3 Only</option>
                   <option value="Form 4">Form 4 Only</option>
                 </select>
-                <p className="text-xs text-gray-500 mt-1">Select which form can access this quiz</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
@@ -694,7 +734,7 @@ const QuizManagement = () => {
                   onChange={(e) => setQuizForm({ ...quizForm, duration: parseInt(e.target.value) || 30 })}
                   min="5"
                   max="180"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 />
               </div>
               <div className="flex items-center gap-2">
@@ -703,14 +743,14 @@ const QuizManagement = () => {
                   id="is_active"
                   checked={quizForm.is_active}
                   onChange={(e) => setQuizForm({ ...quizForm, is_active: e.target.checked })}
-                  className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                  className="w-4 h-4 text-teal-600 rounded focus:ring-teal-500"
                 />
                 <label htmlFor="is_active" className="text-sm text-gray-700">Active (visible to learners)</label>
               </div>
               <button
                 onClick={editingQuiz ? handleUpdateQuiz : handleCreateQuiz}
                 disabled={submitting}
-                className="w-full py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-2 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition font-semibold disabled:opacity-50"
               >
                 {submitting ? (editingQuiz ? 'Updating...' : 'Creating...') : (editingQuiz ? 'Update Quiz' : 'Create Quiz')}
               </button>
@@ -719,7 +759,7 @@ const QuizManagement = () => {
         </div>
       )}
 
-      {/* Add Question Modal */}
+      {/* Add Question Modal with Image Upload */}
       {showQuestionModal && selectedQuiz && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={(e) => {
           if (e.target === e.currentTarget) {
@@ -732,26 +772,34 @@ const QuizManagement = () => {
                 Add Question to "{selectedQuiz.title}"
               </h3>
               <button
-                onClick={() => {
-                  setShowQuestionModal(false);
-                }}
+                onClick={() => setShowQuestionModal(false)}
                 className="p-1 hover:bg-gray-100 rounded-lg"
               >
                 <XMarkIcon className="w-5 h-5" />
               </button>
             </div>
             <div className="p-5 space-y-4">
+              {/* Question Text */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Question Text *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Question Text</label>
                 <textarea
                   value={questionForm.question_text}
                   onChange={(e) => setQuestionForm({ ...questionForm, question_text: e.target.value })}
                   rows="3"
                   placeholder="Enter your question here..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 />
+                <p className="text-xs text-gray-500 mt-1">You can also use a diagram instead of text</p>
               </div>
               
+              {/* Question Diagram Upload */}
+              <ImageUploader
+                label="Question Diagram (Optional)"
+                currentImage={questionForm.question_image}
+                onImageUpload={(url) => setQuestionForm({ ...questionForm, question_image: url })}
+              />
+              
+              {/* Question Type */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Question Type</label>
                 <select
@@ -761,11 +809,12 @@ const QuizManagement = () => {
                       ...questionForm, 
                       question_type: e.target.value,
                       options: e.target.value === 'multiple_choice' ? ['', '', '', ''] : [],
+                      option_images: ['', '', '', ''],
                       correct_answer: 0,
                       expected_answer: ''
                     });
                   }}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 >
                   <option value="multiple_choice">Multiple Choice</option>
                   <option value="short_answer">Short Answer</option>
@@ -776,26 +825,37 @@ const QuizManagement = () => {
                 <>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Options *</label>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       {questionForm.options.map((opt, idx) => (
-                        <div key={idx} className="flex items-center gap-2">
-                          <span className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-medium">
-                            {String.fromCharCode(65 + idx)}
-                          </span>
-                          <input
-                            type="text"
-                            value={opt}
-                            onChange={(e) => {
-                              const newOptions = [...questionForm.options];
-                              newOptions[idx] = e.target.value;
-                              setQuestionForm({ ...questionForm, options: newOptions });
+                        <div key={idx} className="border rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-sm font-medium">
+                              {String.fromCharCode(65 + idx)}
+                            </span>
+                            <input
+                              type="text"
+                              value={opt}
+                              onChange={(e) => {
+                                const newOptions = [...questionForm.options];
+                                newOptions[idx] = e.target.value;
+                                setQuestionForm({ ...questionForm, options: newOptions });
+                              }}
+                              placeholder={`Option ${String.fromCharCode(65 + idx)} text`}
+                              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+                            />
+                            {idx === questionForm.correct_answer && (
+                              <span className="text-green-600 text-sm font-medium">✓ Correct</span>
+                            )}
+                          </div>
+                          <ImageUploader
+                            label="Option Image (Optional)"
+                            currentImage={questionForm.option_images[idx]}
+                            onImageUpload={(url) => {
+                              const newImages = [...questionForm.option_images];
+                              newImages[idx] = url;
+                              setQuestionForm({ ...questionForm, option_images: newImages });
                             }}
-                            placeholder={`Option ${String.fromCharCode(65 + idx)}`}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                           />
-                          {idx === questionForm.correct_answer && (
-                            <span className="text-green-600 text-sm font-medium">✓ Correct</span>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -805,7 +865,7 @@ const QuizManagement = () => {
                     <select
                       value={questionForm.correct_answer}
                       onChange={(e) => setQuestionForm({ ...questionForm, correct_answer: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
                     >
                       {questionForm.options.map((_, idx) => (
                         <option key={idx} value={idx}>
@@ -816,17 +876,24 @@ const QuizManagement = () => {
                   </div>
                 </>
               ) : (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Expected Answer *</label>
-                  <textarea
-                    value={questionForm.expected_answer}
-                    onChange={(e) => setQuestionForm({ ...questionForm, expected_answer: e.target.value })}
-                    rows="3"
-                    placeholder="Enter the expected answer (case insensitive)"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Expected Answer *</label>
+                    <textarea
+                      value={questionForm.expected_answer}
+                      onChange={(e) => setQuestionForm({ ...questionForm, expected_answer: e.target.value })}
+                      rows="3"
+                      placeholder="Enter the expected answer (case insensitive)"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Student's answer will be compared case-insensitively</p>
+                  </div>
+                  <ImageUploader
+                    label="Answer Reference Image (Optional)"
+                    currentImage={questionForm.answer_image}
+                    onImageUpload={(url) => setQuestionForm({ ...questionForm, answer_image: url })}
                   />
-                  <p className="text-xs text-gray-500 mt-1">Student's answer will be compared case-insensitively</p>
-                </div>
+                </>
               )}
 
               <div>
@@ -836,7 +903,7 @@ const QuizManagement = () => {
                   onChange={(e) => setQuestionForm({ ...questionForm, explanation: e.target.value })}
                   rows="2"
                   placeholder="Explain why this is the correct answer..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
                 />
               </div>
               <div>
@@ -847,13 +914,13 @@ const QuizManagement = () => {
                   onChange={(e) => setQuestionForm({ ...questionForm, marks: parseInt(e.target.value) || 1 })}
                   min="1"
                   max="10"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500"
                 />
               </div>
               <button
                 onClick={handleAddQuestion}
                 disabled={submitting}
-                className="w-full py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-2 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition font-semibold disabled:opacity-50"
               >
                 {submitting ? 'Adding...' : 'Add Question'}
               </button>
