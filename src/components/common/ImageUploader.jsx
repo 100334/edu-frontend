@@ -99,4 +99,4 @@ const ImageUploader = ({ onImageUpload, currentImage, label, className = '' }) =
   );
 };
 
-export default ImageUploader;
+export default ImageUploader;  // ← This line was missing
