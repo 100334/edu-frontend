@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
@@ -9,8 +9,22 @@ const LearnerLogin = ({ serverStatus }) => {
   const [regNumber, setRegNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const { learnerLogin } = useAuth();
   const navigate = useNavigate();
+
+  // Load saved credentials on mount
+  useEffect(() => {
+    const savedName = localStorage.getItem('learner_name');
+    const savedReg = localStorage.getItem('learner_regNumber');
+    const savedRemember = localStorage.getItem('learner_rememberMe') === 'true';
+
+    if (savedRemember && savedName && savedReg) {
+      setName(savedName);
+      setRegNumber(savedReg);
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleLogin = async (e) => {
     if (e) e.preventDefault();
@@ -26,6 +40,18 @@ const LearnerLogin = ({ serverStatus }) => {
         toast.success(`Welcome, ${result.user.name}`, {
           style: { background: '#0D1B2A', color: '#fff' }
         });
+
+        // Handle "Remember Me"
+        if (rememberMe) {
+          localStorage.setItem('learner_name', name);
+          localStorage.setItem('learner_regNumber', regNumber.toUpperCase());
+          localStorage.setItem('learner_rememberMe', 'true');
+        } else {
+          localStorage.removeItem('learner_name');
+          localStorage.removeItem('learner_regNumber');
+          localStorage.setItem('learner_rememberMe', 'false');
+        }
+
         navigate('/learner/dashboard');
       } else {
         setError(result.message || 'Invalid credentials');
@@ -99,6 +125,19 @@ const LearnerLogin = ({ serverStatus }) => {
               {error}
             </p>
           )}
+
+          {/* Remember Me Checkbox */}
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 text-xs text-slate-500 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 accent-[#00B0FF] rounded"
+              />
+              <span>Remember me</span>
+            </label>
+          </div>
 
           {/* Button: Navy Blue */}
           <button

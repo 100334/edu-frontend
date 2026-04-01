@@ -12,7 +12,8 @@ import {
   XMarkIcon,
   PlayIcon,
   TrophyIcon,
-  BookOpenIcon
+  BookOpenIcon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
@@ -157,6 +158,7 @@ export default function LearnerDashboard() {
   // Quiz states
   const [showQuiz, setShowQuiz] = useState(null);
   const [quizResult, setQuizResult] = useState(null);
+  const [quizAttempts, setQuizAttempts] = useState([]); // NEW: store full attempts with marks/feedback
   
   // Data states
   const [reports, setReports] = useState([]);
@@ -170,7 +172,9 @@ export default function LearnerDashboard() {
     lateCount: 0,
     absentCount: 0,
     quizScore: '—',
-    quizzesCompleted: 0
+    quizzesCompleted: 0,
+    totalMarks: 0,         // NEW
+    totalPossibleMarks: 0  // NEW
   });
   const [latestReport, setLatestReport] = useState(null);
   const [recentActivity, setRecentActivity] = useState([]);
@@ -306,6 +310,8 @@ export default function LearnerDashboard() {
       let quizHistoryData = [];
       let totalQuizScore = 0;
       let quizzesCompleted = 0;
+      let totalMarks = 0;
+      let totalPossibleMarks = 0;
       try {
         const quizRes = await api.get('/api/quiz/history');
         if (quizRes.data && quizRes.data.attempts) {
@@ -317,7 +323,11 @@ export default function LearnerDashboard() {
               const avgQuizScore = validScores.reduce((sum, q) => sum + (q.percentage || 0), 0) / validScores.length;
               totalQuizScore = Math.round(avgQuizScore);
             }
+            // Calculate total marks earned and total possible marks
+            totalMarks = quizHistoryData.reduce((sum, q) => sum + (q.marks_earned || 0), 0);
+            totalPossibleMarks = quizHistoryData.reduce((sum, q) => sum + (q.total_marks || 0), 0);
           }
+          setQuizAttempts(quizHistoryData);
         }
       } catch (quizError) {
         console.error('Error fetching quiz history:', quizError);
@@ -378,7 +388,9 @@ export default function LearnerDashboard() {
         lateCount: attendanceData.stats?.late || 0,
         absentCount: attendanceData.stats?.absent || 0,
         quizScore: totalQuizScore > 0 ? `${totalQuizScore}%` : '—',
-        quizzesCompleted
+        quizzesCompleted,
+        totalMarks,
+        totalPossibleMarks
       });
 
       // Build recent activity
@@ -403,17 +415,21 @@ export default function LearnerDashboard() {
         });
       }
       
-      // Add quiz activity
+      // Add quiz activity with marks
       if (quizHistoryData.length > 0) {
         const latestQuiz = quizHistoryData[0];
+        const marksDisplay = latestQuiz.marks_earned !== undefined 
+          ? `${latestQuiz.marks_earned}/${latestQuiz.total_marks} marks` 
+          : `${Math.round(latestQuiz.percentage || 0)}%`;
         activity.push({
           id: 'latest-quiz',
           type: 'quiz',
           title: `Quiz Completed: ${latestQuiz.quiz?.title || latestQuiz.subject}`,
-          description: `Score: ${Math.round(latestQuiz.percentage || 0)}%`,
+          description: `Score: ${marksDisplay}${latestQuiz.feedback ? ' • Feedback received' : ''}`,
           date: latestQuiz.completed_at || new Date().toISOString(),
           icon: '📝',
-          color: 'text-purple-600'
+          color: 'text-purple-600',
+          feedback: latestQuiz.feedback
         });
       }
       
@@ -489,8 +505,7 @@ export default function LearnerDashboard() {
     return 'Please focus on regular attendance ⚠️';
   };
 
-  // REDESIGNED REPORT CARD PDF DOWNLOAD
-   // REDESIGNED REPORT CARD PDF DOWNLOAD - SINGLE PAGE WITH LOGO
+  // REDESIGNED REPORT CARD PDF DOWNLOAD - SINGLE PAGE WITH LOGO
   const downloadReportPDF = (report) => {
     if (!report) {
       toast.error('No report data available');
@@ -887,7 +902,7 @@ export default function LearnerDashboard() {
     setQuizResult(result);
     setShowQuiz(null);
     toast.success(`Quiz submitted! Score: ${Math.round(result.percentage)}%`);
-    loadDashboardData(); 
+    loadDashboardData(); // refresh to show new attempt
   };
 
   const getReportHTML = (report) => {
@@ -1325,9 +1340,9 @@ export default function LearnerDashboard() {
                 </div>
               </div>
 
-              {/* Side Panel - Quiz Performance Card, Attendance Summary, Quick Actions, Recent Activity */}
+              {/* Side Panel */}
               <div className="space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6">
-                {/* Quiz Performance Card */}
+                {/* Quiz Performance Card – updated to show marks */}
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
                   <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
                     <div className="flex items-center justify-between">
@@ -1354,9 +1369,14 @@ export default function LearnerDashboard() {
                       </div>
                       <p className="text-[10px] sm:text-xs text-gray-600">
                         {stats.quizzesCompleted > 0 
-                          ? `Completed ${stats.quizzesCompleted} quiz(zes)` 
+                          ? `${stats.quizzesCompleted} quiz(zes) completed`
                           : "No quizzes taken yet"}
                       </p>
+                      {stats.totalPossibleMarks > 0 && (
+                        <p className="text-[9px] sm:text-[10px] text-gray-500 mt-1">
+                          Total marks: {stats.totalMarks} / {stats.totalPossibleMarks}
+                        </p>
+                      )}
                     </div>
                     {stats.quizzesCompleted === 0 && (
                       <button
@@ -1369,6 +1389,57 @@ export default function LearnerDashboard() {
                     )}
                   </div>
                 </div>
+
+                {/* New: Recent Quiz Attempts Card */}
+                {quizAttempts.length > 0 && (
+                  <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
+                    <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
+                      <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0f1923] flex items-center gap-2">
+                        <span className="text-purple-600">📊</span>
+                        Recent Quiz Attempts
+                      </h2>
+                    </div>
+                    <div className="divide-y divide-gray-100">
+                      {quizAttempts.slice(0, 3).map((attempt, idx) => (
+                        <div key={attempt.id || idx} className="p-3 sm:p-4">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <p className="text-xs sm:text-sm font-medium text-gray-800">
+                                {attempt.quiz?.title || attempt.subject || 'Quiz'}
+                              </p>
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                <span className="text-[9px] sm:text-[10px] font-medium text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
+                                  {attempt.marks_earned !== undefined 
+                                    ? `${attempt.marks_earned}/${attempt.total_marks} marks`
+                                    : `${Math.round(attempt.percentage || 0)}%`}
+                                </span>
+                                <span className="text-[9px] sm:text-[10px] text-gray-500">
+                                  {new Date(attempt.completed_at || attempt.created_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                              {attempt.feedback && (
+                                <div className="mt-2 flex items-start gap-1 text-[9px] sm:text-[10px] text-amber-600 bg-amber-50 p-1.5 rounded">
+                                  <ChatBubbleLeftRightIcon className="w-3 h-3 mt-0.5" />
+                                  <span>{attempt.feedback}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {quizAttempts.length > 3 && (
+                        <div className="p-2 text-center">
+                          <button
+                            onClick={() => setActiveTab('quizzes')}
+                            className="text-[10px] text-purple-600 hover:underline"
+                          >
+                            View all {quizAttempts.length} attempts →
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Attendance Summary Card */}
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
@@ -1503,7 +1574,7 @@ export default function LearnerDashboard() {
                   </div>
                 </div>
 
-                {/* Recent Activity Card */}
+                {/* Recent Activity Card – updated to show marks and feedback */}
                 {recentActivity.length > 0 && (
                   <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
                     <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
@@ -1516,11 +1587,17 @@ export default function LearnerDashboard() {
                       <div className="divide-y divide-[#ede9e1]">
                         {recentActivity.slice(0, 4).map((activity) => (
                           <div key={activity.id} className="p-2.5 sm:p-3 md:p-4 hover:bg-[#f7f4ef] transition-colors">
-                            <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3">
+                            <div className="flex items-start gap-2 sm:gap-2.5 md:gap-3">
                               <span className={`text-base sm:text-lg md:text-xl ${activity.color || 'text-[#c9933a]'}`}>{activity.icon}</span>
                               <div className="flex-1 min-w-0">
                                 <p className="text-[10px] sm:text-xs md:text-sm font-medium text-[#0f1923] truncate">{activity.title}</p>
-                                <p className="text-[8px] sm:text-[9px] md:text-[10px] text-gray-500 mt-0.5 truncate">{activity.description}</p>
+                                <p className="text-[8px] sm:text-[9px] md:text-[10px] text-gray-500 mt-0.5">{activity.description}</p>
+                                {activity.feedback && (
+                                  <p className="text-[8px] sm:text-[9px] text-amber-600 mt-1 flex items-center gap-1">
+                                    <ChatBubbleLeftRightIcon className="w-3 h-3" />
+                                    {activity.feedback}
+                                  </p>
+                                )}
                               </div>
                               <span className="text-[8px] sm:text-[9px] md:text-[10px] text-gray-400 flex-shrink-0">
                                 {new Date(activity.date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}

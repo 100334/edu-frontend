@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ClockIcon, 
-  ArrowLeftIcon,
-  ArrowRightIcon,
   FlagIcon,
   PaperAirplaneIcon,
   ExclamationCircleIcon,
@@ -12,8 +10,7 @@ import {
   XMarkIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  CheckCircleIcon,
-  QuestionMarkCircleIcon
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
@@ -34,6 +31,7 @@ const QuizTaking = ({ quizId, onComplete }) => {
 
   useEffect(() => {
     loadQuiz();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quizId]);
 
   useEffect(() => {
@@ -72,14 +70,20 @@ const QuizTaking = ({ quizId, onComplete }) => {
       }
       
       setQuiz(response.data.quiz);
-      setQuestions(response.data.questions || []);
+      // Normalise question marks: use marks if available, else points
+      const questionsWithMarks = (response.data.questions || []).map(q => ({
+        ...q,
+        marks: q.marks ?? q.points ?? 1
+      }));
+      setQuestions(questionsWithMarks);
       setTimeLeft(response.data.quiz.duration * 60);
       
       if (response.data.saved_answers) {
         setAnswers(response.data.saved_answers);
       }
     } catch (error) {
-      toast.error('Failed to sync data');
+      console.error('Load quiz error:', error);
+      toast.error('Failed to load quiz. Please refresh.');
     }
   };
 
@@ -94,6 +98,7 @@ const QuizTaking = ({ quizId, onComplete }) => {
   };
 
   const autoSaveAnswer = async (questionIndex, answer) => {
+    if (!attemptId) return; // wait for attempt creation
     try {
       const token = localStorage.getItem('token');
       await api.post(`/api/quiz/${quizId}/save-answer`, {
@@ -104,7 +109,7 @@ const QuizTaking = ({ quizId, onComplete }) => {
         headers: { Authorization: `Bearer ${token}` }
       });
     } catch (error) {
-      console.warn('Auto-save failed', error);
+      console.warn('Auto-save failed:', error);
     }
   };
 
@@ -134,12 +139,34 @@ const QuizTaking = ({ quizId, onComplete }) => {
       });
       
       if (response.data.success) {
-        toast.success(`Complete! Score: ${Math.round(response.data.percentage)}%`, { icon: '🏆' });
-        if (onComplete) onComplete(response.data);
-        else navigate('/learner/dashboard');
+        const result = response.data;
+        const marksEarned = result.marks_earned ?? result.earned_points ?? 0;
+        const totalMarks = result.total_marks ?? result.total_points ?? 0;
+        const marksDisplay = totalMarks > 0 ? `${marksEarned}/${totalMarks} marks` : `${Math.round(result.percentage)}%`;
+        
+        toast.success(`Quiz submitted! You scored ${marksDisplay}`, { icon: '🏆' });
+        
+        // Pass the full result to parent
+        if (onComplete) {
+          onComplete({
+            ...result,
+            marks_earned: marksEarned,
+            total_marks: totalMarks,
+            percentage: result.percentage ?? (totalMarks ? (marksEarned / totalMarks * 100) : 0),
+            feedback: result.feedback || null
+          });
+        } else {
+          navigate('/learner/dashboard');
+        }
       }
     } catch (error) {
-      toast.error('Submission failed.');
+      console.error('Submit error:', error);
+      // Check for 404 (endpoint not found) – backend may need update
+      if (error.response && error.response.status === 404) {
+        toast.error('Quiz submission endpoint not found. Please contact support.');
+      } else {
+        toast.error('Submission failed. Please check your connection and try again.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -262,7 +289,7 @@ const QuizTaking = ({ quizId, onComplete }) => {
                       )}
                     </div>
                     <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                      {currentQ?.points || 1} {currentQ?.points === 1 ? 'point' : 'points'}
+                      {currentQ?.marks || 1} {currentQ?.marks === 1 ? 'mark' : 'marks'}
                     </span>
                   </div>
                 </div>

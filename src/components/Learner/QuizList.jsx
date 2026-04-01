@@ -9,7 +9,8 @@ import {
   InformationCircleIcon,
   PhotoIcon,
   SparklesIcon,
-  AcademicCapIcon
+  AcademicCapIcon,
+  ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -80,7 +81,14 @@ const QuizList = ({ onStartQuiz }) => {
       if (response.data.success && response.data.attempts) {
         const historyMap = {};
         response.data.attempts.forEach(attempt => {
-          historyMap[attempt.quiz_id] = attempt;
+          historyMap[attempt.quiz_id] = {
+            ...attempt,
+            // Normalize to marks_earned and total_marks
+            marks_earned: attempt.marks_earned ?? attempt.earned_points ?? 0,
+            total_marks: attempt.total_marks ?? attempt.total_points ?? 0,
+            percentage: attempt.percentage ?? (attempt.marks_earned && attempt.total_marks ? (attempt.marks_earned / attempt.total_marks * 100) : 0),
+            feedback: attempt.feedback || null
+          };
         });
         setQuizHistory(historyMap);
       }
@@ -229,6 +237,9 @@ const QuizList = ({ onStartQuiz }) => {
             const score = attempted?.percentage ? Math.round(attempted.percentage) : 0;
             const isFormRestricted = quiz.target_form && quiz.target_form !== 'All' && quiz.target_form !== learnerForm;
             const hasDiagram = hasDiagrams(quiz);
+            const marksDisplay = attempted?.marks_earned !== undefined && attempted?.total_marks
+              ? `${attempted.marks_earned}/${attempted.total_marks} marks`
+              : `${score}%`;
             
             return (
               <div 
@@ -293,7 +304,7 @@ const QuizList = ({ onStartQuiz }) => {
                       </div>
                       <div className="flex items-center gap-1 text-slate-500">
                         <StarIcon className="w-4 h-4" />
-                        <span className="text-xs font-medium">{quiz.total_points || 0} pts</span>
+                        <span className="text-xs font-medium">{quiz.total_marks || quiz.total_points || 0} marks</span>
                       </div>
                     </div>
                     {hasDiagram && (
@@ -305,7 +316,7 @@ const QuizList = ({ onStartQuiz }) => {
                     <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 border border-blue-100">
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-xs font-bold text-blue-800 uppercase tracking-wide">Your Score</span>
-                        <span className="text-xl font-black text-amber-600">{score}%</span>
+                        <span className="text-xl font-black text-amber-600">{marksDisplay}</span>
                       </div>
                       <div className="h-2 bg-white rounded-full overflow-hidden">
                         <div 
@@ -313,9 +324,12 @@ const QuizList = ({ onStartQuiz }) => {
                           style={{ width: `${score}%` }}
                         />
                       </div>
-                      <div className="mt-2 text-[11px] text-blue-700 font-medium">
-                        Earned: {attempted?.earned_points || 0} / {attempted?.total_points || 0} points
-                      </div>
+                      {attempted?.feedback && (
+                        <div className="mt-3 flex items-start gap-1 text-xs text-amber-700 bg-amber-50 p-2 rounded-lg">
+                          <ChatBubbleLeftRightIcon className="w-3 h-3 mt-0.5 shrink-0" />
+                          <span>{attempted.feedback}</span>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <button

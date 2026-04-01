@@ -4,7 +4,8 @@ import {
   DocumentTextIcon, ClockIcon, QuestionMarkCircleIcon, 
   TrophyIcon, ChevronRightIcon, ArchiveBoxIcon,
   CheckCircleIcon, InformationCircleIcon, LockClosedIcon,
-  ShieldCheckIcon, PhotoIcon, SparklesIcon, AcademicCapIcon
+  ShieldCheckIcon, PhotoIcon, SparklesIcon, AcademicCapIcon,
+  UserGroupIcon, ClipboardDocumentListIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -20,6 +21,11 @@ const QuizManagement = () => {
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [editingQuiz, setEditingQuiz] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  
+  // New state for grading
+  const [submissions, setSubmissions] = useState([]);
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [gradingModal, setGradingModal] = useState(false);
   
   // Form states
   const [quizForm, setQuizForm] = useState({
@@ -98,6 +104,24 @@ const QuizManagement = () => {
       toast.error(error.response?.data?.message || 'Failed to load quizzes');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // New function to load submissions for a quiz
+  const loadSubmissions = async (quizId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await api.get(`/api/admin/quizzes/${quizId}/submissions`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        setSubmissions(res.data.submissions);
+      } else {
+        toast.error(res.data.message || 'Failed to load submissions');
+      }
+    } catch (err) {
+      console.error('Error loading submissions:', err);
+      toast.error('Failed to load submissions');
     }
   };
 
@@ -343,6 +367,42 @@ const QuizManagement = () => {
     }
   };
 
+  // When switching to Grading tab, load submissions for the selected quiz
+  const handleGradingTab = async () => {
+    setActiveTab('grading');
+    if (selectedQuiz) {
+      await loadSubmissions(selectedQuiz.id);
+    } else {
+      toast.error('Please select a quiz first');
+    }
+  };
+
+  // Save grades for a submission
+  const saveGrades = async () => {
+    if (!selectedSubmission) return;
+    try {
+      const token = localStorage.getItem('token');
+      const payload = {
+        submissionId: selectedSubmission.id,
+        answers: selectedSubmission.answers.map(a => ({
+          questionId: a.question_id,
+          marks: a.given_marks,
+          feedback: a.feedback,
+        })),
+      };
+      await api.post('/api/admin/grade', payload, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      toast.success('Grades saved successfully');
+      setGradingModal(false);
+      // Refresh submissions list
+      if (selectedQuiz) loadSubmissions(selectedQuiz.id);
+    } catch (err) {
+      console.error('Error saving grades:', err);
+      toast.error('Failed to save grades');
+    }
+  };
+
   const getSubjectColor = (subjectName) => {
     const colors = {
       'Geography': 'bg-emerald-100 text-emerald-700',
@@ -448,11 +508,15 @@ const QuizManagement = () => {
           {[
             { id: 'all', label: 'All Quizzes', icon: DocumentTextIcon },
             { id: 'active', label: 'Active', icon: CheckCircleIcon },
-            { id: 'draft', label: 'Draft', icon: ArchiveBoxIcon }
+            { id: 'draft', label: 'Draft', icon: ArchiveBoxIcon },
+            { id: 'grading', label: 'Grading', icon: UserGroupIcon } // new tab
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => {
+                if (tab.id === 'grading') handleGradingTab();
+                else setActiveTab(tab.id);
+              }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold capitalize transition-all ${
                 activeTab === tab.id 
                   ? 'bg-white text-teal-600 shadow-md' 
@@ -465,125 +529,171 @@ const QuizManagement = () => {
           ))}
         </div>
         
-        {filteredQuizzes.length > 0 && (
+        {activeTab !== 'grading' && filteredQuizzes.length > 0 && (
           <div className="text-sm text-gray-500 bg-gray-100 px-3 py-1.5 rounded-full">
             {filteredQuizzes.length} {filteredQuizzes.length === 1 ? 'quiz' : 'quizzes'} found
           </div>
         )}
       </div>
 
-      {/* Quiz Grid - Enhanced Cards */}
-      {filteredQuizzes.length === 0 ? (
-        <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl border-2 border-dashed border-gray-200 py-20 text-center">
-          <div className="w-20 h-20 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ArchiveBoxIcon className="w-10 h-10 text-teal-400" />
-          </div>
-          <p className="text-gray-500 font-medium text-lg mb-2">No quizzes found</p>
-          <p className="text-gray-400 mb-6">Get started by creating your first quiz</p>
-          <button 
-            onClick={() => { 
-              setEditingQuiz(null); 
-              setQuizForm({ 
-                subject_id: '', 
-                title: '', 
-                description: '', 
-                duration: 30, 
-                is_active: true,
-                target_form: 'All'
-              }); 
-              setShowQuizModal(true); 
-            }}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 shadow-sm transition-all"
-          >
-            <PlusIcon className="w-5 h-5" />
-            Create Your First Quiz
-          </button>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredQuizzes.map((quiz) => (
-            <div 
-              key={quiz.id} 
-              className="group bg-white border border-gray-200 rounded-2xl p-6 hover:border-teal-300 hover:shadow-xl hover:shadow-teal-500/5 transition-all duration-300 relative overflow-hidden cursor-pointer"
-              onClick={() => viewQuizDetails(quiz)}
-            >
-              <div className={`absolute top-0 right-0 w-2 h-full ${quiz.is_active ? 'bg-gradient-to-b from-emerald-500 to-teal-500' : 'bg-gray-300'}`} />
-              
-              <div className="flex justify-between items-start mb-4">
-                <div className="flex flex-wrap gap-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${getSubjectColor(quiz.subject_name)}`}>
-                    {quiz.subject_name || 'Unknown'}
-                  </span>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${getTargetFormColor(quiz.target_form)}`}>
-                    {quiz.target_form === 'All' ? 'All Forms' : quiz.target_form}
-                  </span>
-                  {!quiz.is_active && (
-                    <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-gray-100 text-gray-600">
-                      Draft
-                    </span>
-                  )}
-                </div>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openEditQuiz(quiz);
-                    }} 
-                    className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
-                  >
-                    <PencilIcon className="w-5 h-5" />
-                  </button>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteQuiz(quiz);
-                    }} 
-                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <TrashIcon className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-
-              <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-teal-600 transition-colors line-clamp-1">
-                {quiz.title}
-              </h3>
-              <p className="text-gray-500 text-sm line-clamp-2 mb-4 h-10">
-                {quiz.description || 'No description provided for this assessment.'}
-              </p>
-              
-              {/* Quiz Stats */}
-              <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                <div className="flex gap-4 text-xs font-semibold text-gray-500">
-                  <span className="flex items-center gap-1.5">
-                    <QuestionMarkCircleIcon className="w-4 h-4" />
-                    {quiz.question_count || 0} Questions
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <ClockIcon className="w-4 h-4" />
-                    {quiz.duration || 0} min
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <TrophyIcon className="w-4 h-4" />
-                    {quiz.total_marks || 0} pts
-                  </span>
-                </div>
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    viewQuizDetails(quiz);
-                  }}
-                  className="flex items-center gap-1 text-sm font-bold text-teal-600 hover:gap-2 transition-all"
-                >
-                  Manage Questions <ChevronRightIcon className="w-4 h-4 stroke-2" />
-                </button>
+      {/* Grading View */}
+      {activeTab === 'grading' ? (
+        <div className="bg-white rounded-2xl shadow p-6">
+          {!selectedQuiz ? (
+            <div className="text-center py-12">
+              <ClipboardDocumentListIcon className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+              <p className="text-gray-500">Select a quiz from the list to view submissions.</p>
+              <p className="text-sm text-gray-400 mt-2">Click on any quiz card to start grading.</p>
+            </div>
+          ) : submissions.length === 0 ? (
+            <div className="text-center py-12">
+              <UserGroupIcon className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+              <p className="text-gray-500">No submissions yet for this quiz.</p>
+            </div>
+          ) : (
+            <div>
+              <h3 className="text-xl font-bold mb-4">Submissions for "{selectedQuiz.title}"</h3>
+              <div className="space-y-4">
+                {submissions.map(sub => (
+                  <div key={sub.id} className="border rounded-xl p-4 hover:shadow-md transition">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium text-gray-800">{sub.student_name}</p>
+                        <p className="text-sm text-gray-500">Submitted: {new Date(sub.created_at).toLocaleString()}</p>
+                        <p className="text-sm mt-1">
+                          Marks: <span className="font-semibold">{sub.total_marks ?? 'Not graded'}</span> / {sub.total_possible}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedSubmission(sub);
+                          setGradingModal(true);
+                        }}
+                        className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm hover:bg-teal-700 transition"
+                      >
+                        Grade
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ))}
+          )}
         </div>
+      ) : (
+        /* Quiz Grid - Enhanced Cards (unchanged except points → marks) */
+        filteredQuizzes.length === 0 ? (
+          <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl border-2 border-dashed border-gray-200 py-20 text-center">
+            <div className="w-20 h-20 bg-teal-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ArchiveBoxIcon className="w-10 h-10 text-teal-400" />
+            </div>
+            <p className="text-gray-500 font-medium text-lg mb-2">No quizzes found</p>
+            <p className="text-gray-400 mb-6">Get started by creating your first quiz</p>
+            <button 
+              onClick={() => { 
+                setEditingQuiz(null); 
+                setQuizForm({ 
+                  subject_id: '', 
+                  title: '', 
+                  description: '', 
+                  duration: 30, 
+                  is_active: true,
+                  target_form: 'All'
+                }); 
+                setShowQuizModal(true); 
+              }}
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-teal-600 text-white rounded-xl font-semibold hover:bg-teal-700 shadow-sm transition-all"
+            >
+              <PlusIcon className="w-5 h-5" />
+              Create Your First Quiz
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {filteredQuizzes.map((quiz) => (
+              <div 
+                key={quiz.id} 
+                className="group bg-white border border-gray-200 rounded-2xl p-6 hover:border-teal-300 hover:shadow-xl hover:shadow-teal-500/5 transition-all duration-300 relative overflow-hidden cursor-pointer"
+                onClick={() => viewQuizDetails(quiz)}
+              >
+                <div className={`absolute top-0 right-0 w-2 h-full ${quiz.is_active ? 'bg-gradient-to-b from-emerald-500 to-teal-500' : 'bg-gray-300'}`} />
+                
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex flex-wrap gap-2">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${getSubjectColor(quiz.subject_name)}`}>
+                      {quiz.subject_name || 'Unknown'}
+                    </span>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${getTargetFormColor(quiz.target_form)}`}>
+                      {quiz.target_form === 'All' ? 'All Forms' : quiz.target_form}
+                    </span>
+                    {!quiz.is_active && (
+                      <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-gray-100 text-gray-600">
+                        Draft
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditQuiz(quiz);
+                      }} 
+                      className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+                    >
+                      <PencilIcon className="w-5 h-5" />
+                    </button>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteQuiz(quiz);
+                      }} 
+                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <TrashIcon className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-teal-600 transition-colors line-clamp-1">
+                  {quiz.title}
+                </h3>
+                <p className="text-gray-500 text-sm line-clamp-2 mb-4 h-10">
+                  {quiz.description || 'No description provided for this assessment.'}
+                </p>
+                
+                {/* Quiz Stats */}
+                <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                  <div className="flex gap-4 text-xs font-semibold text-gray-500">
+                    <span className="flex items-center gap-1.5">
+                      <QuestionMarkCircleIcon className="w-4 h-4" />
+                      {quiz.question_count || 0} Questions
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <ClockIcon className="w-4 h-4" />
+                      {quiz.duration || 0} min
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <TrophyIcon className="w-4 h-4" />
+                      {quiz.total_marks || 0} marks {/* changed from pts */}
+                    </span>
+                  </div>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      viewQuizDetails(quiz);
+                    }}
+                    className="flex items-center gap-1 text-sm font-bold text-teal-600 hover:gap-2 transition-all"
+                  >
+                    Manage Questions <ChevronRightIcon className="w-4 h-4 stroke-2" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
       )}
 
-      {/* Quiz Details Side Panel */}
+      {/* Quiz Details Side Panel (unchanged) */}
       {selectedQuiz && (
         <div className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl z-50 transform transition-transform duration-300 ease-in-out border-l border-gray-200">
           <div className="h-full flex flex-col">
@@ -656,7 +766,7 @@ const QuizManagement = () => {
                               </span>
                             )}
                             <span className="text-xs text-gray-400 ml-auto">
-                              {q.marks || 1} {q.marks === 1 ? 'point' : 'points'}
+                              {q.marks || 1} {q.marks === 1 ? 'mark' : 'marks'} {/* changed */}
                             </span>
                           </div>
                           
@@ -728,7 +838,7 @@ const QuizManagement = () => {
         </div>
       )}
 
-      {/* Create/Edit Quiz Modal - Enhanced */}
+      {/* Create/Edit Quiz Modal (unchanged) */}
       {showQuizModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => {
           if (e.target === e.currentTarget) {
@@ -846,7 +956,7 @@ const QuizManagement = () => {
         </div>
       )}
 
-      {/* Add Question Modal - Keep existing implementation */}
+      {/* Add Question Modal (unchanged) */}
       {showQuestionModal && selectedQuiz && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => {
           if (e.target === e.currentTarget) {
@@ -1018,6 +1128,77 @@ const QuizManagement = () => {
                   'Add Question'
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Grading Modal */}
+      {gradingModal && selectedSubmission && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => {
+          if (e.target === e.currentTarget) setGradingModal(false);
+        }}>
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-5 flex justify-between items-center">
+              <h3 className="text-xl font-bold text-gray-800">Grade Submission</h3>
+              <button
+                onClick={() => setGradingModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition"
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              <p className="text-sm text-gray-500">Student: <span className="font-medium">{selectedSubmission.student_name}</span></p>
+              {selectedSubmission.answers.map((ans, idx) => (
+                <div key={idx} className="border-b pb-4 last:border-0">
+                  <p className="font-medium text-gray-800">Question {idx+1}: {ans.question_text}</p>
+                  <p className="text-gray-700 mt-1">Student's answer: <span className="font-mono bg-gray-50 p-1 rounded">{ans.answer || '(no answer)'}</span></p>
+                  {ans.question_type === 'short_answer' && (
+                    <div className="mt-2 space-y-2">
+                      <label className="block text-sm font-medium">Marks (out of {ans.max_marks})</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max={ans.max_marks}
+                        value={ans.given_marks ?? 0}
+                        onChange={(e) => {
+                          const newAnswers = [...selectedSubmission.answers];
+                          newAnswers[idx].given_marks = parseInt(e.target.value) || 0;
+                          setSelectedSubmission({ ...selectedSubmission, answers: newAnswers });
+                        }}
+                        className="p-2 border rounded w-24"
+                      />
+                      <label className="block text-sm font-medium">Feedback (optional)</label>
+                      <textarea
+                        value={ans.feedback || ''}
+                        onChange={(e) => {
+                          const newAnswers = [...selectedSubmission.answers];
+                          newAnswers[idx].feedback = e.target.value;
+                          setSelectedSubmission({ ...selectedSubmission, answers: newAnswers });
+                        }}
+                        rows="2"
+                        className="p-2 border rounded w-full"
+                        placeholder="Provide feedback to the student..."
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div className="flex justify-end gap-3 pt-4">
+                <button
+                  onClick={() => setGradingModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveGrades}
+                  className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition"
+                >
+                  Save Grades
+                </button>
+              </div>
             </div>
           </div>
         </div>
