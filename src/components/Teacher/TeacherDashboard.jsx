@@ -180,6 +180,10 @@ export default function TeacherDashboard() {
   const [teacherComment, setTeacherComment] = useState('');
   const [loadingSubjects, setLoadingSubjects] = useState(false);
   
+  // Edit mode states
+  const [editingReportId, setEditingReportId] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  
   // Attendance form states
   const [attDate, setAttDate] = useState(new Date().toISOString().split('T')[0]);
   const [attLearnerId, setAttLearnerId] = useState('');
@@ -365,6 +369,33 @@ export default function TeacherDashboard() {
     }
   };
 
+  // Handle edit report
+  const handleEditReport = async (report) => {
+    setEditingReportId(report.id);
+    setIsEditing(true);
+    
+    setSelectedLearnerId(report.learner_id);
+    const learner = myLearners.find(l => l.id === report.learner_id);
+    setSelectedLearner(learner);
+    setReportTerm(report.term);
+    setReportForm(report.form);
+    setSelectedAssessmentType(report.assessment_type_id || '');
+    setSelectedYear(report.academic_year?.toString() || new Date().getFullYear().toString());
+    setTeacherComment(report.comment || '');
+    
+    if (learner && learner.class_id) {
+      await fetchSubjectsForClass(learner.class_id);
+      const scores = {};
+      subjects.forEach(subject => {
+        const found = report.subjects.find(s => s.name === subject.name);
+        scores[subject.name] = found ? found.score : '';
+      });
+      setSubjectScores(scores);
+    }
+    
+    document.getElementById('report-form')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   const handleSaveReport = async () => {
     if (!selectedLearnerId) {
       toast.error('Please select a learner');
@@ -401,7 +432,6 @@ export default function TeacherDashboard() {
     
     const isUpperForm = reportForm === 'Form 3' || reportForm === 'Form 4';
     
-    // Calculate best subjects and points for upper forms
     let bestSubjects = subjectsData;
     let totalPoints = null;
     let englishPassed = true;
@@ -417,11 +447,9 @@ export default function TeacherDashboard() {
       finalStatus = getFinalStatus(englishPassed, totalPoints);
     }
     
-    // Calculate average for the comment
     const avgScore = Math.round(subjectsData.reduce((sum, s) => sum + s.score, 0) / subjectsData.length);
     const grade = getGradeFromScore(avgScore, reportForm);
     
-    // Generate comment if not provided
     let finalComment = teacherComment;
     if (!finalComment && subjectsData.length > 0) {
       if (isUpperForm) {
@@ -450,9 +478,24 @@ export default function TeacherDashboard() {
     };
     
     try {
-      const response = await api.post('/api/teacher/reports', reportData);
+      let response;
+      if (isEditing && editingReportId) {
+        response = await api.put(`/api/teacher/reports/${editingReportId}`, reportData);
+        if (response.data.success) {
+          toast.success('Report card updated! ✅');
+        } else {
+          toast.error(response.data.message || 'Failed to update report');
+        }
+      } else {
+        response = await api.post('/api/teacher/reports', reportData);
+        if (response.data.success) {
+          toast.success('Report card saved! ✅');
+        } else {
+          toast.error(response.data.message || 'Failed to save report');
+        }
+      }
+      
       if (response.data.success) {
-        toast.success('Report card saved! ✅');
         setSubjectScores({});
         setTeacherComment('');
         setSelectedLearnerId('');
@@ -460,13 +503,13 @@ export default function TeacherDashboard() {
         setSubjects([]);
         setSelectedAssessmentType('');
         setReportTerm('Term 1 – 2024');
+        setEditingReportId(null);
+        setIsEditing(false);
         loadDashboardData();
-      } else {
-        toast.error(response.data.message || 'Failed to save report');
       }
     } catch (error) {
       console.error('Error saving report:', error);
-      toast.error('Failed to save report');
+      toast.error(error.response?.data?.message || 'Failed to save report');
     } finally {
       setIsSubmitting(false);
     }
@@ -950,8 +993,8 @@ export default function TeacherDashboard() {
                       <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-semibold text-gray-500 uppercase">Form</th>
                       <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
                       <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
-                     </tr>
-                     </thead>
+                    </tr>
+                    </thead>
                   <tbody className="divide-y divide-gray-200">
                     {myLearners && myLearners.length > 0 ? (
                       myLearners.map(learner => (
@@ -967,12 +1010,12 @@ export default function TeacherDashboard() {
                             }`}>
                               {learner.status || 'Active'}
                             </span>
-                          </td>
+                           </td>
                           <td className="px-3 lg:px-6 py-3">
                             <button onClick={() => handleRemoveLearner(learner.id, learner.name)} className="text-red-600 hover:text-red-800 text-sm">
                               Remove
                             </button>
-                          </td>
+                           </td>
                         </tr>
                       ))
                     ) : (
@@ -1010,9 +1053,11 @@ export default function TeacherDashboard() {
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Generate Report Card Form */}
-              <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
+              <div id="report-form" className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
                 <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-[#d4cfc6]">
-                  <h2 className="font-semibold text-[#0f1923] text-sm lg:text-base">Generate Report Card</h2>
+                  <h2 className="font-semibold text-[#0f1923] text-sm lg:text-base">
+                    {isEditing ? '✏️ Edit Report Card' : '📝 Generate Report Card'}
+                  </h2>
                 </div>
                 <div className="p-4 lg:p-6">
                   <div className="mb-4">
@@ -1166,13 +1211,35 @@ export default function TeacherDashboard() {
                     />
                   </div>
                   
-                  <button 
-                    onClick={handleSaveReport} 
-                    disabled={isSubmitting || !selectedLearnerId || subjects.length === 0 || loadingSubjects}
-                    className="w-full px-4 py-2 bg-[#c9933a] text-[#0f1923] rounded-lg hover:bg-[#e8b96a] transition font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSubmitting ? 'Saving...' : '💾 Save Report Card'}
-                  </button>
+                  <div className="flex gap-3">
+                    <button 
+                      onClick={handleSaveReport} 
+                      disabled={isSubmitting || !selectedLearnerId || subjects.length === 0 || loadingSubjects}
+                      className="flex-1 px-4 py-2 bg-[#c9933a] text-[#0f1923] rounded-lg hover:bg-[#e8b96a] transition font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSubmitting ? 'Saving...' : (isEditing ? '✏️ Update Report Card' : '💾 Save Report Card')}
+                    </button>
+                    
+                    {isEditing && (
+                      <button
+                        onClick={() => {
+                          setEditingReportId(null);
+                          setIsEditing(false);
+                          setSubjectScores({});
+                          setTeacherComment('');
+                          setSelectedLearnerId('');
+                          setSelectedLearner(null);
+                          setSubjects([]);
+                          setSelectedAssessmentType('');
+                          setReportTerm('Term 1 – 2024');
+                          setSelectedYear(new Date().getFullYear().toString());
+                        }}
+                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition text-sm"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
               
@@ -1213,18 +1280,18 @@ export default function TeacherDashboard() {
                             <tr key={report.id} className="hover:bg-gray-50">
                               <td className="px-3 lg:px-4 py-3 text-sm font-medium truncate max-w-[100px] lg:max-w-none">
                                 {getLearnerName(report.learner_id)}
-                              </td>
+                               </td>
                               <td className="px-3 lg:px-4 py-3">
                                 <span className="px-2 py-1 rounded-full text-xs font-semibold bg-[#1a6b6b]/10 text-[#1a6b6b]">
                                   {report.term?.length > 12 ? report.term.substring(0, 10) + '…' : report.term}
                                 </span>
-                              </td>
+                               </td>
                               <td className="px-3 lg:px-4 py-3 text-sm text-gray-600">
                                 {report.academic_year || new Date().getFullYear()}
-                              </td>
+                               </td>
                               <td className="px-3 lg:px-4 py-3">
                                 {isUpperForm && totalPoints !== null ? `${totalPoints} pts` : '—'}
-                              </td>
+                               </td>
                               <td className="px-3 lg:px-4 py-3">
                                 {isUpperForm && finalStatus ? (
                                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
@@ -1238,12 +1305,13 @@ export default function TeacherDashboard() {
                                 ) : (
                                   <span className="text-xs text-gray-500">—</span>
                                 )}
-                              </td>
+                               </td>
                               <td className="px-3 lg:px-4 py-3">
+                                <button onClick={() => handleEditReport(report)} className="text-blue-600 hover:text-blue-800 text-sm mr-2">Edit</button>
                                 <button onClick={() => handleViewReport(report)} className="text-blue-600 hover:text-blue-800 text-sm mr-2">View</button>
                                 <button onClick={() => handleDeleteReport(report.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
-                              </td>
-                            </tr>
+                               </td>
+                             </tr>
                           );
                         })
                       ) : (
@@ -1339,12 +1407,12 @@ export default function TeacherDashboard() {
                           <tr key={record.id} className="hover:bg-gray-50">
                             <td className="px-3 lg:px-4 py-3 text-sm font-medium truncate max-w-[100px] lg:max-w-none">
                               {getLearnerName(record.learner_id)}
-                            </td>
+                             </td>
                             <td className="px-3 lg:px-4 py-3 text-sm">
                               <span className="px-2 py-1 rounded text-xs font-semibold bg-[#c9933a]/10 text-[#c9933a]">
                                 {getLearnerForm(record.learner_id)}
                               </span>
-                            </td>
+                             </td>
                             <td className="px-3 lg:px-4 py-3 text-sm">{formatDate(record.date)}</td>
                             <td className="px-3 lg:px-4 py-3">
                               <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
@@ -1354,8 +1422,8 @@ export default function TeacherDashboard() {
                               }`}>
                                 {record.status === 'present' ? 'Present' : record.status === 'absent' ? 'Absent' : 'Late'}
                               </span>
-                            </td>
-                          </tr>
+                             </td>
+                           </tr>
                         ))
                       ) : (
                         <tr>
