@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
@@ -14,7 +14,7 @@ import RegisterTeacher from '../../components/Admin/RegisterTeacher';
 import AdminClassManagement from '../../components/Admin/AdminClassManagement';
 import AdminSubjectManagement from '../../components/Admin/AdminSubjectManagement';
 import SecurityLogs from '../../components/Admin/SecurityLogs';
-import QuizManagement from '../../components/Admin/QuizManagement'; // Add this import
+import QuizManagement from '../../components/Admin/QuizManagement';
 
 // Theme constants
 const NAVY_DARK = '#0A192F';
@@ -184,6 +184,45 @@ const RegisterTeacherModal = ({ isOpen, onClose }) => {
   );
 };
 
+// ============================================
+// NOTIFICATIONS PANEL COMPONENT
+// ============================================
+const NotificationsPanel = ({ notifications, onMarkAsRead, onClose }) => {
+  if (!notifications.length) {
+    return (
+      <div className="px-4 py-8 text-center text-gray-500">
+        <div className="text-2xl mb-2">🔔</div>
+        <p className="text-sm">No new notifications</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-h-96 overflow-y-auto">
+      {notifications.map((notif) => (
+        <div
+          key={notif.id}
+          className="px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition"
+          onClick={() => onMarkAsRead(notif.id)}
+        >
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm">
+              📋
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-gray-800">{notif.title}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{notif.message}</p>
+              <p className="text-xs text-gray-400 mt-1">
+                {new Date(notif.created_at).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -202,11 +241,17 @@ export default function AdminDashboard() {
   const [showRegisterLearnerModal, setShowRegisterLearnerModal] = useState(false);
   const [showRegisterTeacherModal, setShowRegisterTeacherModal] = useState(false);
 
+  // Notification state
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef(null);
+
   // Navigation items for mobile drawer - UPDATED with Quiz Management
   const navItems = [
     { id: 'register-learner', icon: '📝', label: 'Register Learner' },
     { id: 'register-teacher', icon: '👨‍🏫', label: 'Register Teacher' },
-    { id: 'quiz-management', icon: '📋', label: 'Quiz Management' }, // Added Quiz Management
+    { id: 'quiz-management', icon: '📋', label: 'Quiz Management' },
     { id: 'class-management', icon: '📚', label: 'Class Management' },
     { id: 'subject-management', icon: '📖', label: 'Subject Management' },
     { id: 'security-logs', icon: '🔒', label: 'Security Logs' },
@@ -222,6 +267,23 @@ export default function AdminDashboard() {
   useEffect(() => {
     checkAdminAccess();
     loadStats();
+    fetchNotifications();
+    
+    // Poll for new notifications every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000);
+    
+    // Close dropdown when clicking outside
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
   const checkAdminAccess = () => {
@@ -256,6 +318,35 @@ export default function AdminDashboard() {
       toast.error('Failed to load statistics');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await api.get('/api/admin/notifications', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.success) {
+        const notifs = response.data.notifications || [];
+        setNotifications(notifs);
+        setUnreadCount(notifs.length);
+      }
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    }
+  };
+
+  const markNotificationAsRead = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      await api.put(`/api/admin/notifications/${id}/read`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // Refresh notifications
+      await fetchNotifications();
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
     }
   };
 
@@ -313,7 +404,7 @@ export default function AdminDashboard() {
     loadStats();
   };
 
-  // Render content based on active navigation - UPDATED with Quiz Management case
+  // Render content based on active navigation
   const renderContent = () => {
     switch (activeNav) {
       case 'register-learner':
@@ -377,6 +468,37 @@ export default function AdminDashboard() {
                 <p className="text-xs sm:text-sm text-white/70 mt-0.5 sm:mt-1">{getGreeting()}! Welcome back</p>
               </div>
               <div className="flex items-center gap-2 sm:gap-3">
+                {/* Notifications Bell */}
+                <div className="relative" ref={notificationRef}>
+                  <button
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="relative w-8 h-8 sm:w-10 sm:h-10 lg:w-11 lg:h-11 bg-white/10 backdrop-blur rounded-xl flex items-center justify-center transition-all hover:bg-white/20"
+                  >
+                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-red-500 text-white text-[10px] sm:text-xs rounded-full flex items-center justify-center font-bold">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Dropdown */}
+                  {showNotifications && (
+                    <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden">
+                      <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                        <h3 className="text-sm font-semibold text-gray-800">Notifications</h3>
+                      </div>
+                      <NotificationsPanel
+                        notifications={notifications}
+                        onMarkAsRead={markNotificationAsRead}
+                        onClose={() => setShowNotifications(false)}
+                      />
+                    </div>
+                  )}
+                </div>
+
                 {/* Mobile Menu Button */}
                 <MobileMenuButton 
                   isOpen={mobileMenuOpen} 

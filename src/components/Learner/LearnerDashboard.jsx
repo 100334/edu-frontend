@@ -144,6 +144,56 @@ const MobileMenuButton = ({ isOpen, onClick }) => (
   </button>
 );
 
+// QuizHistory Component (inline for revision)
+const QuizHistory = ({ attempts, onReview }) => {
+  if (!attempts || attempts.length === 0) return null;
+  
+  return (
+    <div className="mt-8 bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
+      <div className="px-4 py-3 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
+        <h3 className="font-serif text-base font-bold text-[#0f1923] flex items-center gap-2">
+          <span className="text-purple-600">📚</span>
+          My Quiz History
+        </h3>
+      </div>
+      <div className="divide-y divide-gray-100">
+        {attempts.map((attempt) => (
+          <div key={attempt.id} className="p-4 hover:bg-gray-50 transition">
+            <div className="flex justify-between items-start flex-wrap gap-2">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-medium text-gray-800 text-sm">
+                    {attempt.quiz_title || attempt.subject || 'Quiz'}
+                  </span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${attempt.passed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    {attempt.passed ? 'Passed' : 'Failed'}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-3 mt-1 text-xs text-gray-500">
+                  <span>📅 {new Date(attempt.completed_at || attempt.created_at).toLocaleDateString()}</span>
+                  <span>🎯 Score: {attempt.marks_earned !== undefined ? `${attempt.marks_earned}/${attempt.total_marks}` : `${Math.round(attempt.percentage)}%`}</span>
+                </div>
+                {attempt.feedback && (
+                  <div className="mt-2 text-xs text-amber-600 bg-amber-50 p-2 rounded flex items-start gap-1">
+                    <ChatBubbleLeftRightIcon className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                    <span>{attempt.feedback}</span>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => onReview(attempt.id)}
+                className="px-3 py-1.5 text-xs font-medium text-purple-600 border border-purple-300 rounded-lg hover:bg-purple-50 transition"
+              >
+                Review Answers
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export default function LearnerDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -158,7 +208,9 @@ export default function LearnerDashboard() {
   // Quiz states
   const [showQuiz, setShowQuiz] = useState(null);
   const [quizResult, setQuizResult] = useState(null);
-  const [quizAttempts, setQuizAttempts] = useState([]); // NEW: store full attempts with marks/feedback
+  const [quizAttempts, setQuizAttempts] = useState([]);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewAttempt, setReviewAttempt] = useState(null);
   
   // Data states
   const [reports, setReports] = useState([]);
@@ -173,8 +225,8 @@ export default function LearnerDashboard() {
     absentCount: 0,
     quizScore: '—',
     quizzesCompleted: 0,
-    totalMarks: 0,         // NEW
-    totalPossibleMarks: 0  // NEW
+    totalMarks: 0,
+    totalPossibleMarks: 0
   });
   const [latestReport, setLatestReport] = useState(null);
   const [recentActivity, setRecentActivity] = useState([]);
@@ -195,66 +247,41 @@ export default function LearnerDashboard() {
     sessionStorage.setItem('learnerActiveTab', activeTab);
   }, [activeTab]);
 
-  // Close mobile menu when tab changes
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [activeTab]);
 
-  // Extract available years and assessments from reports
   const extractFilters = useCallback((reportsData) => {
     const years = new Set();
     const assessments = new Set();
-    
     reportsData.forEach(report => {
-      if (report.academic_year) {
-        years.add(report.academic_year);
-      } else if (report.created_at) {
-        years.add(new Date(report.created_at).getFullYear());
-      }
-      if (report.term) {
-        assessments.add(report.term);
-      }
+      if (report.academic_year) years.add(report.academic_year);
+      else if (report.created_at) years.add(new Date(report.created_at).getFullYear());
+      if (report.term) assessments.add(report.term);
     });
-    
     const sortedYears = Array.from(years).sort((a, b) => b - a);
     const sortedAssessments = Array.from(assessments).sort();
-    
     setAvailableYears(sortedYears);
     setAvailableAssessments(sortedAssessments);
-    
-    if (sortedYears.length > 0 && !selectedYear) {
-      setSelectedYear(sortedYears[0]);
-    }
-    if (sortedAssessments.length > 0 && !selectedAssessment) {
-      setSelectedAssessment(sortedAssessments[0]);
-    }
+    if (sortedYears.length > 0 && !selectedYear) setSelectedYear(sortedYears[0]);
+    if (sortedAssessments.length > 0 && !selectedAssessment) setSelectedAssessment(sortedAssessments[0]);
   }, [selectedYear, selectedAssessment]);
 
-  // Filter reports based on selected year and assessment
   useEffect(() => {
     if (reports.length > 0) {
       let filtered = [...reports];
-      
       if (selectedYear) {
         filtered = filtered.filter(report => {
           const reportYear = report.academic_year || (report.created_at ? new Date(report.created_at).getFullYear() : null);
           return reportYear === selectedYear;
         });
       }
-      
       if (selectedAssessment) {
         filtered = filtered.filter(report => report.term === selectedAssessment);
       }
-      
       setFilteredReports(filtered);
-      
       if (filtered.length > 0) {
-        const sorted = [...filtered].sort((a, b) => {
-          if (a.created_at && b.created_at) {
-            return new Date(b.created_at) - new Date(a.created_at);
-          }
-          return 0;
-        });
+        const sorted = [...filtered].sort((a, b) => (new Date(b.created_at) - new Date(a.created_at)));
         setLatestReport(sorted[0]);
       } else {
         setLatestReport(null);
@@ -267,22 +294,16 @@ export default function LearnerDashboard() {
       setLoading(false);
       return;
     }
-
     setLoading(true);
     setError(null);
-    
     try {
       // Fetch reports
       let reportsData = [];
       try {
         const reportsRes = await api.get('/api/learner/reports');
-        if (reportsRes.data && Array.isArray(reportsRes.data)) {
-          reportsData = reportsRes.data;
-        } else if (reportsRes.data && reportsRes.data.data && Array.isArray(reportsRes.data.data)) {
-          reportsData = reportsRes.data.data;
-        } else if (reportsRes.data && reportsRes.data.reports && Array.isArray(reportsRes.data.reports)) {
-          reportsData = reportsRes.data.reports;
-        }
+        if (reportsRes.data && Array.isArray(reportsRes.data)) reportsData = reportsRes.data;
+        else if (reportsRes.data?.data && Array.isArray(reportsRes.data.data)) reportsData = reportsRes.data.data;
+        else if (reportsRes.data?.reports && Array.isArray(reportsRes.data.reports)) reportsData = reportsRes.data.reports;
       } catch (reportError) {
         console.error('Error fetching reports:', reportError);
         toast.error('Could not load reports');
@@ -293,13 +314,9 @@ export default function LearnerDashboard() {
       try {
         const attendanceRes = await api.get('/api/learner/attendance');
         if (attendanceRes.data) {
-          if (attendanceRes.data.stats && attendanceRes.data.records) {
-            attendanceData = attendanceRes.data;
-          } else if (attendanceRes.data.data) {
-            attendanceData = attendanceRes.data.data;
-          } else if (Array.isArray(attendanceRes.data)) {
-            attendanceData = { stats: {}, records: attendanceRes.data };
-          }
+          if (attendanceRes.data.stats && attendanceRes.data.records) attendanceData = attendanceRes.data;
+          else if (attendanceRes.data.data) attendanceData = attendanceRes.data.data;
+          else if (Array.isArray(attendanceRes.data)) attendanceData = { stats: {}, records: attendanceRes.data };
         }
       } catch (attendanceError) {
         console.error('Error fetching attendance:', attendanceError);
@@ -323,7 +340,6 @@ export default function LearnerDashboard() {
               const avgQuizScore = validScores.reduce((sum, q) => sum + (q.percentage || 0), 0) / validScores.length;
               totalQuizScore = Math.round(avgQuizScore);
             }
-            // Calculate total marks earned and total possible marks
             totalMarks = quizHistoryData.reduce((sum, q) => sum + (q.marks_earned || 0), 0);
             totalPossibleMarks = quizHistoryData.reduce((sum, q) => sum + (q.total_marks || 0), 0);
           }
@@ -340,11 +356,10 @@ export default function LearnerDashboard() {
         form: report.form || user?.form || 'Form 1',
         subjects: (report.subjects || report.subjects_data || report.subject_scores || []).filter(s => s && (s.score !== undefined || s.score !== null))
       }));
-      
       setReports(processedReports);
       extractFilters(processedReports);
 
-      // Process attendance records
+      // Process attendance
       const processedAttendance = (attendanceData.records || []).map(record => ({
         id: record.id,
         date: record.date,
@@ -353,7 +368,6 @@ export default function LearnerDashboard() {
         year: record.year,
         recorded_at: record.recorded_at || record.created_at
       }));
-      
       setAttendanceRecords(processedAttendance);
 
       // Calculate stats
@@ -362,7 +376,6 @@ export default function LearnerDashboard() {
                             attendanceData.stats?.percentage ? `${attendanceData.stats.percentage}%` : '—';
       
       let averageScore = '—';
-      
       if (processedReports.length > 0) {
         let allValidSubjects = [];
         processedReports.forEach(report => {
@@ -371,7 +384,6 @@ export default function LearnerDashboard() {
             allValidSubjects = [...allValidSubjects, ...validSubjects];
           }
         });
-        
         if (allValidSubjects.length > 0) {
           const totalScore = allValidSubjects.reduce((sum, s) => sum + (s.score || 0), 0);
           const avg = Math.round(totalScore / allValidSubjects.length);
@@ -395,15 +407,8 @@ export default function LearnerDashboard() {
 
       // Build recent activity
       const activity = [];
-      
       if (processedReports.length > 0) {
-        const latest = [...processedReports].sort((a, b) => {
-          if (a.created_at && b.created_at) {
-            return new Date(b.created_at) - new Date(a.created_at);
-          }
-          return 0;
-        })[0];
-        
+        const latest = [...processedReports].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
         activity.push({
           id: 'latest-report',
           type: 'report',
@@ -414,8 +419,6 @@ export default function LearnerDashboard() {
           color: 'text-[#c9933a]'
         });
       }
-      
-      // Add quiz activity with marks
       if (quizHistoryData.length > 0) {
         const latestQuiz = quizHistoryData[0];
         const marksDisplay = latestQuiz.marks_earned !== undefined 
@@ -432,32 +435,21 @@ export default function LearnerDashboard() {
           feedback: latestQuiz.feedback
         });
       }
-      
       const recentRecords = processedAttendance.slice(0, 2);
       recentRecords.forEach(record => {
-        const statusDisplay = record.status === 'present' ? 'Present' : 
-                              record.status === 'late' ? 'Late' : 'Absent';
+        const statusDisplay = record.status === 'present' ? 'Present' : record.status === 'late' ? 'Late' : 'Absent';
         activity.push({
           id: record.id,
           type: 'attendance',
           title: `Attendance: ${statusDisplay}`,
-          description: `Marked as ${record.status} on ${new Date(record.date).toLocaleDateString('en', { 
-            month: 'short', 
-            day: 'numeric',
-            year: 'numeric'
-          })}`,
+          description: `Marked as ${record.status} on ${new Date(record.date).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}`,
           date: record.date,
           icon: record.status === 'present' ? '✅' : record.status === 'late' ? '⏰' : '❌',
           color: record.status === 'present' ? 'text-green-600' : record.status === 'late' ? 'text-[#c9933a]' : 'text-red-500'
         });
       });
-      
-      const sortedActivity = activity.sort((a, b) => 
-        new Date(b.date) - new Date(a.date)
-      ).slice(0, 5);
-      
+      const sortedActivity = activity.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
       setRecentActivity(sortedActivity);
-
     } catch (error) {
       console.error('Dashboard error:', error);
       setError(error.message);
@@ -468,9 +460,8 @@ export default function LearnerDashboard() {
   }, [user, extractFilters]);
 
   useEffect(() => {
-    if (user?.id) {
-      loadDashboardData();
-    } else {
+    if (user?.id) loadDashboardData();
+    else {
       const timer = setTimeout(() => {
         if (!user?.id) {
           setLoading(false);
@@ -505,19 +496,13 @@ export default function LearnerDashboard() {
     return 'Please focus on regular attendance ⚠️';
   };
 
-  // REDESIGNED REPORT CARD PDF DOWNLOAD - SINGLE PAGE WITH LOGO
   const downloadReportPDF = (report) => {
     if (!report) {
       toast.error('No report data available');
       return;
     }
-
     try {
-      const doc = new jsPDF({
-        unit: 'mm',
-        format: 'a4',
-        orientation: 'portrait'
-      });
+      const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       const validSubjects = (report.subjects || []).filter(s => s && s.score !== undefined && s.score !== null);
@@ -526,90 +511,60 @@ export default function LearnerDashboard() {
       const bestSubjects = isUpperForm ? calculateBestSubjects(validSubjects, report.form) : validSubjects;
       const avgScore = calculateAverage(validSubjects);
       const avgGrade = getGradeFromScore(avgScore, report.form);
-      
-      // Colors
       const navy = [26, 35, 126];
       const gold = [201, 147, 58];
       const lightGray = [248, 250, 252];
       const darkGray = [15, 25, 35];
-      
-      let currentY = 10; // Start position tracker
-      
-      // 1. Header with Logo Area and Gradient Effect
+      let currentY = 10;
       doc.setFillColor(navy[0], navy[1], navy[2]);
       doc.rect(0, 0, pageWidth, 50, 'F');
-      
-      // Decorative gold bar
       doc.setFillColor(gold[0], gold[1], gold[2]);
       doc.rect(0, 47, pageWidth, 3, 'F');
-      
-      // Logo Area (Placeholder Circle with P)
       doc.setFillColor(255, 255, 255);
       doc.circle(25, 25, 8, 'F');
       doc.setTextColor(navy[0], navy[1], navy[2]);
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.text('P', 25, 29, { align: 'center' });
-      
-      // School Name
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
       doc.text('PROGRESS SECONDARY SCHOOL', pageWidth / 2, 22, { align: 'center' });
-      
-      // Motto
       doc.setFontSize(8);
       doc.setFont('helvetica', 'italic');
       doc.setTextColor(220, 220, 220);
       doc.text('Scholastica, Excellentia et Disciplina', pageWidth / 2, 30, { align: 'center' });
-      
-      // Report Title
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(gold[0], gold[1], gold[2]);
       doc.text('ACADEMIC REPORT CARD', pageWidth / 2, 40, { align: 'center' });
-      
       currentY = 58;
-      
-      // 2. Student Information Card (Compact)
       doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
       doc.roundedRect(15, currentY, pageWidth - 30, 32, 3, 3, 'F');
       doc.setDrawColor(gold[0], gold[1], gold[2]);
       doc.setLineWidth(0.3);
       doc.roundedRect(15, currentY, pageWidth - 30, 32, 3, 3, 'S');
-      
-      // Student Info - Two column layout
       doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
       doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
       doc.text('STUDENT INFORMATION', 20, currentY + 8);
-      
       doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
-      // Left column
       doc.text(`Name: ${user?.name || user?.full_name || 'N/A'}`, 20, currentY + 16);
       doc.text(`Registration: ${user?.reg_number || user?.registration_number || 'N/A'}`, 20, currentY + 22);
       doc.text(`Form: ${report?.form || user?.form || 'N/A'}`, 20, currentY + 28);
-      
-      // Right column
       doc.text(`Assessment: ${report?.term || 'N/A'}`, pageWidth - 65, currentY + 16);
       doc.text(`Year: ${report?.academic_year || new Date().getFullYear()}`, pageWidth - 65, currentY + 22);
       doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 65, currentY + 28);
-      
       currentY += 38;
-      
-      // 3. Performance Summary Cards (Compact)
       const cardWidth = (pageWidth - 45) / 3;
       const cardSpacing = 7;
       const summaryY = currentY;
       const cardHeight = 38;
-      
-      // Card 1: Average Score
       doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
       doc.roundedRect(15, summaryY, cardWidth, cardHeight, 3, 3, 'F');
       doc.setDrawColor(gold[0], gold[1], gold[2]);
       doc.roundedRect(15, summaryY, cardWidth, cardHeight, 3, 3, 'S');
-      
       doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
       doc.setFontSize(7);
       doc.setFont('helvetica', 'bold');
@@ -618,13 +573,10 @@ export default function LearnerDashboard() {
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(gold[0], gold[1], gold[2]);
       doc.text(`${avgScore}%`, 20, summaryY + 28);
-      
-      // Card 2: Grade
       doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
       doc.roundedRect(15 + cardWidth + cardSpacing, summaryY, cardWidth, cardHeight, 3, 3, 'F');
       doc.setDrawColor(gold[0], gold[1], gold[2]);
       doc.roundedRect(15 + cardWidth + cardSpacing, summaryY, cardWidth, cardHeight, 3, 3, 'S');
-      
       doc.setFontSize(7);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
@@ -633,13 +585,10 @@ export default function LearnerDashboard() {
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(gold[0], gold[1], gold[2]);
       doc.text(avgGrade.letter, 20 + cardWidth + cardSpacing, summaryY + 32);
-      
-      // Card 3: Status
       doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
       doc.roundedRect(15 + (cardWidth + cardSpacing) * 2, summaryY, cardWidth, cardHeight, 3, 3, 'F');
       doc.setDrawColor(gold[0], gold[1], gold[2]);
       doc.roundedRect(15 + (cardWidth + cardSpacing) * 2, summaryY, cardWidth, cardHeight, 3, 3, 'S');
-      
       doc.setFontSize(7);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
@@ -649,79 +598,32 @@ export default function LearnerDashboard() {
       const statusColor = avgScore >= 50 ? [30, 126, 74] : [192, 57, 43];
       doc.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
       doc.text(avgScore >= 50 ? 'PASS' : 'FAIL', 20 + (cardWidth + cardSpacing) * 2, summaryY + 30);
-      
       currentY = summaryY + cardHeight + 10;
-      
-      // 4. Subjects Table (Compact with smaller fonts)
       const tableColumn = isUpperForm ? ["Subject", "Score", "Points", "Grade"] : ["Subject", "Score", "Grade", "Remarks"];
       const tableRows = bestSubjects.map((subject) => {
         const grade = getGradeFromScore(subject.score, report.form);
-        if (isUpperForm) {
-          return [subject.name, `${subject.score}%`, grade.points + ' pts', grade.letter];
-        } else {
-          return [subject.name, `${subject.score}%`, grade.letter, grade.description];
-        }
+        if (isUpperForm) return [subject.name, `${subject.score}%`, grade.points + ' pts', grade.letter];
+        else return [subject.name, `${subject.score}%`, grade.letter, grade.description];
       });
-      
-      // Add Summary Row
       if (isUpperForm && totalPoints !== null) {
-        tableRows.push([
-          { content: 'BEST 6 TOTAL', styles: { fontStyle: 'bold', fillColor: [255, 248, 225] } },
-          { content: '', styles: { fontStyle: 'bold' } },
-          { content: totalPoints + ' pts', styles: { fontStyle: 'bold', textColor: gold } },
-          { content: getOverallGradeFromPoints(totalPoints).description, styles: { fontStyle: 'bold', textColor: gold } }
-        ]);
+        tableRows.push([{ content: 'BEST 6 TOTAL', styles: { fontStyle: 'bold', fillColor: [255, 248, 225] } }, '', { content: totalPoints + ' pts', styles: { fontStyle: 'bold', textColor: gold } }, { content: getOverallGradeFromPoints(totalPoints).description, styles: { fontStyle: 'bold', textColor: gold } }]);
       } else {
-        tableRows.push([
-          { content: 'OVERALL AVERAGE', styles: { fontStyle: 'bold', fillColor: [255, 248, 225] } },
-          { content: `${avgScore}%`, styles: { fontStyle: 'bold', textColor: gold } },
-          { content: avgGrade.letter, styles: { fontStyle: 'bold', textColor: gold } },
-          { content: avgGrade.description, styles: { fontStyle: 'bold' } }
-        ]);
+        tableRows.push([{ content: 'OVERALL AVERAGE', styles: { fontStyle: 'bold', fillColor: [255, 248, 225] } }, { content: `${avgScore}%`, styles: { fontStyle: 'bold', textColor: gold } }, { content: avgGrade.letter, styles: { fontStyle: 'bold', textColor: gold } }, { content: avgGrade.description, styles: { fontStyle: 'bold' } }]);
       }
-      
-      // Calculate available space for table
-      const remainingSpace = pageHeight - currentY - 35; // Reserve space for comment and footer
-      const tableStartY = currentY;
-      
       autoTable(doc, {
-        startY: tableStartY,
+        startY: currentY,
         margin: { left: 15, right: 15 },
         head: [tableColumn],
         body: tableRows,
         theme: 'grid',
-        headStyles: {
-          fillColor: navy,
-          textColor: 255,
-          fontStyle: 'bold',
-          halign: 'center',
-          fontSize: 8,
-          cellPadding: 3
-        },
-        bodyStyles: {
-          textColor: darkGray,
-          fontSize: 7,
-          cellPadding: 2.5
-        },
-        alternateRowStyles: {
-          fillColor: lightGray
-        },
-        columnStyles: {
-          0: { cellWidth: 70, fontStyle: 'bold' },
-          1: { halign: 'center', cellWidth: 30 },
-          2: { halign: 'center', cellWidth: 30 },
-          3: { halign: 'center' }
-        },
-        didDrawPage: (data) => {
-          // Store final Y for comment placement
-          window.tableFinalY = data.cursor.y;
-        }
+        headStyles: { fillColor: navy, textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 8, cellPadding: 3 },
+        bodyStyles: { textColor: darkGray, fontSize: 7, cellPadding: 2.5 },
+        alternateRowStyles: { fillColor: lightGray },
+        columnStyles: { 0: { cellWidth: 70, fontStyle: 'bold' }, 1: { halign: 'center', cellWidth: 30 }, 2: { halign: 'center', cellWidth: 30 }, 3: { halign: 'center' } },
+        didDrawPage: (data) => { window.tableFinalY = data.cursor.y; }
       });
-      
       const finalTableY = window.tableFinalY || (currentY + (tableRows.length * 8) + 15);
       currentY = finalTableY + 8;
-      
-      // 5. Teacher's Comment (Compact)
       if (report?.comment) {
         const commentHeight = 35;
         if (currentY + commentHeight + 25 <= pageHeight) {
@@ -730,57 +632,41 @@ export default function LearnerDashboard() {
           doc.setDrawColor(gold[0], gold[1], gold[2]);
           doc.setLineWidth(0.3);
           doc.roundedRect(15, currentY, pageWidth - 30, commentHeight, 3, 3, 'S');
-          
-          // Gold accent bar
           doc.setFillColor(gold[0], gold[1], gold[2]);
           doc.rect(15, currentY, 3, commentHeight, 'F');
-          
           doc.setFontSize(7);
           doc.setFont('helvetica', 'bold');
           doc.setTextColor(gold[0], gold[1], gold[2]);
           doc.text("Teacher's Remarks", 23, currentY + 8);
-          
           doc.setFontSize(7);
           doc.setFont('helvetica', 'italic');
           doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
           const splitComment = doc.splitTextToSize(report.comment, pageWidth - 55);
-          // Limit comment to fit within available space
           const maxLines = Math.floor(commentHeight / 5) - 1;
           const displayComment = splitComment.slice(0, maxLines);
           doc.text(displayComment, 23, currentY + 16);
-          
           currentY += commentHeight + 8;
         } else {
-          // If not enough space, skip comment or add a note
           doc.setFontSize(6);
           doc.setTextColor(gold[0], gold[1], gold[2]);
           doc.text('* Teacher\'s comment available in full report', pageWidth / 2, pageHeight - 25, { align: 'center' });
         }
       }
-      
-      // 6. Footer (Always at bottom)
       const footerY = pageHeight - 12;
       doc.setDrawColor(gold[0], gold[1], gold[2]);
       doc.setLineWidth(0.2);
       doc.line(15, footerY - 5, pageWidth - 15, footerY - 5);
-      
       doc.setFontSize(6);
       doc.setTextColor(150, 150, 150);
       doc.text('This is an official academic document. Results are final.', pageWidth / 2, footerY, { align: 'center' });
       doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, footerY + 4, { align: 'center' });
-      
-      // Add points system guide for upper form if space allows
       if (isUpperForm && currentY < pageHeight - 28) {
         doc.setFontSize(6);
         doc.setTextColor(100, 100, 100);
-        doc.text('Points Guide: 85-100%=1pt | 75-84%=2pts | 65-74%=3pts | 56-64%=4pts | 50-55%=5pts | 45-49%=6pts | 40-44%=7pts | 35-39%=8pts | <35%=9pts', 
-                 pageWidth / 2, pageHeight - 22, { align: 'center' });
+        doc.text('Points Guide: 85-100%=1pt | 75-84%=2pts | 65-74%=3pts | 56-64%=4pts | 50-55%=5pts | 45-49%=6pts | 40-44%=7pts | 35-39%=8pts | <35%=9pts', pageWidth / 2, pageHeight - 22, { align: 'center' });
       }
-      
-      // Save PDF
       const fileName = `${user?.name?.replace(/\s+/g, '_') || 'student'}_${report?.term?.replace(/\s+/g, '_') || 'report'}_${report?.academic_year || ''}.pdf`;
       doc.save(fileName);
-      
       toast.success('Report downloaded successfully!');
     } catch (error) {
       console.error('PDF generation error:', error);
@@ -793,34 +679,26 @@ export default function LearnerDashboard() {
       toast.error('No attendance records to download');
       return;
     }
-
     try {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const navy = [26, 35, 126];
       const gold = [201, 147, 58];
       const lightGray = [248, 250, 252];
-      
-      // Header
       doc.setFillColor(navy[0], navy[1], navy[2]);
       doc.rect(0, 0, pageWidth, 50, 'F');
-      
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(24);
       doc.setFont('helvetica', 'bold');
       doc.text('PROGRESS SECONDARY SCHOOL', pageWidth / 2, 25, { align: 'center' });
-      
       doc.setFontSize(11);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(200, 200, 200);
       doc.text('Attendance Record', pageWidth / 2, 38, { align: 'center' });
-      
-      // Student Info
       doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
       doc.roundedRect(20, 65, pageWidth - 40, 45, 3, 3, 'F');
       doc.setDrawColor(gold[0], gold[1], gold[2]);
       doc.roundedRect(20, 65, pageWidth - 40, 45, 3, 3, 'S');
-      
       doc.setTextColor(15, 25, 35);
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
@@ -831,8 +709,6 @@ export default function LearnerDashboard() {
       doc.text(`Registration: ${user?.reg_number || user?.registration_number || 'N/A'}`, 25, 95);
       doc.text(`Form: ${user?.form || 'N/A'}`, pageWidth - 85, 88);
       doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 85, 95);
-      
-      // Stats
       let yPos = 125;
       doc.setFontSize(10);
       doc.setTextColor(gold[0], gold[1], gold[2]);
@@ -842,34 +718,21 @@ export default function LearnerDashboard() {
       doc.text(`Present: ${stats.presentCount}`, 20, yPos + 14);
       doc.text(`Late: ${stats.lateCount}`, 20, yPos + 21);
       doc.text(`Absent: ${stats.absentCount}`, 20, yPos + 28);
-      
       yPos += 45;
-      
-      // Attendance Table
       const tableRows = attendanceRecords.map(record => [
         new Date(record.date).toLocaleDateString('en', { year: 'numeric', month: 'short', day: 'numeric' }),
         new Date(record.date).toLocaleDateString('en', { weekday: 'long' }),
         record.status === 'present' ? 'Present' : record.status === 'late' ? 'Late' : 'Absent'
       ]);
-
       autoTable(doc, {
         startY: yPos,
         margin: { left: 20, right: 20 },
         head: [['Date', 'Day', 'Status']],
         body: tableRows,
         theme: 'grid',
-        headStyles: {
-          fillColor: navy,
-          textColor: 255,
-          fontStyle: 'bold',
-          halign: 'center'
-        },
-        alternateRowStyles: {
-          fillColor: lightGray
-        }
+        headStyles: { fillColor: navy, textColor: 255, fontStyle: 'bold', halign: 'center' },
+        alternateRowStyles: { fillColor: lightGray }
       });
-
-      // Footer
       const footerY = doc.internal.pageSize.getHeight() - 15;
       doc.setDrawColor(gold[0], gold[1], gold[2]);
       doc.setLineWidth(0.3);
@@ -877,7 +740,6 @@ export default function LearnerDashboard() {
       doc.setFontSize(8);
       doc.setTextColor(150, 150, 150);
       doc.text('Official Attendance Record', pageWidth / 2, footerY, { align: 'center' });
-
       doc.save(`${user?.name?.replace(/\s+/g, '_') || 'student'}_Attendance_Record.pdf`);
       toast.success('Attendance record downloaded successfully!');
     } catch (error) {
@@ -905,9 +767,21 @@ export default function LearnerDashboard() {
     loadDashboardData(); // refresh to show new attempt
   };
 
+  const handleReviewQuiz = async (attemptId) => {
+    try {
+      const res = await api.get(`/api/quiz/attempt/${attemptId}`);
+      if (res.data.success) {
+        setReviewAttempt(res.data.attempt);
+        setShowReviewModal(true);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Could not load quiz details');
+    }
+  };
+
   const getReportHTML = (report) => {
     if (!report || !report.subjects) return '<div>No report data</div>';
-    
     const validSubjects = (report.subjects || []).filter(s => s && s.score !== undefined && s.score !== null);
     const isUpperForm = report.form === 'Form 3' || report.form === 'Form 4';
     const totalPoints = isUpperForm ? calculateTotalPoints(validSubjects, report.form) : null;
@@ -917,7 +791,6 @@ export default function LearnerDashboard() {
     const pointsGrade = isUpperForm && totalPoints ? getOverallGradeFromPoints(totalPoints) : null;
     const englishPassed = isUpperForm ? (validSubjects.find(s => s.name.toLowerCase().includes('english'))?.score >= 35) : true;
     const finalStatus = isUpperForm ? getFinalStatus(englishPassed, totalPoints) : null;
-    
     return `
       <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(15,25,35,0.1);">
         <div style="background: linear-gradient(135deg, #0f1923, #1a2d3f); color: white; padding: 20px;">
@@ -930,7 +803,6 @@ export default function LearnerDashboard() {
           </div>
         </div>
         <div style="padding: 20px;">
-          <!-- Performance Summary -->
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px;">
             <div style="background: #f8fafc; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0;">
               <div style="font-size: 11px; color: #64748b; font-weight: 600;">AVERAGE</div>
@@ -945,8 +817,6 @@ export default function LearnerDashboard() {
               <div style="font-size: 16px; font-weight: bold; color: ${avg >= 50 ? '#10b981' : '#ef4444'};">${avg >= 50 ? 'PASS' : 'FAIL'}</div>
             </div>
           </div>
-          
-          <!-- Subjects Table -->
           <div style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse;">
               <thead>
@@ -979,14 +849,12 @@ export default function LearnerDashboard() {
               </tbody>
             </table>
           </div>
-          
           ${report.comment ? `
             <div style="margin-top: 20px; padding: 16px; background: #fef9e6; border-radius: 12px; border-left: 4px solid #c9933a;">
               <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: #c9933a; margin-bottom: 6px;">Teacher's Comment</div>
               <div style="font-size: 12px; color: #334155; line-height: 1.5;">${report.comment}</div>
             </div>
           ` : ''}
-          
           ${isUpperForm ? `
             <div style="margin-top: 16px; padding: 12px; background: #f0fdf4; border-radius: 8px; border-left: 3px solid #10b981;">
               <div style="font-size: 9px; font-weight: 700; text-transform: uppercase; color: #10b981;">Points System Guide</div>
@@ -1167,30 +1035,10 @@ export default function LearnerDashboard() {
       <div className="hidden lg:block sticky top-[72px] sm:top-[88px] md:top-[96px] z-20 bg-white border-b border-gray-200 shadow-sm overflow-x-auto">
         <div className="container mx-auto px-3 sm:px-4 lg:px-6">
           <div className="flex gap-0.5 sm:gap-1 py-2 sm:py-3 min-w-max">
-            <NavItem
-              icon="📊"
-              label="Overview"
-              isActive={activeTab === 'overview'}
-              onClick={() => setActiveTab('overview')}
-            />
-            <NavItem
-              icon="📝"
-              label="Quizzes"
-              isActive={activeTab === 'quizzes'}
-              onClick={() => setActiveTab('quizzes')}
-            />
-            <NavItem
-              icon="📋"
-              label="Reports"
-              isActive={activeTab === 'reports'}
-              onClick={() => setActiveTab('reports')}
-            />
-            <NavItem
-              icon="📅"
-              label="Attendance"
-              isActive={activeTab === 'attendance'}
-              onClick={() => setActiveTab('attendance')}
-            />
+            <NavItem icon="📊" label="Overview" isActive={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
+            <NavItem icon="📝" label="Quizzes" isActive={activeTab === 'quizzes'} onClick={() => setActiveTab('quizzes')} />
+            <NavItem icon="📋" label="Reports" isActive={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
+            <NavItem icon="📅" label="Attendance" isActive={activeTab === 'attendance'} onClick={() => setActiveTab('attendance')} />
           </div>
         </div>
       </div>
@@ -1250,10 +1098,7 @@ export default function LearnerDashboard() {
                               {calculateAverage(latestReport.subjects)}%
                             </p>
                             <div className="mt-1 sm:mt-2 w-full h-1 bg-gray-200 rounded-full">
-                              <div 
-                                className="h-1 bg-[#c9933a] rounded-full" 
-                                style={{ width: `${calculateAverage(latestReport.subjects)}%` }}
-                              />
+                              <div className="h-1 bg-[#c9933a] rounded-full" style={{ width: `${calculateAverage(latestReport.subjects)}%` }} />
                             </div>
                           </div>
                           <div className="bg-[#f7f4ef] p-2 sm:p-3 md:p-4 rounded-xl border border-[#d4cfc6]">
@@ -1261,7 +1106,6 @@ export default function LearnerDashboard() {
                             <p className="text-[10px] sm:text-xs md:text-sm lg:text-xl font-bold text-[#0f1923]">{latestReport.academic_year || new Date().getFullYear()}</p>
                           </div>
                         </div>
-
                         <div className="bg-[#f7f4ef] rounded-xl p-3 sm:p-4 border border-[#d4cfc6] overflow-x-auto">
                           <h3 className="text-[10px] sm:text-xs md:text-sm font-medium text-[#0f1923] mb-2 sm:mb-3 flex items-center gap-2">
                             <span className="w-1 h-3 sm:h-4 bg-[#c9933a] rounded-full" />
@@ -1277,22 +1121,13 @@ export default function LearnerDashboard() {
                                   </div>
                                   <div className="flex-1 max-w-[80px] sm:max-w-[120px] md:max-w-[200px] mx-2 sm:mx-4">
                                     <div className="h-1 sm:h-1.5 md:h-2 bg-gray-200 rounded-full overflow-hidden">
-                                      <div 
-                                        className="h-full rounded-full transition-all duration-500" 
-                                        style={{ 
-                                          width: `${subject.score}%`,
-                                          background: `linear-gradient(90deg, ${grade.color}80, ${grade.color})`
-                                        }}
-                                      />
+                                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${subject.score}%`, background: `linear-gradient(90deg, ${grade.color}80, ${grade.color})` }} />
                                     </div>
                                   </div>
                                   <div className="font-mono text-[10px] sm:text-xs md:text-sm w-8 sm:w-10 md:w-12 text-right font-bold" style={{ color: grade.color }}>
                                     {subject.score}
                                   </div>
-                                  <div className="w-5 sm:w-6 md:w-8 text-center font-bold px-1 sm:px-2 py-0.5 rounded ml-1 sm:ml-2 text-[10px] sm:text-xs md:text-sm" style={{ 
-                                    color: grade.color,
-                                    backgroundColor: `${grade.color}10`
-                                  }}>
+                                  <div className="w-5 sm:w-6 md:w-8 text-center font-bold px-1 sm:px-2 py-0.5 rounded ml-1 sm:ml-2 text-[10px] sm:text-xs md:text-sm" style={{ color: grade.color, backgroundColor: `${grade.color}10` }}>
                                     {latestReport.form === 'Form 3' || latestReport.form === 'Form 4' ? grade.points + 'pts' : grade.letter}
                                   </div>
                                 </div>
@@ -1300,21 +1135,15 @@ export default function LearnerDashboard() {
                             })}
                           </div>
                         </div>
-
                         {latestReport.comment && (
                           <div className="bg-[#f7f4ef] p-3 sm:p-4 rounded-xl border-l-4 border-[#c9933a]">
-                            <div className="text-[#c9933a] text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1">
-                              Teacher's Note
-                            </div>
+                            <div className="text-[#c9933a] text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1">Teacher's Note</div>
                             <p className="text-[10px] sm:text-xs md:text-sm text-gray-700 italic">"{latestReport.comment}"</p>
                           </div>
                         )}
-                        
                         <button
                           onClick={() => setActiveTab('reports')}
-                          className="w-full mt-3 sm:mt-4 py-2 sm:py-3 text-[10px] sm:text-xs md:text-sm text-[#c9933a] font-medium transition-all 
-                                     bg-[#c9933a]/5 hover:bg-[#c9933a]/10 rounded-lg border border-[#d4cfc6] 
-                                     hover:border-[#c9933a]/60 flex items-center justify-center gap-2 group"
+                          className="w-full mt-3 sm:mt-4 py-2 sm:py-3 text-[10px] sm:text-xs md:text-sm text-[#c9933a] font-medium transition-all bg-[#c9933a]/5 hover:bg-[#c9933a]/10 rounded-lg border border-[#d4cfc6] hover:border-[#c9933a]/60 flex items-center justify-center gap-2 group"
                         >
                           <DocumentTextIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:animate-pulse" />
                           <span className="hidden xs:inline">View All Reports</span>
@@ -1327,13 +1156,8 @@ export default function LearnerDashboard() {
                         <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 mx-auto mb-2 sm:mb-3 md:mb-4 bg-[#c9933a]/5 rounded-full flex items-center justify-center border-2 border-[#d4cfc6]">
                           <DocumentTextIcon className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-[#c9933a]" />
                         </div>
-                        <div className="font-medium text-[#0f1923] mb-2 text-xs sm:text-sm md:text-base">
-                          No Report Card Available
-                        </div>
-                        <p className="text-[10px] sm:text-xs md:text-sm text-gray-500 max-w-xs mx-auto">
-                          Your teacher hasn't generated any reports yet. 
-                          Check back after your next assessment.
-                        </p>
+                        <div className="font-medium text-[#0f1923] mb-2 text-xs sm:text-sm md:text-base">No Report Card Available</div>
+                        <p className="text-[10px] sm:text-xs md:text-sm text-gray-500 max-w-xs mx-auto">Your teacher hasn't generated any reports yet. Check back after your next assessment.</p>
                       </div>
                     )}
                   </div>
@@ -1342,7 +1166,7 @@ export default function LearnerDashboard() {
 
               {/* Side Panel */}
               <div className="space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6">
-                {/* Quiz Performance Card – updated to show marks */}
+                {/* Quiz Performance Card */}
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
                   <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
                     <div className="flex items-center justify-between">
@@ -1350,47 +1174,30 @@ export default function LearnerDashboard() {
                         <span className="text-purple-600">📝</span>
                         Quiz Performance
                       </h2>
-                      <button
-                        onClick={() => setActiveTab('quizzes')}
-                        className="text-xs text-purple-600 hover:text-purple-700"
-                      >
-                        Take Quiz →
-                      </button>
+                      <button onClick={() => setActiveTab('quizzes')} className="text-xs text-purple-600 hover:text-purple-700">Take Quiz →</button>
                     </div>
                   </div>
                   <div className="p-3 sm:p-4 md:p-5 lg:p-6">
                     <div className="text-center mb-3 sm:mb-4">
                       <div className="relative inline-flex items-center justify-center mb-2 sm:mb-3">
                         <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full border-4 border-purple-200 flex items-center justify-center">
-                          <span className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-purple-600">
-                            {stats.quizScore}
-                          </span>
+                          <span className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-purple-600">{stats.quizScore}</span>
                         </div>
                       </div>
-                      <p className="text-[10px] sm:text-xs text-gray-600">
-                        {stats.quizzesCompleted > 0 
-                          ? `${stats.quizzesCompleted} quiz(zes) completed`
-                          : "No quizzes taken yet"}
-                      </p>
+                      <p className="text-[10px] sm:text-xs text-gray-600">{stats.quizzesCompleted > 0 ? `${stats.quizzesCompleted} quiz(zes) completed` : "No quizzes taken yet"}</p>
                       {stats.totalPossibleMarks > 0 && (
-                        <p className="text-[9px] sm:text-[10px] text-gray-500 mt-1">
-                          Total marks: {stats.totalMarks} / {stats.totalPossibleMarks}
-                        </p>
+                        <p className="text-[9px] sm:text-[10px] text-gray-500 mt-1">Total marks: {stats.totalMarks} / {stats.totalPossibleMarks}</p>
                       )}
                     </div>
                     {stats.quizzesCompleted === 0 && (
-                      <button
-                        onClick={() => setActiveTab('quizzes')}
-                        className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-xs sm:text-sm"
-                      >
-                        <PlayIcon className="w-4 h-4" />
-                        Start a Quiz
+                      <button onClick={() => setActiveTab('quizzes')} className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-xs sm:text-sm">
+                        <PlayIcon className="w-4 h-4" /> Start a Quiz
                       </button>
                     )}
                   </div>
                 </div>
 
-                {/* New: Recent Quiz Attempts Card */}
+                {/* Recent Quiz Attempts Card */}
                 {quizAttempts.length > 0 && (
                   <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
                     <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
@@ -1404,18 +1211,12 @@ export default function LearnerDashboard() {
                         <div key={attempt.id || idx} className="p-3 sm:p-4">
                           <div className="flex justify-between items-start">
                             <div className="flex-1">
-                              <p className="text-xs sm:text-sm font-medium text-gray-800">
-                                {attempt.quiz?.title || attempt.subject || 'Quiz'}
-                              </p>
+                              <p className="text-xs sm:text-sm font-medium text-gray-800">{attempt.quiz?.title || attempt.subject || 'Quiz'}</p>
                               <div className="flex flex-wrap gap-2 mt-1">
                                 <span className="text-[9px] sm:text-[10px] font-medium text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
-                                  {attempt.marks_earned !== undefined 
-                                    ? `${attempt.marks_earned}/${attempt.total_marks} marks`
-                                    : `${Math.round(attempt.percentage || 0)}%`}
+                                  {attempt.marks_earned !== undefined ? `${attempt.marks_earned}/${attempt.total_marks} marks` : `${Math.round(attempt.percentage || 0)}%`}
                                 </span>
-                                <span className="text-[9px] sm:text-[10px] text-gray-500">
-                                  {new Date(attempt.completed_at || attempt.created_at).toLocaleDateString()}
-                                </span>
+                                <span className="text-[9px] sm:text-[10px] text-gray-500">{new Date(attempt.completed_at || attempt.created_at).toLocaleDateString()}</span>
                               </div>
                               {attempt.feedback && (
                                 <div className="mt-2 flex items-start gap-1 text-[9px] sm:text-[10px] text-amber-600 bg-amber-50 p-1.5 rounded">
@@ -1429,12 +1230,7 @@ export default function LearnerDashboard() {
                       ))}
                       {quizAttempts.length > 3 && (
                         <div className="p-2 text-center">
-                          <button
-                            onClick={() => setActiveTab('quizzes')}
-                            className="text-[10px] text-purple-600 hover:underline"
-                          >
-                            View all {quizAttempts.length} attempts →
-                          </button>
+                          <button onClick={() => setActiveTab('quizzes')} className="text-[10px] text-purple-600 hover:underline">View all {quizAttempts.length} attempts →</button>
                         </div>
                       )}
                     </div>
@@ -1451,11 +1247,7 @@ export default function LearnerDashboard() {
                         <span className="xs:hidden">Attend</span>
                       </h2>
                       {attendanceRecords.length > 0 && (
-                        <button
-                          onClick={downloadAttendancePDF}
-                          className="p-1.5 sm:p-2 text-[#c9933a] hover:bg-[#c9933a]/10 rounded-lg transition-all hover:scale-110 border border-[#d4cfc6] hover:border-[#c9933a]/40"
-                          title="Download Attendance PDF"
-                        >
+                        <button onClick={downloadAttendancePDF} className="p-1.5 sm:p-2 text-[#c9933a] hover:bg-[#c9933a]/10 rounded-lg transition-all hover:scale-110 border border-[#d4cfc6] hover:border-[#c9933a]/40" title="Download Attendance PDF">
                           <ArrowDownTrayIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                         </button>
                       )}
@@ -1472,7 +1264,6 @@ export default function LearnerDashboard() {
                         {getAttendanceMessage()}
                       </p>
                     </div>
-                    
                     {stats.totalDays > 0 ? (
                       <div className="grid grid-cols-3 gap-1.5 sm:gap-2 md:gap-3 mt-2 sm:mt-3 md:mt-4">
                         <div className="text-center p-1.5 sm:p-2 md:p-3 bg-green-50 rounded-xl border border-green-200">
@@ -1517,55 +1308,38 @@ export default function LearnerDashboard() {
                     </h2>
                   </div>
                   <div className="p-3 sm:p-4 md:p-5 lg:p-6 space-y-2 sm:space-y-2.5 md:space-y-3">
-                    <button 
-                      onClick={() => setActiveTab('quizzes')}
-                      className="w-full text-left p-2.5 sm:p-3 md:p-4 bg-purple-50 rounded-xl hover:bg-purple-100 transition-all group border border-purple-200 hover:border-purple-400"
-                    >
+                    <button onClick={() => setActiveTab('quizzes')} className="w-full text-left p-2.5 sm:p-3 md:p-4 bg-purple-50 rounded-xl hover:bg-purple-100 transition-all group border border-purple-200 hover:border-purple-400">
                       <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3">
                         <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200">
                           <BookOpenIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-purple-600" />
                         </div>
                         <div className="flex-1">
-                          <span className="text-[11px] sm:text-xs md:text-sm font-medium text-purple-700 group-hover:text-purple-800 transition-colors">
-                            Take a Quiz
-                          </span>
+                          <span className="text-[11px] sm:text-xs md:text-sm font-medium text-purple-700 group-hover:text-purple-800 transition-colors">Take a Quiz</span>
                           <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5 hidden sm:block">Test your knowledge</p>
                         </div>
                         <span className="text-xs text-gray-400 group-hover:translate-x-1 transition-transform">→</span>
                       </div>
                     </button>
-                    
-                    <button 
-                      onClick={() => setActiveTab('reports')}
-                      className="w-full text-left p-2.5 sm:p-3 md:p-4 bg-[#f7f4ef] rounded-xl hover:bg-[#ede9e1] transition-all group border border-[#d4cfc6] hover:border-[#c9933a]/30"
-                    >
+                    <button onClick={() => setActiveTab('reports')} className="w-full text-left p-2.5 sm:p-3 md:p-4 bg-[#f7f4ef] rounded-xl hover:bg-[#ede9e1] transition-all group border border-[#d4cfc6] hover:border-[#c9933a]/30">
                       <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3">
                         <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-[#c9933a]/5 rounded-lg flex items-center justify-center group-hover:bg-[#c9933a]/10 border border-[#d4cfc6]">
                           <DocumentTextIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-[#c9933a]" />
                         </div>
                         <div className="flex-1">
-                          <span className="text-[11px] sm:text-xs md:text-sm font-medium text-[#0f1923] group-hover:text-[#c9933a] transition-colors">
-                            View All Reports
-                          </span>
+                          <span className="text-[11px] sm:text-xs md:text-sm font-medium text-[#0f1923] group-hover:text-[#c9933a] transition-colors">View All Reports</span>
                           <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5 hidden sm:block">Access your complete academic history</p>
                         </div>
                         <span className="text-xs text-gray-400 group-hover:translate-x-1 transition-transform">→</span>
                       </div>
                     </button>
-                    
                     {stats.reportsCount > 0 && latestReport && (
-                      <button 
-                        onClick={() => downloadReportPDF(latestReport)}
-                        className="w-full text-left p-2.5 sm:p-3 md:p-4 bg-[#c9933a]/5 rounded-xl hover:bg-[#c9933a]/10 transition-all group border border-[#c9933a]/30"
-                      >
+                      <button onClick={() => downloadReportPDF(latestReport)} className="w-full text-left p-2.5 sm:p-3 md:p-4 bg-[#c9933a]/5 rounded-xl hover:bg-[#c9933a]/10 transition-all group border border-[#c9933a]/30">
                         <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3">
                           <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-[#c9933a] rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                             <ArrowDownTrayIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-white" />
                           </div>
                           <div className="flex-1">
-                            <span className="text-[11px] sm:text-xs md:text-sm font-medium text-[#c9933a]">
-                              Download Latest Report
-                            </span>
+                            <span className="text-[11px] sm:text-xs md:text-sm font-medium text-[#c9933a]">Download Latest Report</span>
                             <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5 hidden sm:block">Save as PDF</p>
                           </div>
                         </div>
@@ -1574,7 +1348,7 @@ export default function LearnerDashboard() {
                   </div>
                 </div>
 
-                {/* Recent Activity Card – updated to show marks and feedback */}
+                {/* Recent Activity Card */}
                 {recentActivity.length > 0 && (
                   <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
                     <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
@@ -1592,16 +1366,9 @@ export default function LearnerDashboard() {
                               <div className="flex-1 min-w-0">
                                 <p className="text-[10px] sm:text-xs md:text-sm font-medium text-[#0f1923] truncate">{activity.title}</p>
                                 <p className="text-[8px] sm:text-[9px] md:text-[10px] text-gray-500 mt-0.5">{activity.description}</p>
-                                {activity.feedback && (
-                                  <p className="text-[8px] sm:text-[9px] text-amber-600 mt-1 flex items-center gap-1">
-                                    <ChatBubbleLeftRightIcon className="w-3 h-3" />
-                                    {activity.feedback}
-                                  </p>
-                                )}
+                                {activity.feedback && <p className="text-[8px] sm:text-[9px] text-amber-600 mt-1 flex items-center gap-1"><ChatBubbleLeftRightIcon className="w-3 h-3" />{activity.feedback}</p>}
                               </div>
-                              <span className="text-[8px] sm:text-[9px] md:text-[10px] text-gray-400 flex-shrink-0">
-                                {new Date(activity.date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
-                              </span>
+                              <span className="text-[8px] sm:text-[9px] md:text-[10px] text-gray-400 flex-shrink-0">{new Date(activity.date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}</span>
                             </div>
                           </div>
                         ))}
@@ -1618,21 +1385,16 @@ export default function LearnerDashboard() {
         {activeTab === 'quizzes' && (
           <div className="space-y-6">
             {!showQuiz ? (
-              <QuizList 
-                onStartQuiz={(quizId) => setShowQuiz(quizId)} 
-              />
+              <>
+                <QuizList onStartQuiz={(quizId) => setShowQuiz(quizId)} />
+                {quizAttempts.length > 0 && (
+                  <QuizHistory attempts={quizAttempts} onReview={handleReviewQuiz} />
+                )}
+              </>
             ) : (
               <div>
-                <button
-                  onClick={() => setShowQuiz(null)}
-                  className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
-                >
-                  ← Back to Quizzes
-                </button>
-                <QuizTaking 
-                  quizId={showQuiz} 
-                  onComplete={handleQuizComplete}
-                />
+                <button onClick={() => setShowQuiz(null)} className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition">← Back to Quizzes</button>
+                <QuizTaking quizId={showQuiz} onComplete={handleQuizComplete} />
               </div>
             )}
           </div>
@@ -1647,72 +1409,36 @@ export default function LearnerDashboard() {
                   <h1 className="font-serif text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-[#0f1923] mb-1">Report Cards</h1>
                   <p className="text-[10px] sm:text-xs md:text-sm text-gray-500">Your academic performance overview</p>
                 </div>
-                
                 <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                   {availableYears.length > 0 && (
                     <div className="flex items-center gap-1.5 sm:gap-2">
                       <label className="text-[9px] sm:text-[10px] md:text-xs font-semibold text-gray-500 uppercase">Year:</label>
-                      <select
-                        value={selectedYear || ''}
-                        onChange={(e) => setSelectedYear(e.target.value ? parseInt(e.target.value) : null)}
-                        className="px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-300 rounded-lg text-[10px] sm:text-xs bg-white focus:ring-2 focus:ring-[#c9933a] focus:border-transparent"
-                      >
+                      <select value={selectedYear || ''} onChange={(e) => setSelectedYear(e.target.value ? parseInt(e.target.value) : null)} className="px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-300 rounded-lg text-[10px] sm:text-xs bg-white focus:ring-2 focus:ring-[#c9933a] focus:border-transparent">
                         <option value="">All</option>
-                        {availableYears.map(year => (
-                          <option key={year} value={year}>{year}</option>
-                        ))}
+                        {availableYears.map(year => <option key={year} value={year}>{year}</option>)}
                       </select>
                     </div>
                   )}
-                  
                   {availableAssessments.length > 0 && (
                     <div className="flex items-center gap-1.5 sm:gap-2">
                       <label className="text-[9px] sm:text-[10px] md:text-xs font-semibold text-gray-500 uppercase">Assessment:</label>
-                      <select
-                        value={selectedAssessment || ''}
-                        onChange={(e) => setSelectedAssessment(e.target.value || null)}
-                        className="px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-300 rounded-lg text-[10px] sm:text-xs bg-white focus:ring-2 focus:ring-[#c9933a] focus:border-transparent"
-                      >
+                      <select value={selectedAssessment || ''} onChange={(e) => setSelectedAssessment(e.target.value || null)} className="px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-300 rounded-lg text-[10px] sm:text-xs bg-white focus:ring-2 focus:ring-[#c9933a] focus:border-transparent">
                         <option value="">All</option>
-                        {availableAssessments.map(assessment => (
-                          <option key={assessment} value={assessment}>{assessment.length > 15 ? assessment.substring(0, 12) + '...' : assessment}</option>
-                        ))}
+                        {availableAssessments.map(assessment => <option key={assessment} value={assessment}>{assessment.length > 15 ? assessment.substring(0, 12) + '...' : assessment}</option>)}
                       </select>
                     </div>
                   )}
                 </div>
               </div>
-              
               {(selectedYear || selectedAssessment) && (
                 <div className="mt-2 flex flex-wrap gap-1.5 sm:gap-2">
                   <span className="text-[9px] sm:text-[10px] text-gray-500">Active filters:</span>
-                  {selectedYear && (
-                    <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] bg-[#c9933a]/10 text-[#c9933a]">
-                      Year: {selectedYear}
-                      <button onClick={() => setSelectedYear(null)} className="ml-1 hover:text-[#b5822e]">✕</button>
-                    </span>
-                  )}
-                  {selectedAssessment && (
-                    <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] bg-[#c9933a]/10 text-[#c9933a]">
-                      {selectedAssessment.length > 20 ? selectedAssessment.substring(0, 18) + '...' : selectedAssessment}
-                      <button onClick={() => setSelectedAssessment(null)} className="ml-1 hover:text-[#b5822e]">✕</button>
-                    </span>
-                  )}
-                  {(selectedYear || selectedAssessment) && (
-                    <button
-                      onClick={() => {
-                        setSelectedYear(null);
-                        setSelectedAssessment(null);
-                      }}
-                      className="text-[9px] sm:text-[10px] text-blue-600 hover:text-blue-800"
-                    >
-                      Clear all
-                    </button>
-                  )}
+                  {selectedYear && <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] bg-[#c9933a]/10 text-[#c9933a]">Year: {selectedYear}<button onClick={() => setSelectedYear(null)} className="ml-1 hover:text-[#b5822e]">✕</button></span>}
+                  {selectedAssessment && <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] bg-[#c9933a]/10 text-[#c9933a]">{selectedAssessment.length > 20 ? selectedAssessment.substring(0, 18) + '...' : selectedAssessment}<button onClick={() => setSelectedAssessment(null)} className="ml-1 hover:text-[#b5822e]">✕</button></span>}
+                  {(selectedYear || selectedAssessment) && <button onClick={() => { setSelectedYear(null); setSelectedAssessment(null); }} className="text-[9px] sm:text-[10px] text-blue-600 hover:text-blue-800">Clear all</button>}
                 </div>
               )}
             </div>
-            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
               {filteredReports && filteredReports.length > 0 ? (
                 filteredReports.map(report => {
@@ -1722,24 +1448,15 @@ export default function LearnerDashboard() {
                   const avg = calculateAverage(validSubjects);
                   const grade = getGradeFromScore(avg, report.form);
                   const totalPoints = isUpperForm ? calculateTotalPoints(validSubjects, report.form) : null;
-                  
                   return (
                     <div key={report.id} className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden hover:shadow-md transition">
                       <div className="p-2.5 sm:p-3 md:p-4 border-b flex justify-between items-center flex-wrap gap-2">
                         <div>
                           <span className="font-bold text-[#0f1923] text-xs sm:text-sm md:text-base">{report.term || 'Report'}</span>
-                          <span className="ml-1.5 sm:ml-2 px-1.5 sm:px-2 py-0.5 bg-[#c9933a]/10 text-[#c9933a] text-[9px] sm:text-[10px] rounded-full">
-                            {report.form || user?.form || 'N/A'}
-                          </span>
-                          <span className="ml-1.5 sm:ml-2 px-1.5 sm:px-2 py-0.5 bg-gray-100 text-gray-600 text-[9px] sm:text-[10px] rounded-full">
-                            {report.academic_year || new Date().getFullYear()}
-                          </span>
+                          <span className="ml-1.5 sm:ml-2 px-1.5 sm:px-2 py-0.5 bg-[#c9933a]/10 text-[#c9933a] text-[9px] sm:text-[10px] rounded-full">{report.form || user?.form || 'N/A'}</span>
+                          <span className="ml-1.5 sm:ml-2 px-1.5 sm:px-2 py-0.5 bg-gray-100 text-gray-600 text-[9px] sm:text-[10px] rounded-full">{report.academic_year || new Date().getFullYear()}</span>
                         </div>
-                        <div className="text-right">
-                          <span className="text-[10px] sm:text-xs md:text-sm font-bold" style={{ color: grade.color }}>
-                            {isUpperForm ? `${totalPoints} pts` : `${avg}% (${grade.letter})`}
-                          </span>
-                        </div>
+                        <div className="text-right"><span className="text-[10px] sm:text-xs md:text-sm font-bold" style={{ color: grade.color }}>{isUpperForm ? `${totalPoints} pts` : `${avg}% (${grade.letter})`}</span></div>
                       </div>
                       <div className="p-2.5 sm:p-3 md:p-4">
                         <div className="space-y-1.5 sm:space-y-2 max-h-32 sm:max-h-36 md:max-h-40 overflow-y-auto">
@@ -1748,42 +1465,17 @@ export default function LearnerDashboard() {
                             return (
                               <div key={idx} className="flex justify-between items-center text-[10px] sm:text-xs md:text-sm">
                                 <span className="truncate">{s.name}</span>
-                                <span style={{ color: g.color }} className="font-mono font-medium ml-2">
-                                  {s.score}% {isUpperForm ? `(${g.points} pts)` : `(${g.letter})`}
-                                </span>
+                                <span style={{ color: g.color }} className="font-mono font-medium ml-2">{s.score}% {isUpperForm ? `(${g.points} pts)` : `(${g.letter})`}</span>
                               </div>
                             );
                           })}
-                          {bestSubjects.length > 5 && (
-                            <div className="text-[9px] sm:text-[10px] text-gray-400 text-center pt-1">
-                              +{bestSubjects.length - 5} more subjects
-                            </div>
-                          )}
-                          {isUpperForm && bestSubjects.length < validSubjects.length && (
-                            <div className="text-[8px] sm:text-[9px] text-gray-400 text-center">
-                              * Best {bestSubjects.length} subjects shown
-                            </div>
-                          )}
+                          {bestSubjects.length > 5 && <div className="text-[9px] sm:text-[10px] text-gray-400 text-center pt-1">+{bestSubjects.length - 5} more subjects</div>}
+                          {isUpperForm && bestSubjects.length < validSubjects.length && <div className="text-[8px] sm:text-[9px] text-gray-400 text-center">* Best {bestSubjects.length} subjects shown</div>}
                         </div>
-                        {report.comment && (
-                          <div className="mt-2 sm:mt-3 p-1.5 sm:p-2 bg-[#f7f4ef] rounded text-[9px] sm:text-[10px] italic">
-                            💬 {report.comment.substring(0, 50)}{report.comment.length > 50 ? '…' : ''}
-                          </div>
-                        )}
+                        {report.comment && <div className="mt-2 sm:mt-3 p-1.5 sm:p-2 bg-[#f7f4ef] rounded text-[9px] sm:text-[10px] italic">💬 {report.comment.substring(0, 50)}{report.comment.length > 50 ? '…' : ''}</div>}
                         <div className="mt-2.5 sm:mt-3 md:mt-4 flex gap-2">
-                          <button 
-                            onClick={() => handleViewReport(report)} 
-                            className="flex-1 px-2 sm:px-3 py-1 sm:py-1.5 border border-[#c9933a] text-[#c9933a] rounded-lg text-[10px] sm:text-xs hover:bg-[#c9933a]/10 transition"
-                          >
-                            Preview
-                          </button>
-                          <button 
-                            onClick={() => downloadReportPDF(report)} 
-                            className="flex-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-[#0f1923] text-white rounded-lg text-[10px] sm:text-xs hover:bg-[#1a2d3f] transition"
-                          >
-                            <ArrowDownTrayIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" />
-                            PDF
-                          </button>
+                          <button onClick={() => handleViewReport(report)} className="flex-1 px-2 sm:px-3 py-1 sm:py-1.5 border border-[#c9933a] text-[#c9933a] rounded-lg text-[10px] sm:text-xs hover:bg-[#c9933a]/10 transition">Preview</button>
+                          <button onClick={() => downloadReportPDF(report)} className="flex-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-[#0f1923] text-white rounded-lg text-[10px] sm:text-xs hover:bg-[#1a2d3f] transition"><ArrowDownTrayIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" />PDF</button>
                         </div>
                       </div>
                     </div>
@@ -1792,22 +1484,8 @@ export default function LearnerDashboard() {
               ) : (
                 <div className="col-span-2 text-center py-6 sm:py-8 md:py-10 lg:py-12 bg-white rounded-xl border border-[#d4cfc6]">
                   <DocumentTextIcon className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-gray-300 mx-auto mb-2" />
-                  <p className="text-xs sm:text-sm md:text-base text-gray-500">
-                    {selectedYear || selectedAssessment 
-                      ? `No reports match your filters` 
-                      : 'No reports available yet'}
-                  </p>
-                  {(selectedYear || selectedAssessment) && (
-                    <button
-                      onClick={() => {
-                        setSelectedYear(null);
-                        setSelectedAssessment(null);
-                      }}
-                      className="mt-2 text-xs sm:text-sm text-[#c9933a] hover:underline"
-                    >
-                      Clear filters
-                    </button>
-                  )}
+                  <p className="text-xs sm:text-sm md:text-base text-gray-500">{selectedYear || selectedAssessment ? 'No reports match your filters' : 'No reports available yet'}</p>
+                  {(selectedYear || selectedAssessment) && <button onClick={() => { setSelectedYear(null); setSelectedAssessment(null); }} className="mt-2 text-xs sm:text-sm text-[#c9933a] hover:underline">Clear filters</button>}
                   <p className="text-[9px] sm:text-[10px] text-gray-400 mt-1">Reports will appear here once your teacher generates them</p>
                 </div>
               )}
@@ -1822,67 +1500,29 @@ export default function LearnerDashboard() {
               <h1 className="font-serif text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-[#0f1923] mb-1">Attendance Records</h1>
               <p className="text-[10px] sm:text-xs md:text-sm text-gray-500">Your daily attendance history</p>
             </div>
-            
             <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
               <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] flex justify-between items-center flex-wrap gap-2">
                 <h2 className="font-semibold text-[#0f1923] text-xs sm:text-sm md:text-base">📅 Attendance Log</h2>
-                {attendanceRecords.length > 0 && (
-                  <button 
-                    onClick={downloadAttendancePDF} 
-                    className="px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs bg-[#c9933a] text-white rounded-lg hover:bg-[#b5822e] transition"
-                  >
-                    <ArrowDownTrayIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" />
-                    <span className="hidden xs:inline">PDF</span>
-                  </button>
-                )}
+                {attendanceRecords.length > 0 && <button onClick={downloadAttendancePDF} className="px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs bg-[#c9933a] text-white rounded-lg hover:bg-[#b5822e] transition"><ArrowDownTrayIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" /><span className="hidden xs:inline">PDF</span></button>}
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[350px] sm:min-w-[400px] md:min-w-[500px]">
                   <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase">Date</th>
-                      <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Day</th>
-                      <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase">Status</th>
-                    </tr>
+                    <tr><th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase">Date</th><th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Day</th><th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase">Status</th></tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {attendanceRecords && attendanceRecords.length > 0 ? (
-                      [...attendanceRecords]
-                        .sort((a, b) => new Date(b.date) - new Date(a.date))
-                        .slice(0, 15)
-                        .map(record => (
-                          <tr key={record.id} className="hover:bg-gray-50">
-                            <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-[9px] sm:text-[10px] lg:text-sm whitespace-nowrap">
-                              {new Date(record.date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}
-                            </td>
-                            <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-[9px] sm:text-[10px] lg:text-sm hidden sm:table-cell">
-                              {new Date(record.date).toLocaleDateString('en', { weekday: 'short' })}
-                            </td>
-                            <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
-                              <span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-semibold ${
-                                record.status === 'present' ? 'bg-green-100 text-green-700' : 
-                                record.status === 'late' ? 'bg-yellow-100 text-yellow-700' : 
-                                'bg-red-100 text-red-700'
-                              }`}>
-                                {record.status === 'present' ? 'P' : record.status === 'late' ? 'L' : 'A'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                    ) : (
-                      <tr>
-                        <td colSpan="3" className="px-3 sm:px-4 py-6 sm:py-8 text-center text-gray-500 text-xs sm:text-sm">
-                          No attendance records yet
-                        </td>
-                      </tr>
-                    )}
+                      [...attendanceRecords].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 15).map(record => (
+                        <tr key={record.id} className="hover:bg-gray-50">
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-[9px] sm:text-[10px] lg:text-sm whitespace-nowrap">{new Date(record.date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}</td>
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-[9px] sm:text-[10px] lg:text-sm hidden sm:table-cell">{new Date(record.date).toLocaleDateString('en', { weekday: 'short' })}</td>
+                          <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3"><span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-semibold ${record.status === 'present' ? 'bg-green-100 text-green-700' : record.status === 'late' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{record.status === 'present' ? 'P' : record.status === 'late' ? 'L' : 'A'}</span></td>
+                        </tr>
+                      ))
+                    ) : (<tr><td colSpan="3" className="px-3 sm:px-4 py-6 sm:py-8 text-center text-gray-500 text-xs sm:text-sm">No attendance records yet</td></tr>)}
                   </tbody>
                 </table>
-                {attendanceRecords.length > 15 && (
-                  <div className="px-4 py-2 text-center text-[10px] text-gray-400 border-t border-gray-100">
-                    Showing last 15 of {attendanceRecords.length} records
-                  </div>
-                )}
+                {attendanceRecords.length > 15 && <div className="px-4 py-2 text-center text-[10px] text-gray-400 border-t border-gray-100">Showing last 15 of {attendanceRecords.length} records</div>}
               </div>
             </div>
           </>
@@ -1894,13 +1534,37 @@ export default function LearnerDashboard() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-3 md:p-4" onClick={() => setShowReportModal(false)}>
           <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div dangerouslySetInnerHTML={{ __html: getReportHTML(selectedReport) }} />
-            <div className="mt-3 sm:mt-4 flex justify-end">
-              <button 
-                onClick={() => setShowReportModal(false)} 
-                className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-xs sm:text-sm"
-              >
-                Close
-              </button>
+            <div className="mt-3 sm:mt-4 flex justify-end"><button onClick={() => setShowReportModal(false)} className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-xs sm:text-sm">Close</button></div>
+          </div>
+        </div>
+      )}
+
+      {/* Quiz Review Modal */}
+      {showReviewModal && reviewAttempt && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" onClick={() => setShowReviewModal(false)}>
+          <div className="flex items-center justify-center min-h-screen p-4">
+            <div className="fixed inset-0 bg-black/50" onClick={() => setShowReviewModal(false)}></div>
+            <div className="relative bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-xl" onClick={e => e.stopPropagation()}>
+              <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+                <div>
+                  <h3 className="text-xl font-bold">{reviewAttempt.quiz_title}</h3>
+                  <p className="text-sm text-gray-500">Score: {reviewAttempt.earned_points} / {reviewAttempt.total_points} ({Math.round(reviewAttempt.percentage)}%)</p>
+                </div>
+                <button onClick={() => setShowReviewModal(false)} className="text-gray-400 hover:text-gray-600"><XMarkIcon className="w-6 h-6" /></button>
+              </div>
+              <div className="p-6 space-y-6">
+                {reviewAttempt.answers && reviewAttempt.answers.map((q, idx) => (
+                  <div key={idx} className="border-b border-gray-200 pb-4 last:border-0">
+                    <p className="font-semibold text-gray-800">Q{idx+1}. {q.question_text}</p>
+                    <div className="mt-2 pl-4 space-y-1 text-sm">
+                      <p><span className="font-medium">Your answer:</span> {q.selected_answer_text || 'Not answered'}</p>
+                      <p><span className="font-medium">Correct answer:</span> {q.correct_answer}</p>
+                      <p><span className="font-medium">Marks:</span> {q.points_obtained} / {q.max_points}</p>
+                      {q.explanation && <p className="text-gray-600 text-xs mt-1">💡 {q.explanation}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

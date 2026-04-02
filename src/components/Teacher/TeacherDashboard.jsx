@@ -994,12 +994,12 @@ export default function TeacherDashboard() {
                       <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
                       <th className="px-3 lg:px-6 py-2 lg:py-3 text-left text-xs font-semibold text-gray-500 uppercase">Actions</th>
                     </tr>
-                    </thead>
+                  </thead>
                   <tbody className="divide-y divide-gray-200">
                     {myLearners && myLearners.length > 0 ? (
                       myLearners.map(learner => (
                         <tr key={learner.id} className="hover:bg-gray-50 transition">
-                          <td className="px-3 lg:px-6 py-3 text-sm font-medium truncate max-w-[120px] lg:max-w-none">{learner.name}   </td>
+                          <td className="px-3 lg:px-6 py-3 text-sm font-medium truncate max-w-[120px] lg:max-w-none">{learner.name}</td>
                           <td className="px-3 lg:px-6 py-3 text-xs font-mono text-gray-600">{learner.reg_number || learner.reg}</td>
                           <td className="px-3 lg:px-6 py-3 text-sm">{learner.form}</td>
                           <td className="px-3 lg:px-6 py-3">
@@ -1010,12 +1010,12 @@ export default function TeacherDashboard() {
                             }`}>
                               {learner.status || 'Active'}
                             </span>
-                           </td>
+                          </td>
                           <td className="px-3 lg:px-6 py-3">
                             <button onClick={() => handleRemoveLearner(learner.id, learner.name)} className="text-red-600 hover:text-red-800 text-sm">
                               Remove
                             </button>
-                           </td>
+                          </td>
                         </tr>
                       ))
                     ) : (
@@ -1280,18 +1280,18 @@ export default function TeacherDashboard() {
                             <tr key={report.id} className="hover:bg-gray-50">
                               <td className="px-3 lg:px-4 py-3 text-sm font-medium truncate max-w-[100px] lg:max-w-none">
                                 {getLearnerName(report.learner_id)}
-                               </td>
+                              </td>
                               <td className="px-3 lg:px-4 py-3">
                                 <span className="px-2 py-1 rounded-full text-xs font-semibold bg-[#1a6b6b]/10 text-[#1a6b6b]">
                                   {report.term?.length > 12 ? report.term.substring(0, 10) + '…' : report.term}
                                 </span>
-                               </td>
+                              </td>
                               <td className="px-3 lg:px-4 py-3 text-sm text-gray-600">
                                 {report.academic_year || new Date().getFullYear()}
-                               </td>
+                              </td>
                               <td className="px-3 lg:px-4 py-3">
                                 {isUpperForm && totalPoints !== null ? `${totalPoints} pts` : '—'}
-                               </td>
+                              </td>
                               <td className="px-3 lg:px-4 py-3">
                                 {isUpperForm && finalStatus ? (
                                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
@@ -1305,13 +1305,13 @@ export default function TeacherDashboard() {
                                 ) : (
                                   <span className="text-xs text-gray-500">—</span>
                                 )}
-                               </td>
+                              </td>
                               <td className="px-3 lg:px-4 py-3">
                                 <button onClick={() => handleEditReport(report)} className="text-blue-600 hover:text-blue-800 text-sm mr-2">Edit</button>
                                 <button onClick={() => handleViewReport(report)} className="text-blue-600 hover:text-blue-800 text-sm mr-2">View</button>
                                 <button onClick={() => handleDeleteReport(report.id)} className="text-red-600 hover:text-red-800 text-sm">Delete</button>
-                               </td>
-                             </tr>
+                              </td>
+                            </tr>
                           );
                         })
                       ) : (
@@ -1407,12 +1407,12 @@ export default function TeacherDashboard() {
                           <tr key={record.id} className="hover:bg-gray-50">
                             <td className="px-3 lg:px-4 py-3 text-sm font-medium truncate max-w-[100px] lg:max-w-none">
                               {getLearnerName(record.learner_id)}
-                             </td>
+                            </td>
                             <td className="px-3 lg:px-4 py-3 text-sm">
                               <span className="px-2 py-1 rounded text-xs font-semibold bg-[#c9933a]/10 text-[#c9933a]">
                                 {getLearnerForm(record.learner_id)}
                               </span>
-                             </td>
+                            </td>
                             <td className="px-3 lg:px-4 py-3 text-sm">{formatDate(record.date)}</td>
                             <td className="px-3 lg:px-4 py-3">
                               <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
@@ -1422,8 +1422,8 @@ export default function TeacherDashboard() {
                               }`}>
                                 {record.status === 'present' ? 'Present' : record.status === 'absent' ? 'Absent' : 'Late'}
                               </span>
-                             </td>
-                           </tr>
+                            </td>
+                          </tr>
                         ))
                       ) : (
                         <tr>

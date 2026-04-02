@@ -10,11 +10,13 @@ import {
   XMarkIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  ChatBubbleLeftRightIcon
+  EyeIcon,
+  DocumentArrowDownIcon
 } from '@heroicons/react/24/outline';
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import html2pdf from 'html2pdf.js';
 
 const QuizTaking = ({ quizId, onComplete }) => {
   const [quiz, setQuiz] = useState(null);
@@ -25,7 +27,9 @@ const QuizTaking = ({ quizId, onComplete }) => {
   const [submitting, setSubmitting] = useState(false);
   const [attemptId, setAttemptId] = useState(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
   const [lightboxImage, setLightboxImage] = useState(null);
+  const reviewContentRef = useRef(null);
   const questionRef = useRef(null);
   const navigate = useNavigate();
 
@@ -64,13 +68,12 @@ const QuizTaking = ({ quizId, onComplete }) => {
       });
       
       if (response.data.already_completed) {
-        toast.error('Session finalized.');
-        navigate('/learner/dashboard');
+        toast.error('Session finalized. Redirecting...');
+        setTimeout(() => navigate('/learner/dashboard'), 1500);
         return;
       }
       
       setQuiz(response.data.quiz);
-      // Normalise question marks: use marks if available, else points
       const questionsWithMarks = (response.data.questions || []).map(q => ({
         ...q,
         marks: q.marks ?? q.points ?? 1
@@ -98,7 +101,7 @@ const QuizTaking = ({ quizId, onComplete }) => {
   };
 
   const autoSaveAnswer = async (questionIndex, answer) => {
-    if (!attemptId) return; // wait for attempt creation
+    if (!attemptId) return;
     try {
       const token = localStorage.getItem('token');
       await api.post(`/api/quiz/${quizId}/save-answer`, {
@@ -113,19 +116,18 @@ const QuizTaking = ({ quizId, onComplete }) => {
     }
   };
 
-  const handleSubmit = () => {
-    if (submitting) return;
-    const unansweredCount = questions.length - Object.keys(answers).length;
-    if (unansweredCount > 0) {
-      setShowConfirmDialog(true);
-      return;
-    }
-    submitQuiz();
+  const handleOpenReview = () => {
+    setShowReviewModal(true);
+  };
+
+  const handleConfirmSubmit = () => {
+    setShowConfirmDialog(true);
   };
 
   const submitQuiz = async () => {
     setSubmitting(true);
     setShowConfirmDialog(false);
+    setShowReviewModal(false);
     
     try {
       const token = localStorage.getItem('token');
@@ -133,7 +135,8 @@ const QuizTaking = ({ quizId, onComplete }) => {
       
       const response = await api.post(`/api/quiz/${quizId}/submit`, {
         answers: answersArray,
-        time_taken: (quiz.duration * 60) - timeLeft
+        time_taken: (quiz.duration * 60) - timeLeft,
+        attempt_id: attemptId
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -146,7 +149,6 @@ const QuizTaking = ({ quizId, onComplete }) => {
         
         toast.success(`Quiz submitted! You scored ${marksDisplay}`, { icon: '🏆' });
         
-        // Pass the full result to parent
         if (onComplete) {
           onComplete({
             ...result,
@@ -161,7 +163,6 @@ const QuizTaking = ({ quizId, onComplete }) => {
       }
     } catch (error) {
       console.error('Submit error:', error);
-      // Check for 404 (endpoint not found) – backend may need update
       if (error.response && error.response.status === 404) {
         toast.error('Quiz submission endpoint not found. Please contact support.');
       } else {
@@ -170,6 +171,21 @@ const QuizTaking = ({ quizId, onComplete }) => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const downloadPDF = () => {
+    if (!reviewContentRef.current) return;
+    
+    const element = reviewContentRef.current;
+    const opt = {
+      margin: [0.5, 0.5, 0.5, 0.5],
+      filename: `${quiz?.title || 'quiz'}_review.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, letterRendering: true },
+      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+    };
+    html2pdf().set(opt).from(element).save();
+    toast.success('PDF generated!');
   };
 
   const formatTime = (seconds) => {
@@ -183,6 +199,8 @@ const QuizTaking = ({ quizId, onComplete }) => {
     total: questions.length,
     progress: ((currentQuestion + 1) / questions.length) * 100
   };
+
+  const unansweredCount = stats.total - stats.answered;
 
   const currentQ = questions[currentQuestion];
   const hasDiagram = currentQ?.question_image;
@@ -251,20 +269,29 @@ const QuizTaking = ({ quizId, onComplete }) => {
                 </div>
               </div>
 
-              <button
-                onClick={handleSubmit}
-                disabled={submitting}
-                className="group relative flex items-center gap-2 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submitting ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <>
-                    <PaperAirplaneIcon className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                    Submit
-                  </>
-                )}
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleOpenReview}
+                  className="group relative flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-lg transition-all duration-200"
+                >
+                  <EyeIcon className="w-4 h-4" />
+                  Review
+                </button>
+                <button
+                  onClick={handleConfirmSubmit}
+                  disabled={submitting}
+                  className="group relative flex items-center gap-2 px-4 py-2 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-sm font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <PaperAirplaneIcon className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                      Submit
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -479,7 +506,7 @@ const QuizTaking = ({ quizId, onComplete }) => {
                 <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
                   {hasDiagram 
                     ? "📸 Click on images to enlarge. Your answers are saved automatically as you type."
-                    : "💡 Answers are auto-saved. You can resume if disconnected. Review all questions before submitting."
+                    : "💡 Answers are auto-saved. You can review all answers before submitting. Submission is final."
                   }
                 </p>
               </div>
@@ -487,6 +514,165 @@ const QuizTaking = ({ quizId, onComplete }) => {
           </div>
         </div>
       </div>
+
+      {/* Review Answers Modal with PDF download */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => setShowReviewModal(false)}></div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+            <div className="inline-block align-bottom bg-white dark:bg-slate-800 rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+              <div className="bg-white dark:bg-slate-800 px-6 pt-5 pb-4">
+                <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-3 mb-4">
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Review Your Answers</h3>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={downloadPDF}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg transition"
+                    >
+                      <DocumentArrowDownIcon className="w-4 h-4" />
+                      Save as PDF
+                    </button>
+                    <button onClick={() => setShowReviewModal(false)} className="text-slate-400 hover:text-slate-500">
+                      <XMarkIcon className="w-6 h-6" />
+                    </button>
+                  </div>
+                </div>
+                <div className="max-h-[60vh] overflow-y-auto space-y-6 pr-2" ref={reviewContentRef}>
+                  {/* Hidden PDF content (same as visible, but we style it for print) */}
+                  <div className="pdf-content">
+                    <h1 className="text-2xl font-bold mb-4 text-center">{quiz.title} – Answer Review</h1>
+                    <p className="text-sm text-gray-500 mb-6 text-center">Generated on {new Date().toLocaleString()}</p>
+                    {questions.map((q, idx) => {
+                      const userAnswer = answers[idx];
+                      let answerDisplay = '';
+                      if (q.question_type === 'multiple_choice') {
+                        if (userAnswer !== undefined && q.options[userAnswer]) {
+                          answerDisplay = q.options[userAnswer];
+                        } else {
+                          answerDisplay = 'Not answered';
+                        }
+                      } else {
+                        answerDisplay = userAnswer || 'Not answered';
+                      }
+                      return (
+                        <div key={idx} className="mb-6 pb-4 border-b border-gray-200 last:border-0">
+                          <p className="font-semibold text-gray-800">Q{idx+1}. {q.question_text}</p>
+                          <div className="mt-1 text-sm">
+                            <span className="font-medium text-gray-500">Your answer: </span>
+                            <span className="text-gray-700">{answerDisplay}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Visible content (same as PDF but without the extra styling) */}
+                  {questions.map((q, idx) => {
+                    const userAnswer = answers[idx];
+                    let answerDisplay = '';
+                    if (q.question_type === 'multiple_choice') {
+                      if (userAnswer !== undefined && q.options[userAnswer]) {
+                        answerDisplay = q.options[userAnswer];
+                      } else {
+                        answerDisplay = 'Not answered';
+                      }
+                    } else {
+                      answerDisplay = userAnswer || 'Not answered';
+                    }
+                    return (
+                      <div key={idx} className="border-b border-slate-200 dark:border-slate-700 pb-4 last:border-0">
+                        <div className="flex justify-between items-start gap-4">
+                          <div className="flex-1">
+                            <p className="font-semibold text-slate-800 dark:text-slate-200">
+                              Q{idx+1}. {q.question_text}
+                            </p>
+                            <div className="mt-2 text-sm">
+                              <span className="font-medium text-slate-500 dark:text-slate-400">Your answer: </span>
+                              <span className="text-slate-700 dark:text-slate-300">{answerDisplay}</span>
+                            </div>
+                            {q.question_type === 'multiple_choice' && (
+                              <div className="mt-1 text-xs text-slate-400">
+                                {userAnswer !== undefined ? '✓ Answered' : '✗ Not answered'}
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => {
+                              setShowReviewModal(false);
+                              setCurrentQuestion(idx);
+                            }}
+                            className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="bg-slate-50 dark:bg-slate-700/50 px-6 py-4 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowReviewModal(false)}
+                  className="px-4 py-2 bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-500 transition"
+                >
+                  Continue Editing
+                </button>
+                <button
+                  onClick={() => {
+                    setShowReviewModal(false);
+                    handleConfirmSubmit();
+                  }}
+                  className="px-4 py-2 bg-blue-900 text-white rounded-lg hover:bg-blue-800 transition"
+                >
+                  Proceed to Submit
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Dialog (always appears before submit) */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowConfirmDialog(false)} />
+          <div className="relative bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="w-14 h-14 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <FlagIcon className="w-7 h-7" />
+            </div>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 text-center mb-2">Submit Assessment?</h3>
+            <div className="text-center mb-4">
+              <p className="text-slate-500 dark:text-slate-400 text-sm">
+                You have answered <strong className="text-amber-600 dark:text-amber-400">{stats.answered}</strong> out of <strong>{stats.total}</strong> questions.
+                {unansweredCount > 0 && (
+                  <span className="block mt-1 text-red-600 dark:text-red-400">
+                    ⚠️ {unansweredCount} question{unansweredCount !== 1 ? 's are' : ' is'} unanswered.
+                  </span>
+                )}
+              </p>
+              <p className="text-xs text-slate-400 mt-3">
+                Once submitted, you cannot change your answers.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowConfirmDialog(false)}
+                className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-600 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitQuiz}
+                disabled={submitting}
+                className="flex-1 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50"
+              >
+                {submitting ? 'Submitting...' : 'Yes, Submit'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Lightbox modal */}
       {lightboxImage && (
@@ -499,36 +685,6 @@ const QuizTaking = ({ quizId, onComplete }) => {
             >
               <XMarkIcon className="w-6 h-6 text-white" />
             </button>
-          </div>
-        </div>
-      )}
-
-      {/* Confirmation dialog */}
-      {showConfirmDialog && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowConfirmDialog(false)} />
-          <div className="relative bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="w-14 h-14 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <FlagIcon className="w-7 h-7" />
-            </div>
-            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 text-center mb-2">Incomplete Assessment</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-center text-sm mb-6">
-              You have <span className="font-bold text-amber-600 dark:text-amber-400">{questions.length - stats.answered}</span> unanswered {questions.length - stats.answered === 1 ? 'question' : 'questions'}. Submit anyway?
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={submitQuiz}
-                className="flex-1 py-2.5 bg-blue-900 hover:bg-blue-800 text-white rounded-xl text-sm font-semibold transition"
-              >
-                Yes, Submit
-              </button>
-              <button
-                onClick={() => setShowConfirmDialog(false)}
-                className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-600 transition"
-              >
-                Continue
-              </button>
-            </div>
           </div>
         </div>
       )}
