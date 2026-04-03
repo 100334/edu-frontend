@@ -1,102 +1,119 @@
-import React, { useState, useRef } from 'react';
-import { 
-  PhotoIcon, 
-  XMarkIcon,
-  ArrowUpTrayIcon
-} from '@heroicons/react/24/outline';
-import { uploadImage } from '../../services/imageUpload';
+// src/components/common/ImageUploader.jsx
+import React, { useState } from 'react';
+import { PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import api from '../../services/api';
 
-const ImageUploader = ({ onImageUpload, currentImage, label, className = '' }) => {
+const ImageUploader = ({ label, currentImage = '', onImageUpload, onRemove }) => {
   const [uploading, setUploading] = useState(false);
-  const [preview, setPreview] = useState(currentImage || null);
-  const fileInputRef = useRef(null);
+  const [preview, setPreview] = useState(currentImage);
 
   const handleFileSelect = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    
-    // Show preview immediately
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreview(reader.result);
-    };
-    reader.readAsDataURL(file);
-    
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select a valid image file (JPEG, PNG, GIF, WebP)');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    // Show local preview immediately
+    const localPreview = URL.createObjectURL(file);
+    setPreview(localPreview);
+
+    // Upload to Cloudinary via backend
     setUploading(true);
+    const formData = new FormData();
+    formData.append('image', file);
+
     try {
-      const url = await uploadImage(file);
-      if (url) {
-        onImageUpload(url);
+      const token = localStorage.getItem('token');
+      const response = await api.post('/api/upload', formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data.imageUrl) {
+        const uploadedUrl = response.data.imageUrl;
+        setPreview(uploadedUrl);
+        onImageUpload(uploadedUrl);
         toast.success('Image uploaded successfully!');
+      } else {
+        throw new Error('No image URL returned');
       }
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error('Failed to upload image');
-      setPreview(currentImage || null);
+      toast.error(error.response?.data?.message || 'Upload failed. Please try again.');
+      // Revert preview
+      setPreview(currentImage);
     } finally {
       setUploading(false);
     }
   };
 
   const handleRemove = () => {
-    setPreview(null);
-    onImageUpload(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    setPreview('');
+    if (onRemove) onRemove();
+    else onImageUpload(''); // clear the URL
   };
 
   return (
-    <div className={`space-y-2 ${className}`}>
+    <div className="space-y-2">
       {label && (
-        <label className="block text-sm font-medium text-gray-700">{label}</label>
+        <label className="block text-sm font-semibold text-gray-700 mb-1">
+          {label}
+        </label>
       )}
-      
+
       {preview ? (
-        <div className="relative group">
-          <img 
-            src={preview} 
-            alt="Upload preview" 
-            className="w-full max-h-48 object-contain rounded-lg border border-gray-200 bg-gray-50"
+        <div className="relative inline-block">
+          <img
+            src={preview}
+            alt="Uploaded preview"
+            className="max-h-32 rounded-lg border border-gray-200 object-contain bg-gray-50"
           />
           <button
             type="button"
             onClick={handleRemove}
-            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+            className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
+            disabled={uploading}
           >
             <XMarkIcon className="w-4 h-4" />
           </button>
         </div>
       ) : (
-        <div 
-          onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-teal-400 transition-colors"
-        >
-          {uploading ? (
-            <div className="flex flex-col items-center">
+        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
+          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+            {uploading ? (
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
-              <p className="text-sm text-gray-500 mt-2">Uploading...</p>
-            </div>
-          ) : (
-            <>
-              <PhotoIcon className="w-10 h-10 text-gray-400 mx-auto mb-2" />
-              <p className="text-sm text-gray-600">Click to upload image</p>
-              <p className="text-xs text-gray-400 mt-1">PNG, JPG, GIF up to 5MB</p>
-            </>
-          )}
-        </div>
+            ) : (
+              <>
+                <PhotoIcon className="w-8 h-8 text-gray-400 mb-2" />
+                <p className="text-xs text-gray-500">Click to upload</p>
+                <p className="text-xs text-gray-400">PNG, JPG, GIF up to 5MB</p>
+              </>
+            )}
+          </div>
+          <input
+            type="file"
+            className="hidden"
+            accept="image/*"
+            onChange={handleFileSelect}
+            disabled={uploading}
+          />
+        </label>
       )}
-      
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handleFileSelect}
-        className="hidden"
-      />
     </div>
   );
 };
 
-export default ImageUploader;  // ← This line was missing
+export default ImageUploader;
