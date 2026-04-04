@@ -3,13 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
-// Theme constants
-const NAVY_PRIMARY = '#1A237E';
-const NAVY_DARK = '#0D1240';
-const AZURE_ACCENT = '#00B0FF';
-const GOLD_ACCENT = '#c9933a';
-const ICE_WHITE = '#F4F7FA';
-
 const RegisterTeacher = ({ onSuccess }) => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
@@ -64,7 +57,6 @@ const RegisterTeacher = ({ onSuccess }) => {
   const handleNextStep = useCallback(() => {
     if (validateStep(currentStep)) {
       setCurrentStep(prev => Math.min(prev + 1, 3));
-      // Clear errors for next step
       setErrors({});
     }
   }, [validateStep, currentStep]);
@@ -72,7 +64,6 @@ const RegisterTeacher = ({ onSuccess }) => {
   // Handle previous step
   const handlePrevStep = useCallback(() => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
-    // Clear errors when going back
     setErrors({});
   }, []);
 
@@ -202,12 +193,12 @@ const RegisterTeacher = ({ onSuccess }) => {
     setShowConfirmPassword(prev => !prev);
   }, []);
 
-  // Get form gradient for step indicator
+  // Get form gradient for step indicator - Navy/Azure theme
   const getFormGradient = (step) => {
     const gradients = {
-      1: 'from-blue-500 to-blue-600',
-      2: 'from-purple-500 to-purple-600',
-      3: 'from-teal-500 to-teal-600'
+      1: 'from-sky-500 to-blue-600',
+      2: 'from-blue-500 to-indigo-600',
+      3: 'from-indigo-500 to-sky-600'
     };
     return gradients[step] || 'from-gray-500 to-gray-600';
   };
@@ -243,7 +234,7 @@ const RegisterTeacher = ({ onSuccess }) => {
             onChange={(e) => handleInputChange(field, e.target.value)}
             placeholder={placeholder}
             autoFocus={autoFocus}
-            className={`w-full pl-10 pr-10 py-3 rounded-xl border focus:ring-2 focus:ring-[#c9933a] focus:border-transparent transition ${
+            className={`w-full pl-10 pr-10 py-3 rounded-xl border focus:ring-2 focus:ring-sky-500 focus:border-transparent transition ${
               error ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'
             }`}
           />
@@ -267,27 +258,14 @@ const RegisterTeacher = ({ onSuccess }) => {
   }, [formData, errors, showPassword, showConfirmPassword, handleInputChange, togglePasswordVisibility, toggleConfirmPasswordVisibility]);
 
   const steps = [
-    { number: 1, title: 'Personal Info', icon: '👤', color: 'blue', description: 'Name and contact details' },
-    { number: 2, title: 'Account Security', icon: '🔐', color: 'purple', description: 'Create secure password' },
-    { number: 3, title: 'Professional Details', icon: '🏫', color: 'teal', description: 'Department & specialization' }
+    { number: 1, title: 'Personal Info', icon: '👤', color: 'sky', description: 'Name and contact details' },
+    { number: 2, title: 'Account Security', icon: '🔐', color: 'blue', description: 'Create secure password' },
+    { number: 3, title: 'Professional Details', icon: '🏫', color: 'indigo', description: 'Department & specialization' }
   ];
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Hero Header */}
-      <div className="bg-gradient-to-r from-[#0f1923] via-[#1a2d3f] to-[#0f1923] rounded-2xl p-6 mb-8 shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-[#c9933a]/20 rounded-2xl flex items-center justify-center">
-            <span className="text-3xl">👨‍🏫</span>
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-white">Register New Teacher</h2>
-            <p className="text-gray-300 text-sm mt-1">Add a new educator to the school system</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Step Progress Indicator */}
+    <div className="max-w-2xl mx-auto pb-8" style={{ fontFamily: "'Calibri', 'Segoe UI', 'Roboto', sans-serif" }}>
+      {/* Step Progress Indicator - Navy/Azure theme */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
           {steps.map((step) => (
@@ -313,7 +291,7 @@ const RegisterTeacher = ({ onSuccess }) => {
               </div>
               {step.number < 3 && (
                 <div className={`absolute top-6 left-1/2 w-full h-0.5 -translate-y-1/2 ${
-                  currentStep > step.number ? 'bg-[#c9933a]' : 'bg-gray-200'
+                  currentStep > step.number ? 'bg-sky-500' : 'bg-gray-200'
                 }`} />
               )}
             </div>
@@ -323,15 +301,15 @@ const RegisterTeacher = ({ onSuccess }) => {
 
       <form onSubmit={(e) => { e.preventDefault(); currentStep === 3 ? registerTeacher() : handleNextStep(); }}>
         
-        {/* Step 1: Personal Information */}
+        {/* Step 1: Personal Information - Skyblue with azure border */}
         {currentStep === 1 && (
-          <div className="bg-white rounded-2xl shadow-md mb-6 overflow-hidden border border-gray-100 animate-in fade-in slide-in-from-left-5 duration-300">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+          <div className="bg-white rounded-2xl shadow-md mb-6 overflow-hidden border border-sky-200 animate-in fade-in slide-in-from-left-5 duration-300">
+            <div className="bg-sky-50 px-6 py-4 border-b border-sky-100">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">👤</span>
                 <div>
-                  <h3 className="text-sm font-bold text-blue-800 uppercase tracking-wider">STEP 1: PERSONAL INFORMATION</h3>
-                  <p className="text-xs text-blue-600 mt-0.5">Enter the teacher's basic details</p>
+                  <h3 className="text-sm font-bold text-sky-800 uppercase tracking-wider">STEP 1: PERSONAL INFORMATION</h3>
+                  <p className="text-xs text-sky-600 mt-0.5">Enter the teacher's basic details</p>
                 </div>
               </div>
             </div>
@@ -372,15 +350,15 @@ const RegisterTeacher = ({ onSuccess }) => {
           </div>
         )}
 
-        {/* Step 2: Account Security */}
+        {/* Step 2: Account Security - Blue/Indigo */}
         {currentStep === 2 && (
-          <div className="bg-white rounded-2xl shadow-md mb-6 overflow-hidden border border-gray-100 animate-in fade-in slide-in-from-right-5 duration-300">
-            <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-6 py-4 border-b border-gray-200">
+          <div className="bg-white rounded-2xl shadow-md mb-6 overflow-hidden border border-blue-200 animate-in fade-in slide-in-from-right-5 duration-300">
+            <div className="bg-blue-50 px-6 py-4 border-b border-blue-100">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">🔐</span>
                 <div>
-                  <h3 className="text-sm font-bold text-purple-800 uppercase tracking-wider">STEP 2: ACCOUNT SECURITY</h3>
-                  <p className="text-xs text-purple-600 mt-0.5">Create a secure password for the teacher</p>
+                  <h3 className="text-sm font-bold text-blue-800 uppercase tracking-wider">STEP 2: ACCOUNT SECURITY</h3>
+                  <p className="text-xs text-blue-600 mt-0.5">Create a secure password for the teacher</p>
                 </div>
               </div>
             </div>
@@ -405,8 +383,8 @@ const RegisterTeacher = ({ onSuccess }) => {
                 required: true
               })}
               
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                <p className="text-xs text-blue-700 flex items-center gap-2">
+              <div className="mt-4 p-3 bg-sky-50 rounded-lg border border-sky-200">
+                <p className="text-xs text-sky-700 flex items-center gap-2">
                   <span>💡</span>
                   <span>Password must be at least 6 characters long</span>
                 </p>
@@ -415,15 +393,15 @@ const RegisterTeacher = ({ onSuccess }) => {
           </div>
         )}
 
-        {/* Step 3: Professional Details */}
+        {/* Step 3: Professional Details - Indigo/Sky */}
         {currentStep === 3 && (
-          <div className="bg-white rounded-2xl shadow-md mb-8 overflow-hidden border border-gray-100 animate-in fade-in slide-in-from-right-5 duration-300">
-            <div className="bg-gradient-to-r from-teal-50 to-emerald-50 px-6 py-4 border-b border-gray-200">
+          <div className="bg-white rounded-2xl shadow-md mb-8 overflow-hidden border border-indigo-200 animate-in fade-in slide-in-from-right-5 duration-300">
+            <div className="bg-indigo-50 px-6 py-4 border-b border-indigo-100">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">🏫</span>
                 <div>
-                  <h3 className="text-sm font-bold text-teal-800 uppercase tracking-wider">STEP 3: PROFESSIONAL DETAILS</h3>
-                  <p className="text-xs text-teal-600 mt-0.5">Department and teaching specialization</p>
+                  <h3 className="text-sm font-bold text-indigo-800 uppercase tracking-wider">STEP 3: PROFESSIONAL DETAILS</h3>
+                  <p className="text-xs text-indigo-600 mt-0.5">Department and teaching specialization</p>
                 </div>
               </div>
             </div>
@@ -443,9 +421,9 @@ const RegisterTeacher = ({ onSuccess }) => {
                 icon: "🔬"
               })}
               
-              {/* Summary Card */}
-              <div className="mt-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200">
-                <p className="text-xs font-bold text-gray-600 uppercase tracking-wider mb-3">Registration Summary</p>
+              {/* Summary Card - Skyblue with azure border */}
+              <div className="mt-6 p-4 bg-sky-50 rounded-xl border-2 border-sky-300">
+                <p className="text-xs font-bold text-sky-800 uppercase tracking-wider mb-3">Registration Summary</p>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-500">Name:</span>
@@ -469,7 +447,7 @@ const RegisterTeacher = ({ onSuccess }) => {
           </div>
         )}
 
-        {/* Navigation Buttons */}
+        {/* Navigation Buttons - Navy/Azure theme */}
         <div className="flex gap-3">
           {currentStep > 1 && (
             <button
@@ -488,7 +466,7 @@ const RegisterTeacher = ({ onSuccess }) => {
               disabled={!canProceed()}
               className={`flex-1 py-3 rounded-xl font-semibold transition-all duration-300 ${
                 canProceed()
-                  ? 'bg-gradient-to-r from-[#1A237E] to-[#0D1240] text-white hover:shadow-lg hover:scale-[1.02]'
+                  ? 'bg-gradient-to-r from-blue-800 to-sky-700 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]'
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}
             >
@@ -498,10 +476,7 @@ const RegisterTeacher = ({ onSuccess }) => {
             <button
               type="submit"
               disabled={isLoading}
-              className="flex-1 py-3 rounded-xl font-bold text-white transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-100 disabled:opacity-50 disabled:hover:scale-100 relative overflow-hidden group"
-              style={{ 
-                background: `linear-gradient(135deg, ${NAVY_PRIMARY}, ${NAVY_DARK})`
-              }}
+              className="flex-1 py-3 rounded-xl font-bold text-white transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-100 disabled:opacity-50 disabled:hover:scale-100 relative overflow-hidden group bg-gradient-to-r from-blue-800 to-sky-700"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
               {isLoading ? (

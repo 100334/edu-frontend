@@ -2,12 +2,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
-// Theme constants
-const NAVY_PRIMARY = '#1A237E';
-const NAVY_DARK = '#0D1240';
-const AZURE_ACCENT = '#00B0FF';
-const GOLD_ACCENT = '#c9933a';
-
 const RegisterLearner = ({ onSuccess }) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -465,10 +459,10 @@ const RegisterLearner = ({ onSuccess }) => {
 
   const getFormGradient = (form) => {
     const gradients = {
-      'Form 1': 'from-emerald-500 to-emerald-600',
-      'Form 2': 'from-sky-500 to-sky-600',
-      'Form 3': 'from-amber-500 to-amber-600',
-      'Form 4': 'from-purple-500 to-purple-600'
+      'Form 1': 'from-sky-500 to-sky-600',
+      'Form 2': 'from-blue-500 to-blue-600',
+      'Form 3': 'from-indigo-500 to-indigo-600',
+      'Form 4': 'from-cyan-500 to-cyan-600'
     };
     return gradients[form] || 'from-gray-500 to-gray-600';
   };
@@ -500,27 +494,8 @@ const RegisterLearner = ({ onSuccess }) => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      {/* Hero Header */}
-      <div className="bg-gradient-to-r from-[#0f1923] via-[#1a2d3f] to-[#0f1923] rounded-2xl p-6 mb-8 shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 bg-[#c9933a]/20 rounded-2xl flex items-center justify-center">
-            <span className="text-3xl">🎓</span>
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-white">
-              {isEditMode ? 'Edit Learner Information' : 'Register New Learner'}
-            </h2>
-            <p className="text-gray-300 text-sm mt-1">
-              {isEditMode 
-                ? 'Update student details and academic placement' 
-                : 'Enroll a new student into the system'}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Mode Toggle */}
+    <div className="max-w-2xl mx-auto pb-8" style={{ fontFamily: "'Calibri', 'Segoe UI', 'Roboto', sans-serif" }}>
+      {/* Mode Toggle - Navy/Azure Styled */}
       <div className="flex justify-center mb-8">
         <div className="bg-gray-100 rounded-2xl p-1 flex gap-2 shadow-inner">
           <ModeChip label="➕ ADD NEW" isEdit={false} />
@@ -528,7 +503,7 @@ const RegisterLearner = ({ onSuccess }) => {
         </div>
       </div>
 
-      {/* Step Progress Indicator */}
+      {/* Step Progress Indicator - Navy/Azure Colors */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
           {steps.map((step) => (
@@ -542,7 +517,7 @@ const RegisterLearner = ({ onSuccess }) => {
                   }}
                   className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
                     currentStep >= step.number
-                      ? `bg-gradient-to-r ${getFormGradient('Form 1')} text-white shadow-lg`
+                      ? 'bg-gradient-to-r from-blue-800 to-sky-700 text-white shadow-lg'
                       : 'bg-gray-200 text-gray-500'
                   }`}
                 >
@@ -552,7 +527,7 @@ const RegisterLearner = ({ onSuccess }) => {
               </div>
               {step.number < 3 && (
                 <div className={`absolute top-5 left-1/2 w-full h-0.5 -translate-y-1/2 ${
-                  currentStep > step.number ? 'bg-[#c9933a]' : 'bg-gray-200'
+                  currentStep > step.number ? 'bg-sky-500' : 'bg-gray-200'
                 }`} />
               )}
             </div>
@@ -561,21 +536,21 @@ const RegisterLearner = ({ onSuccess }) => {
       </div>
 
       <form onSubmit={(e) => { e.preventDefault(); }}>
-        {/* Step 1: ACADEMIC PLACEMENT */}
+        {/* Step 1: ACADEMIC PLACEMENT - Skyblue with Azure border */}
         {currentStep === 1 && (
-          <div className="bg-white rounded-2xl shadow-md mb-6 overflow-hidden border border-gray-100 animate-in fade-in slide-in-from-left-5 duration-300">
-            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 px-6 py-4 border-b border-gray-200">
-              <h3 className="text-sm font-bold text-amber-800 uppercase tracking-wider flex items-center gap-2">
+          <div className="bg-white rounded-2xl shadow-md mb-6 overflow-hidden border border-sky-200 animate-in fade-in slide-in-from-left-5 duration-300">
+            <div className="bg-sky-50 px-6 py-4 border-b border-sky-100">
+              <h3 className="text-sm font-bold text-sky-800 uppercase tracking-wider flex items-center gap-2">
                 <span>🏫</span> STEP 1: ACADEMIC PLACEMENT
               </h3>
-              <p className="text-xs text-amber-600 mt-1">Select the class to determine registration format</p>
+              <p className="text-xs text-sky-600 mt-1">Select the class to determine registration format</p>
             </div>
             
             <div className="p-6">
               {loadingClasses ? (
                 <div className="flex justify-center py-8">
                   <div className="flex flex-col items-center gap-2">
-                    <div className="w-8 h-8 border-3 border-[#c9933a] border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-8 h-8 border-3 border-sky-600 border-t-transparent rounded-full animate-spin"></div>
                     <p className="text-xs text-gray-500">Loading classes...</p>
                   </div>
                 </div>
@@ -588,7 +563,7 @@ const RegisterLearner = ({ onSuccess }) => {
                     <select
                       value={formData.selectedClassId}
                       onChange={(e) => handleClassSelect(e.target.value)}
-                      className={`w-full px-4 py-3 pl-11 rounded-xl border focus:ring-2 focus:ring-[#c9933a] focus:border-transparent transition appearance-none bg-white ${
+                      className={`w-full px-4 py-3 pl-11 rounded-xl border focus:ring-2 focus:ring-sky-500 focus:border-transparent transition appearance-none bg-white ${
                         errors.classId ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
@@ -624,7 +599,7 @@ const RegisterLearner = ({ onSuccess }) => {
                   {loadingLearners ? (
                     <div className="flex justify-center py-6">
                       <div className="flex flex-col items-center gap-2">
-                        <div className="w-6 h-6 border-2 border-[#c9933a] border-t-transparent rounded-full animate-spin"></div>
+                        <div className="w-6 h-6 border-2 border-sky-600 border-t-transparent rounded-full animate-spin"></div>
                         <p className="text-xs text-gray-500">Loading learners...</p>
                       </div>
                     </div>
@@ -633,7 +608,7 @@ const RegisterLearner = ({ onSuccess }) => {
                       <select
                         value={selectedLearnerId}
                         onChange={(e) => handleLearnerSelect(e.target.value)}
-                        className="w-full px-4 py-3 pl-11 rounded-xl border border-gray-200 focus:ring-2 focus:ring-[#c9933a] focus:border-transparent transition appearance-none bg-white"
+                        className="w-full px-4 py-3 pl-11 rounded-xl border border-gray-200 focus:ring-2 focus:ring-sky-500 focus:border-transparent transition appearance-none bg-white"
                       >
                         <option value="">Select a learner</option>
                         {learners.map((learner) => (
@@ -657,10 +632,10 @@ const RegisterLearner = ({ onSuccess }) => {
           </div>
         )}
 
-        {/* Step 2: REGISTRATION NUMBER */}
+        {/* Step 2: REGISTRATION NUMBER - Navy/Azure */}
         {currentStep === 2 && (
-          <div className="bg-white rounded-2xl shadow-md mb-6 overflow-hidden border border-gray-100 animate-in fade-in slide-in-from-right-5 duration-300">
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200">
+          <div className="bg-white rounded-2xl shadow-md mb-6 overflow-hidden border border-blue-200 animate-in fade-in slide-in-from-right-5 duration-300">
+            <div className="bg-blue-50 px-6 py-4 border-b border-blue-100">
               <h3 className="text-sm font-bold text-blue-800 uppercase tracking-wider flex items-center gap-2">
                 <span>🔢</span> STEP 2: REGISTRATION NUMBER
               </h3>
@@ -680,7 +655,7 @@ const RegisterLearner = ({ onSuccess }) => {
                       onChange={(e) => handleInputChange('regNumber', e.target.value.toUpperCase())}
                       placeholder="Select a class first to generate number"
                       readOnly={isEditMode}
-                      className={`w-full px-4 py-3 pl-11 rounded-xl border focus:ring-2 focus:ring-[#c9933a] focus:border-transparent transition font-mono ${
+                      className={`w-full px-4 py-3 pl-11 rounded-xl border focus:ring-2 focus:ring-blue-500 focus:border-transparent transition font-mono ${
                         errors.regNumber ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'
                       } ${isEditMode ? 'bg-gray-50 text-gray-600' : ''} ${!formData.selectedClassId && !isEditMode ? 'bg-gray-50 text-gray-400' : ''}`}
                     />
@@ -720,14 +695,14 @@ const RegisterLearner = ({ onSuccess }) => {
           </div>
         )}
 
-        {/* Step 3: STUDENT NAME */}
+        {/* Step 3: STUDENT NAME - Navy/Azure */}
         {currentStep === 3 && (
-          <div className="bg-white rounded-2xl shadow-md mb-8 overflow-hidden border border-gray-100 animate-in fade-in slide-in-from-right-5 duration-300">
-            <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-6 py-4 border-b border-gray-200">
-              <h3 className="text-sm font-bold text-purple-800 uppercase tracking-wider flex items-center gap-2">
+          <div className="bg-white rounded-2xl shadow-md mb-8 overflow-hidden border border-indigo-200 animate-in fade-in slide-in-from-right-5 duration-300">
+            <div className="bg-indigo-50 px-6 py-4 border-b border-indigo-100">
+              <h3 className="text-sm font-bold text-indigo-800 uppercase tracking-wider flex items-center gap-2">
                 <span>👤</span> STEP 3: STUDENT INFORMATION
               </h3>
-              <p className="text-xs text-purple-600 mt-1">Enter the learner's full name</p>
+              <p className="text-xs text-indigo-600 mt-1">Enter the learner's full name</p>
             </div>
             
             <div className="p-6">
@@ -741,7 +716,7 @@ const RegisterLearner = ({ onSuccess }) => {
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     placeholder="Enter full name (e.g., John Doe)"
-                    className={`w-full px-4 py-3 pl-11 rounded-xl border focus:ring-2 focus:ring-[#c9933a] focus:border-transparent transition ${
+                    className={`w-full px-4 py-3 pl-11 rounded-xl border focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition ${
                       errors.name ? 'border-red-500 bg-red-50' : 'border-gray-200 hover:border-gray-300'
                     }`}
                     autoFocus={!!formData.selectedClassId && !!formData.regNumber}
@@ -761,7 +736,7 @@ const RegisterLearner = ({ onSuccess }) => {
           </div>
         )}
 
-        {/* Navigation Buttons */}
+        {/* Navigation Buttons - Navy/Azure theme */}
         <div className="flex gap-3 mt-4">
           {currentStep > 1 && (
             <button
@@ -780,7 +755,7 @@ const RegisterLearner = ({ onSuccess }) => {
               disabled={!canProceed()}
               className={`flex-1 py-3 rounded-xl font-semibold transition-all duration-300 ${
                 canProceed()
-                  ? 'bg-gradient-to-r from-[#1A237E] to-[#0D1240] text-white hover:shadow-lg hover:scale-[1.02]'
+                  ? 'bg-gradient-to-r from-blue-800 to-sky-700 text-white shadow-lg hover:shadow-xl hover:scale-[1.02]'
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
               }`}
             >
@@ -791,10 +766,7 @@ const RegisterLearner = ({ onSuccess }) => {
               type="button"
               onClick={isEditMode ? handleUpdate : handleRegister}
               disabled={isLoading || !canProceed()}
-              className="flex-1 py-3 rounded-xl font-bold text-white transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-100 disabled:opacity-50 disabled:hover:scale-100 relative overflow-hidden group"
-              style={{ 
-                background: `linear-gradient(135deg, ${NAVY_PRIMARY}, ${NAVY_DARK})`
-              }}
+              className="flex-1 py-3 rounded-xl font-bold text-white transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-100 disabled:opacity-50 disabled:hover:scale-100 relative overflow-hidden group bg-gradient-to-r from-blue-800 to-sky-700"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
               {isLoading ? (
@@ -813,27 +785,27 @@ const RegisterLearner = ({ onSuccess }) => {
           )}
         </div>
 
-        {/* Registration Summary Card (only shows on step 3 when all fields are filled) */}
+        {/* Registration Summary Card - Skyblue with azure border */}
         {!isEditMode && currentStep === 3 && formData.selectedClassId && formData.regNumber && formData.name && (
-          <div className="mt-6 p-5 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="mt-6 p-5 bg-sky-50 rounded-xl border-2 border-sky-300 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-start gap-3">
-              <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+              <div className="w-10 h-10 bg-sky-100 rounded-full flex items-center justify-center">
                 <span className="text-xl">📋</span>
               </div>
               <div className="flex-1">
-                <p className="text-sm font-bold text-green-800">Registration Summary</p>
+                <p className="text-sm font-bold text-sky-800">Registration Summary</p>
                 <div className="mt-2 space-y-1">
-                  <p className="text-xs text-green-700">
+                  <p className="text-xs text-sky-700">
                     <span className="font-semibold">Class:</span> {formData.selectedClassName}
                   </p>
-                  <p className="text-xs text-green-700">
+                  <p className="text-xs text-sky-700">
                     <span className="font-semibold">Registration Number:</span> <code className="bg-white px-2 py-0.5 rounded font-mono">{formData.regNumber}</code>
                   </p>
-                  <p className="text-xs text-green-700">
+                  <p className="text-xs text-sky-700">
                     <span className="font-semibold">Student Name:</span> {formData.name}
                   </p>
                 </div>
-                <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                <p className="text-xs text-sky-600 mt-2 flex items-center gap-1">
                   <span>🔐</span> Initial login password will be the registration number
                 </p>
               </div>
@@ -841,13 +813,13 @@ const RegisterLearner = ({ onSuccess }) => {
           </div>
         )}
 
-        {/* Info Note */}
-        <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+        {/* Info Note - Navy/Azure themed */}
+        <div className="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
           <div className="flex items-start gap-3">
             <span className="text-lg">ℹ️</span>
             <div className="flex-1">
-              <p className="text-xs text-gray-600 font-medium">Registration Process</p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-700 font-medium">Registration Process</p>
+              <p className="text-xs text-gray-600 mt-1">
                 Step 1: Select the learner's class → Registration number auto-generates based on class format<br/>
                 Step 2: Registration number can be regenerated if needed<br/>
                 Step 3: Enter the student's full name (this will be their username)<br/>
