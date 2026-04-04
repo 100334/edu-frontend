@@ -144,8 +144,8 @@ const MobileMenuButton = ({ isOpen, onClick }) => (
   </button>
 );
 
-// QuizHistory Component (inline for revision)
-const QuizHistory = ({ attempts, onReview }) => {
+// QuizHistory Component (inline for revision) - UPDATED with Download PDF button
+const QuizHistory = ({ attempts, onReview, onDownloadPDF }) => {
   if (!attempts || attempts.length === 0) return null;
   
   return (
@@ -159,8 +159,8 @@ const QuizHistory = ({ attempts, onReview }) => {
       <div className="divide-y divide-gray-100">
         {attempts.map((attempt) => (
           <div key={attempt.id} className="p-4 hover:bg-gray-50 transition">
-            <div className="flex justify-between items-start flex-wrap gap-2">
-              <div className="flex-1">
+            <div className="flex justify-between items-start flex-wrap gap-3">
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium text-gray-800 text-sm">
                     {attempt.quiz_title || attempt.subject || 'Quiz'}
@@ -180,12 +180,20 @@ const QuizHistory = ({ attempts, onReview }) => {
                   </div>
                 )}
               </div>
-              <button
-                onClick={() => onReview(attempt.id)}
-                className="px-3 py-1.5 text-xs font-medium text-purple-600 border border-purple-300 rounded-lg hover:bg-purple-50 transition"
-              >
-                Review Answers
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => onReview(attempt.id)}
+                  className="px-3 py-1.5 text-xs font-medium text-purple-600 border border-purple-300 rounded-lg hover:bg-purple-50 transition"
+                >
+                  Review
+                </button>
+                <button
+                  onClick={() => onDownloadPDF(attempt.id)}
+                  className="px-3 py-1.5 text-xs font-medium text-[#c9933a] border border-[#c9933a] rounded-lg hover:bg-[#c9933a]/10 transition flex items-center gap-1"
+                >
+                  <ArrowDownTrayIcon className="w-3 h-3" /> PDF
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -211,6 +219,7 @@ export default function LearnerDashboard() {
   const [quizAttempts, setQuizAttempts] = useState([]);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewAttempt, setReviewAttempt] = useState(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
   
   // Data states
   const [reports, setReports] = useState([]);
@@ -748,6 +757,102 @@ export default function LearnerDashboard() {
     }
   };
 
+  // Download quiz review as PDF directly from attempt ID (includes image URLs as text)
+  const downloadQuizReviewPDFById = async (attemptId) => {
+    try {
+      toast.loading('Generating PDF...', { id: 'quiz-pdf' });
+      const res = await api.get(`/api/quiz/attempt/${attemptId}`);
+      if (!res.data.success) throw new Error('Failed to fetch attempt');
+      const attempt = res.data.attempt;
+
+      const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const navy = [26, 35, 126];
+      const gold = [201, 147, 58];
+      const lightGray = [248, 250, 252];
+      const darkGray = [15, 25, 35];
+
+      // Header
+      doc.setFillColor(navy[0], navy[1], navy[2]);
+      doc.rect(0, 0, pageWidth, 45, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PROGRESS SECONDARY SCHOOL', pageWidth / 2, 20, { align: 'center' });
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(220, 220, 220);
+      doc.text('Quiz Review', pageWidth / 2, 30, { align: 'center' });
+      doc.setFontSize(9);
+      doc.setTextColor(gold[0], gold[1], gold[2]);
+      doc.text(attempt.quiz_title || 'Quiz', pageWidth / 2, 38, { align: 'center' });
+
+      // Student info box
+      let y = 55;
+      doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+      doc.roundedRect(15, y, pageWidth - 30, 28, 3, 3, 'F');
+      doc.setDrawColor(gold[0], gold[1], gold[2]);
+      doc.roundedRect(15, y, pageWidth - 30, 28, 3, 3, 'S');
+      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Student Information', 20, y + 8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Name: ${user?.name || user?.full_name || 'N/A'}`, 20, y + 16);
+      doc.text(`Registration: ${user?.reg_number || user?.registration_number || 'N/A'}`, 20, y + 22);
+      doc.text(`Date: ${new Date(attempt.completed_at).toLocaleDateString()}`, pageWidth - 65, y + 22);
+      doc.text(`Score: ${attempt.earned_points} / ${attempt.total_points} (${Math.round(attempt.percentage)}%)`, pageWidth - 65, y + 16);
+
+      y += 38;
+
+      // Table of answers (include image URLs in question text)
+      const tableHeaders = ['#', 'Question', 'Your Answer', 'Correct Answer', 'Marks', 'Explanation'];
+      const tableData = attempt.answers.map((q, idx) => [
+        (idx + 1).toString(),
+        (q.question_text || 'N/A') + (q.question_image ? `\n[Diagram: ${q.question_image}]` : ''),
+        q.selected_answer_text || 'Not answered',
+        q.correct_answer || 'N/A',
+        `${q.points_obtained}/${q.max_points}`,
+        q.explanation || '—'
+      ]);
+
+      autoTable(doc, {
+        startY: y,
+        margin: { left: 15, right: 15 },
+        head: [tableHeaders],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: navy, textColor: 255, fontStyle: 'bold', fontSize: 8, halign: 'center' },
+        bodyStyles: { fontSize: 7, cellPadding: 2 },
+        alternateRowStyles: { fillColor: lightGray },
+        columnStyles: {
+          0: { cellWidth: 10, halign: 'center' },
+          1: { cellWidth: 60 },
+          2: { cellWidth: 35 },
+          3: { cellWidth: 35 },
+          4: { cellWidth: 20, halign: 'center' },
+          5: { cellWidth: 50 }
+        }
+      });
+
+      // Footer
+      const footerY = doc.internal.pageSize.getHeight() - 12;
+      doc.setDrawColor(gold[0], gold[1], gold[2]);
+      doc.line(15, footerY - 5, pageWidth - 15, footerY - 5);
+      doc.setFontSize(7);
+      doc.setTextColor(150, 150, 150);
+      doc.text('This is an official quiz review document.', pageWidth / 2, footerY, { align: 'center' });
+      doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, footerY + 4, { align: 'center' });
+
+      const fileName = `${user?.name?.replace(/\s+/g, '_') || 'student'}_quiz_review_${attempt.quiz_title?.replace(/\s+/g, '_') || 'quiz'}.pdf`;
+      doc.save(fileName);
+      toast.success('Quiz review PDF downloaded!', { id: 'quiz-pdf' });
+    } catch (error) {
+      console.error('PDF error:', error);
+      toast.error('Failed to generate PDF', { id: 'quiz-pdf' });
+    }
+  };
+
   const handleLogout = async () => {
     sessionStorage.removeItem('learnerActiveTab');
     await logout();
@@ -768,15 +873,20 @@ export default function LearnerDashboard() {
   };
 
   const handleReviewQuiz = async (attemptId) => {
+    setReviewLoading(true);
     try {
       const res = await api.get(`/api/quiz/attempt/${attemptId}`);
       if (res.data.success) {
         setReviewAttempt(res.data.attempt);
         setShowReviewModal(true);
+      } else {
+        toast.error(res.data.message || 'Could not load quiz details');
       }
     } catch (err) {
       console.error(err);
-      toast.error('Could not load quiz details');
+      toast.error('Failed to load quiz details');
+    } finally {
+      setReviewLoading(false);
     }
   };
 
@@ -1387,9 +1497,11 @@ export default function LearnerDashboard() {
             {!showQuiz ? (
               <>
                 <QuizList onStartQuiz={(quizId) => setShowQuiz(quizId)} />
-                {quizAttempts.length > 0 && (
-                  <QuizHistory attempts={quizAttempts} onReview={handleReviewQuiz} />
-                )}
+                <QuizHistory 
+                  attempts={quizAttempts} 
+                  onReview={handleReviewQuiz} 
+                  onDownloadPDF={downloadQuizReviewPDFById} 
+                />
               </>
             ) : (
               <div>
@@ -1508,7 +1620,11 @@ export default function LearnerDashboard() {
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[350px] sm:min-w-[400px] md:min-w-[500px]">
                   <thead className="bg-gray-50">
-                    <tr><th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase">Date</th><th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Day</th><th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase">Status</th></tr>
+                    <tr>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase">Date</th>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Day</th>
+                      <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase">Status</th>
+                    </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {attendanceRecords && attendanceRecords.length > 0 ? (
@@ -1519,7 +1635,9 @@ export default function LearnerDashboard() {
                           <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3"><span className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-semibold ${record.status === 'present' ? 'bg-green-100 text-green-700' : record.status === 'late' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{record.status === 'present' ? 'P' : record.status === 'late' ? 'L' : 'A'}</span></td>
                         </tr>
                       ))
-                    ) : (<tr><td colSpan="3" className="px-3 sm:px-4 py-6 sm:py-8 text-center text-gray-500 text-xs sm:text-sm">No attendance records yet</td></tr>)}
+                    ) : (
+                      <tr><td colSpan="3" className="px-3 sm:px-4 py-6 sm:py-8 text-center text-gray-500 text-xs sm:text-sm">No attendance records yet</td></tr>
+                    )}
                   </tbody>
                 </table>
                 {attendanceRecords.length > 15 && <div className="px-4 py-2 text-center text-[10px] text-gray-400 border-t border-gray-100">Showing last 15 of {attendanceRecords.length} records</div>}
@@ -1544,26 +1662,103 @@ export default function LearnerDashboard() {
         <div className="fixed inset-0 z-50 overflow-y-auto" onClick={() => setShowReviewModal(false)}>
           <div className="flex items-center justify-center min-h-screen p-4">
             <div className="fixed inset-0 bg-black/50" onClick={() => setShowReviewModal(false)}></div>
-            <div className="relative bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-xl" onClick={e => e.stopPropagation()}>
-              <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+            <div className="relative bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div className="sticky top-0 bg-gradient-to-r from-[#0f1923] to-[#1a2d3f] text-white p-4 rounded-t-xl flex justify-between items-center">
                 <div>
-                  <h3 className="text-xl font-bold">{reviewAttempt.quiz_title}</h3>
-                  <p className="text-sm text-gray-500">Score: {reviewAttempt.earned_points} / {reviewAttempt.total_points} ({Math.round(reviewAttempt.percentage)}%)</p>
-                </div>
-                <button onClick={() => setShowReviewModal(false)} className="text-gray-400 hover:text-gray-600"><XMarkIcon className="w-6 h-6" /></button>
-              </div>
-              <div className="p-6 space-y-6">
-                {reviewAttempt.answers && reviewAttempt.answers.map((q, idx) => (
-                  <div key={idx} className="border-b border-gray-200 pb-4 last:border-0">
-                    <p className="font-semibold text-gray-800">Q{idx+1}. {q.question_text}</p>
-                    <div className="mt-2 pl-4 space-y-1 text-sm">
-                      <p><span className="font-medium">Your answer:</span> {q.selected_answer_text || 'Not answered'}</p>
-                      <p><span className="font-medium">Correct answer:</span> {q.correct_answer}</p>
-                      <p><span className="font-medium">Marks:</span> {q.points_obtained} / {q.max_points}</p>
-                      {q.explanation && <p className="text-gray-600 text-xs mt-1">💡 {q.explanation}</p>}
-                    </div>
+                  <h3 className="text-lg font-bold">{reviewAttempt.quiz_title}</h3>
+                  <div className="flex gap-3 mt-1 text-sm">
+                    <span className="bg-white/20 px-2 py-0.5 rounded">Score: {reviewAttempt.earned_points} / {reviewAttempt.total_points}</span>
+                    <span className="bg-white/20 px-2 py-0.5 rounded">Percentage: {Math.round(reviewAttempt.percentage)}%</span>
+                    <span className={`px-2 py-0.5 rounded ${reviewAttempt.passed ? 'bg-green-600' : 'bg-red-600'}`}>
+                      {reviewAttempt.passed ? 'Passed' : 'Failed'}
+                    </span>
                   </div>
-                ))}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => downloadQuizReviewPDFById(reviewAttempt.id)}
+                    className="p-2 bg-[#c9933a] rounded-lg hover:bg-[#b5822e] transition"
+                    title="Download PDF"
+                  >
+                    <ArrowDownTrayIcon className="w-5 h-5 text-white" />
+                  </button>
+                  <button onClick={() => setShowReviewModal(false)} className="p-2 hover:bg-white/20 rounded-lg transition">
+                    <XMarkIcon className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 space-y-6">
+                {reviewLoading && (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#c9933a]"></div>
+                  </div>
+                )}
+                {!reviewLoading && reviewAttempt.answers && reviewAttempt.answers.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">No answer details available.</div>
+                )}
+                {!reviewLoading && reviewAttempt.answers && reviewAttempt.answers.map((q, idx) => {
+                  const isCorrect = q.is_correct;
+                  return (
+                    <div key={idx} className={`border rounded-lg p-4 transition ${isCorrect ? 'border-green-200 bg-green-50/30' : 'border-red-200 bg-red-50/30'}`}>
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="flex-1">
+                          <p className="font-bold text-gray-800">Q{idx+1}. {q.question_text || 'Question text not available'}</p>
+                          
+                          {/* Show question diagram if exists */}
+                          {q.question_image && (
+                            <div className="mt-2 mb-3">
+                              <img 
+                                src={q.question_image} 
+                                alt="Question diagram" 
+                                className="max-h-48 rounded-lg border border-gray-200 object-contain bg-gray-50 p-2"
+                              />
+                            </div>
+                          )}
+
+                          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                            <div className="space-y-1">
+                              <p><span className="font-medium">📝 Your answer:</span> <span className={isCorrect ? 'text-green-700' : 'text-red-700'}>{q.selected_answer_text || 'Not answered'}</span></p>
+                              <p><span className="font-medium">✅ Correct answer:</span> {q.correct_answer || 'Not provided'}</p>
+                              <p><span className="font-medium">🏆 Marks:</span> {q.points_obtained} / {q.max_points}</p>
+                            </div>
+                            {q.explanation && (
+                              <div className="bg-gray-100 p-2 rounded text-xs text-gray-700">
+                                💡 <span className="font-medium">Explanation:</span> {q.explanation}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Show option images for multiple choice (optional) */}
+                          {q.question_type === 'multiple_choice' && q.option_images && q.option_images.length > 0 && (
+                            <div className="mt-3 text-xs text-gray-500">
+                              <span className="font-medium">Option images:</span>
+                              <div className="flex gap-2 mt-1 flex-wrap">
+                                {q.option_images.map((img, i) => img && (
+                                  <img key={i} src={img} alt={`Option ${i+1}`} className="w-12 h-12 object-cover rounded border" />
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          {isCorrect ? (
+                            <CheckCircleIcon className="w-6 h-6 text-green-600" />
+                          ) : (
+                            <XMarkIcon className="w-6 h-6 text-red-500" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Footer */}
+              <div className="sticky bottom-0 bg-gray-50 p-3 border-t text-center text-xs text-gray-500">
+                Review completed on {new Date(reviewAttempt.completed_at).toLocaleString()}
               </div>
             </div>
           </div>
