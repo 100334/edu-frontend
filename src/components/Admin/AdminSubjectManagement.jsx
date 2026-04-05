@@ -2,12 +2,6 @@ import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 
-// Theme constants
-const NAVY_PRIMARY = '#1A237E';
-const NAVY_DARK = '#0D1240';
-const AZURE_ACCENT = '#00B0FF';
-const ICE_WHITE = '#F4F7FA';
-
 const AdminSubjectManagement = ({ user, classId, className, onBack }) => {
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -199,40 +193,42 @@ const AdminSubjectManagement = ({ user, classId, className, onBack }) => {
 
   if (error) {
     return (
-      <div className="text-center py-12">
+      <div className="text-center py-12 px-4">
         <div className="text-4xl mb-3">⚠️</div>
-        <p className="text-red-500 mb-2">{error}</p>
-        <button
-          onClick={fetchSubjects}
-          className="px-4 py-2 bg-[#c9933a] text-white rounded-lg hover:bg-[#b5822e] transition text-sm"
-        >
-          Retry
-        </button>
-        {onBack && (
+        <p className="text-red-500 mb-2 break-words">{error}</p>
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
           <button
-            onClick={onBack}
-            className="ml-3 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-sm"
+            onClick={fetchSubjects}
+            className="px-4 py-2 bg-[#c9933a] text-white rounded-lg hover:bg-[#b5822e] transition text-sm"
           >
-            Go Back
+            Retry
           </button>
-        )}
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition text-sm"
+            >
+              Go Back
+            </button>
+          )}
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+    <div className="px-4 sm:px-6 lg:px-8">
+      {/* Header - Responsive */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
-          <h2 className="text-xl font-serif font-bold text-[#0f1923]">Subject Management</h2>
+          <h2 className="text-lg sm:text-xl font-serif font-bold text-[#0f1923]">Subject Management</h2>
           <p className="text-sm text-gray-500">
             Managing subjects for: <span className="font-semibold text-[#c9933a]">{className}</span>
           </p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="px-4 py-2 bg-[#c9933a] text-white rounded-lg hover:bg-[#b5822e] transition text-sm font-medium flex items-center gap-2"
+          className="px-4 py-2 bg-[#c9933a] text-white rounded-lg hover:bg-[#b5822e] transition text-sm font-medium flex items-center justify-center gap-2 w-full sm:w-auto"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -241,7 +237,7 @@ const AdminSubjectManagement = ({ user, classId, className, onBack }) => {
         </button>
       </div>
 
-      {/* Subjects Grid */}
+      {/* Subjects Grid - Fully Responsive */}
       {subjects.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-xl border border-gray-200">
           <div className="text-4xl mb-3">📚</div>
@@ -254,18 +250,18 @@ const AdminSubjectManagement = ({ user, classId, className, onBack }) => {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {subjects.map((subject, index) => (
             <div
               key={subject.id}
-              className="bg-white border border-gray-200 rounded-lg p-5 hover:shadow-md transition-all hover:border-[#c9933a]/30"
+              className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 hover:shadow-md transition-all hover:border-[#c9933a]/30"
             >
-              <div className="flex justify-between items-start mb-3">
+              <div className="flex flex-wrap justify-between items-start gap-2 mb-3">
                 <div className="flex items-center gap-2">
-                  <span className="w-8 h-8 rounded-full bg-[#c9933a]/10 flex items-center justify-center text-[#c9933a] font-bold">
+                  <span className="w-8 h-8 rounded-full bg-[#c9933a]/10 flex items-center justify-center text-[#c9933a] font-bold text-sm">
                     {subject.display_order || index + 1}
                   </span>
-                  <h3 className="font-bold text-[#0f1923] text-lg">{subject.name}</h3>
+                  <h3 className="font-bold text-[#0f1923] text-base sm:text-lg break-words">{subject.name}</h3>
                 </div>
                 {subject.status && (
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(subject.status)}`}>
@@ -276,15 +272,15 @@ const AdminSubjectManagement = ({ user, classId, className, onBack }) => {
 
               <div className="space-y-2 text-sm mb-4">
                 {subject.code && (
-                  <div className="flex items-center gap-2 text-gray-600">
+                  <div className="flex items-center gap-2 text-gray-600 flex-wrap">
                     <span className="font-medium">Code:</span>
-                    <code className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono">{subject.code}</code>
+                    <code className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono break-all">{subject.code}</code>
                   </div>
                 )}
                 {subject.description && (
                   <div className="text-gray-600">
                     <span className="font-medium">Description:</span>
-                    <p className="text-sm text-gray-500 mt-1">{subject.description}</p>
+                    <p className="text-sm text-gray-500 mt-1 break-words">{subject.description}</p>
                   </div>
                 )}
               </div>
@@ -308,12 +304,12 @@ const AdminSubjectManagement = ({ user, classId, className, onBack }) => {
         </div>
       )}
 
-      {/* Add Subject Modal */}
+      {/* Add Subject Modal - Responsive */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
+          <div className="bg-white rounded-lg w-full max-w-md p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-[#c9933a]/10 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-[#c9933a]/10 flex items-center justify-center flex-shrink-0">
                 <svg className="w-5 h-5 text-[#c9933a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -371,21 +367,21 @@ const AdminSubjectManagement = ({ user, classId, className, onBack }) => {
                 />
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   type="button"
                   onClick={() => {
                     setShowAddModal(false);
                     setFormData({ name: '', code: '', description: '', display_order: 1 });
                   }}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition"
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition sm:flex-1"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 px-4 py-2 bg-[#c9933a] text-white rounded-lg hover:bg-[#b5822e] transition disabled:opacity-50"
+                  className="px-4 py-2 bg-[#c9933a] text-white rounded-lg hover:bg-[#b5822e] transition disabled:opacity-50 sm:flex-1"
                 >
                   {submitting ? 'Adding...' : 'Add Subject'}
                 </button>
@@ -395,12 +391,12 @@ const AdminSubjectManagement = ({ user, classId, className, onBack }) => {
         </div>
       )}
 
-      {/* Edit Subject Modal */}
+      {/* Edit Subject Modal - Responsive */}
       {showEditModal && selectedSubject && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
+          <div className="bg-white rounded-lg w-full max-w-md p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                 <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -455,7 +451,7 @@ const AdminSubjectManagement = ({ user, classId, className, onBack }) => {
                 />
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   type="button"
                   onClick={() => {
@@ -463,14 +459,14 @@ const AdminSubjectManagement = ({ user, classId, className, onBack }) => {
                     setSelectedSubject(null);
                     setFormData({ name: '', code: '', description: '', display_order: 1 });
                   }}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition"
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition sm:flex-1"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex-1 px-4 py-2 bg-[#c9933a] text-white rounded-lg hover:bg-[#b5822e] transition disabled:opacity-50"
+                  className="px-4 py-2 bg-[#c9933a] text-white rounded-lg hover:bg-[#b5822e] transition disabled:opacity-50 sm:flex-1"
                 >
                   {submitting ? 'Updating...' : 'Update Subject'}
                 </button>
