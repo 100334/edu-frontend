@@ -25,7 +25,6 @@ const QuizList = ({ onStartQuiz }) => {
   const [verifying, setVerifying] = useState(false);
   const [verificationError, setVerificationError] = useState('');
   const [learnerForm, setLearnerForm] = useState('');
-  const [showFormInfo, setShowFormInfo] = useState(false);
 
   useEffect(() => {
     loadQuizzes();
@@ -35,13 +34,10 @@ const QuizList = ({ onStartQuiz }) => {
 
   const getLearnerForm = async () => {
     try {
-      const token = localStorage.getItem('token');
       const userStr = localStorage.getItem('user');
       if (userStr) {
         const user = JSON.parse(userStr);
-        if (user.form) {
-          setLearnerForm(user.form);
-        }
+        if (user.form) setLearnerForm(user.form);
       }
     } catch (error) {
       console.error('Error getting learner form:', error);
@@ -54,12 +50,11 @@ const QuizList = ({ onStartQuiz }) => {
       const response = await api.get('/api/quiz/quizzes', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
       if (response.data.success) {
-        setQuizzes(response.data.quizzes || []);
-        if (response.data.learner_form) {
-          setLearnerForm(response.data.learner_form);
-        }
+        const quizzesData = response.data.quizzes || [];
+        console.log('📚 Loaded quizzes:', quizzesData);
+        setQuizzes(quizzesData);
+        if (response.data.learner_form) setLearnerForm(response.data.learner_form);
       } else {
         setQuizzes([]);
       }
@@ -77,13 +72,11 @@ const QuizList = ({ onStartQuiz }) => {
       const response = await api.get('/api/quiz/history', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      
       if (response.data.success && response.data.attempts) {
         const historyMap = {};
         response.data.attempts.forEach(attempt => {
           historyMap[attempt.quiz_id] = {
             ...attempt,
-            // Normalize to marks_earned and total_marks
             marks_earned: attempt.marks_earned ?? attempt.earned_points ?? 0,
             total_marks: attempt.total_marks ?? attempt.total_points ?? 0,
             percentage: attempt.percentage ?? (attempt.marks_earned && attempt.total_marks ? (attempt.marks_earned / attempt.total_marks * 100) : 0),
@@ -98,7 +91,10 @@ const QuizList = ({ onStartQuiz }) => {
   };
 
   const handleStartQuiz = (quiz) => {
-    setVerifyingQuiz(quiz);
+    // Backend now returns integer `id` (int_id)
+    const quizId = quiz.id;
+    console.log('Starting quiz with ID:', quizId);
+    setVerifyingQuiz({ ...quiz, _startId: quizId });
     setShowVerificationModal(true);
     setRegNumber('');
     setVerificationError('');
@@ -109,35 +105,32 @@ const QuizList = ({ onStartQuiz }) => {
       setVerificationError('Registration number required');
       return;
     }
-
     setVerifying(true);
     setVerificationError('');
-
     try {
       const token = localStorage.getItem('token');
-      const response = await api.post(`/api/quiz/${verifyingQuiz.id}/verify`, {
+      const quizId = verifyingQuiz._startId;
+      const response = await api.post(`/api/quiz/${quizId}/verify`, {
         regNumber: regNumber.trim()
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-
       if (response.data.success) {
-        toast.success('Identity Verified', {
-          style: { background: '#fef9c3', color: '#b45309' } // gold/amber tones
-        });
+        toast.success('Identity Verified');
         setShowVerificationModal(false);
-        onStartQuiz(verifyingQuiz.id);
+        onStartQuiz(quizId);
       } else {
         setVerificationError(response.data.message || 'Verification failed');
       }
     } catch (error) {
+      console.error('Verification error:', error);
       setVerificationError('Security verification error');
     } finally {
       setVerifying(false);
     }
   };
 
-  // --- Color helpers for subjects (updated to gold/navy) ---
+  // --- Color helpers (unchanged) ---
   const getSubjectStyles = (subject) => {
     const subjectName = typeof subject === 'string' ? subject : subject?.name || '';
     switch(subjectName) {
@@ -172,7 +165,6 @@ const QuizList = ({ onStartQuiz }) => {
     return 'bg-gray-100 text-gray-600 border-gray-200';
   };
 
-  // Check if quiz contains images
   const hasDiagrams = (quiz) => {
     return quiz.question_image || (quiz.questions && quiz.questions.some(q => q.question_image || q.answer_image));
   };
@@ -204,7 +196,6 @@ const QuizList = ({ onStartQuiz }) => {
   return (
     <div className="bg-gradient-to-br from-blue-50 via-white to-cyan-50 min-h-screen py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header with gold/navy gradient */}
         <div className="mb-10">
           <div className="flex justify-between items-start flex-wrap gap-4">
             <div>
@@ -228,7 +219,6 @@ const QuizList = ({ onStartQuiz }) => {
           <div className="mt-4 h-1 w-20 bg-gradient-to-r from-amber-500 to-blue-600 rounded-full"></div>
         </div>
 
-        {/* Quiz Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {quizzes.map((quiz) => {
             const subjectName = getSubjectName(quiz);
@@ -236,17 +226,12 @@ const QuizList = ({ onStartQuiz }) => {
             const isCompleted = attempted?.status === 'completed';
             const score = attempted?.percentage ? Math.round(attempted.percentage) : 0;
             const isFormRestricted = quiz.target_form && quiz.target_form !== 'All' && quiz.target_form !== learnerForm;
-            const hasDiagram = hasDiagrams(quiz);
             const marksDisplay = attempted?.marks_earned !== undefined && attempted?.total_marks
               ? `${attempted.marks_earned}/${attempted.total_marks} marks`
               : `${score}%`;
             
             return (
-              <div 
-                key={quiz.id} 
-                className="group relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden border border-slate-100"
-              >
-                {/* Form restriction overlay */}
+              <div key={quiz.id} className="group relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden border border-slate-100">
                 {isFormRestricted && !isCompleted && (
                   <div className="absolute inset-0 bg-blue-900/60 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl">
                     <div className="bg-white/95 backdrop-blur-sm rounded-xl p-4 text-center max-w-[90%] shadow-xl border border-amber-200">
@@ -256,10 +241,7 @@ const QuizList = ({ onStartQuiz }) => {
                     </div>
                   </div>
                 )}
-                
-                {/* Decorative accent bar (gold/navy) */}
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 via-blue-600 to-cyan-500 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
-                
                 <div className="p-6">
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex flex-wrap items-center gap-2">
@@ -284,14 +266,12 @@ const QuizList = ({ onStartQuiz }) => {
                       </span>
                     )}
                   </div>
-                  
                   <h3 className="text-lg font-bold text-blue-900 mb-2 line-clamp-1 group-hover:text-amber-600 transition-colors">
                     {quiz.title || 'Untitled Assessment'}
                   </h3>
                   <p className="text-sm text-slate-500 mb-4 line-clamp-2">
                     {quiz.description || 'Challenge your knowledge with this interactive quiz.'}
                   </p>
-                  
                   <div className="flex items-center justify-between gap-2 mb-5 py-2 border-t border-slate-100">
                     <div className="flex items-center gap-3">
                       <div className="flex items-center gap-1 text-slate-500">
@@ -307,11 +287,10 @@ const QuizList = ({ onStartQuiz }) => {
                         <span className="text-xs font-medium">{quiz.total_marks || quiz.total_points || 0} marks</span>
                       </div>
                     </div>
-                    {hasDiagram && (
+                    {hasDiagrams(quiz) && (
                       <div className="text-amber-500 text-sm" title="Contains diagrams">📷</div>
                     )}
                   </div>
-                  
                   {isCompleted ? (
                     <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 border border-blue-100">
                       <div className="flex justify-between items-center mb-2">
@@ -319,10 +298,7 @@ const QuizList = ({ onStartQuiz }) => {
                         <span className="text-xl font-black text-amber-600">{marksDisplay}</span>
                       </div>
                       <div className="h-2 bg-white rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-gradient-to-r from-amber-500 to-blue-600 rounded-full transition-all duration-500"
-                          style={{ width: `${score}%` }}
-                        />
+                        <div className="h-full bg-gradient-to-r from-amber-500 to-blue-600 rounded-full transition-all duration-500" style={{ width: `${score}%` }} />
                       </div>
                       {attempted?.feedback && (
                         <div className="mt-3 flex items-start gap-1 text-xs text-amber-700 bg-amber-50 p-2 rounded-lg">
@@ -361,14 +337,12 @@ const QuizList = ({ onStartQuiz }) => {
         </div>
       </div>
 
-      {/* Verification Modal - Enhanced with gold/navy */}
+      {/* Verification Modal (unchanged) */}
       {showVerificationModal && verifyingQuiz && (
         <div className="fixed inset-0 bg-blue-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden transform transition-all animate-in zoom-in-95 duration-200">
             <div className="relative">
-              {/* Decorative top gradient (gold/navy) */}
               <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-500 via-blue-600 to-cyan-500"></div>
-              
               <div className="p-6 sm:p-8">
                 <div className="flex flex-col items-center text-center">
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center mb-4 shadow-inner">
@@ -376,25 +350,7 @@ const QuizList = ({ onStartQuiz }) => {
                   </div>
                   <h3 className="text-xl font-bold text-blue-900">Identity Verification</h3>
                   <p className="text-sm text-slate-500 mt-1">Confirm your identity to proceed</p>
-                  
-                  {/* Quiz details chips */}
-                  <div className="flex flex-wrap gap-2 justify-center mt-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getSubjectStyles(verifyingQuiz.subject_name)}`}>
-                      {getSubjectName(verifyingQuiz)}
-                    </span>
-                    {verifyingQuiz.target_form && verifyingQuiz.target_form !== 'All' && (
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getTargetFormColor(verifyingQuiz.target_form)}`}>
-                        {verifyingQuiz.target_form}
-                      </span>
-                    )}
-                    {hasDiagrams(verifyingQuiz) && (
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border-amber-100">
-                        📷 Contains Diagrams
-                      </span>
-                    )}
-                  </div>
                 </div>
-                
                 <div className="mt-6 space-y-4">
                   <div>
                     <label className="block text-xs font-bold text-blue-800 uppercase tracking-wide mb-2">
@@ -418,36 +374,6 @@ const QuizList = ({ onStartQuiz }) => {
                       </p>
                     )}
                   </div>
-                  
-                  {/* Info boxes */}
-                  {verifyingQuiz.target_form === 'Form 4' && (
-                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 border border-blue-100">
-                      <div className="flex gap-3">
-                        <TrophyIcon className="w-5 h-5 text-amber-500 shrink-0" />
-                        <div>
-                          <p className="text-sm font-bold text-blue-800 mb-1">Form 4 Assessment</p>
-                          <p className="text-xs text-blue-700 leading-relaxed">
-                            This is a key assessment for your final preparation. Take your time and do your best.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {hasDiagrams(verifyingQuiz) && (
-                    <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-4 border border-amber-100">
-                      <div className="flex gap-3">
-                        <PhotoIcon className="w-5 h-5 text-amber-600 shrink-0" />
-                        <div>
-                          <p className="text-sm font-bold text-amber-800 mb-1">Diagram‑Based Questions</p>
-                          <p className="text-xs text-amber-700 leading-relaxed">
-                            This quiz includes visual elements. Please examine them carefully before answering.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
                   <div className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-xl p-4 border border-slate-100">
                     <div className="flex gap-3">
                       <InformationCircleIcon className="w-5 h-5 text-slate-500 shrink-0" />
@@ -456,7 +382,6 @@ const QuizList = ({ onStartQuiz }) => {
                       </p>
                     </div>
                   </div>
-                  
                   <div className="flex flex-col gap-2 pt-4">
                     <button
                       onClick={handleVerifyAndStart}
