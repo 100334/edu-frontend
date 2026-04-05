@@ -52,7 +52,7 @@ const QuizList = ({ onStartQuiz }) => {
       });
       if (response.data.success) {
         const quizzesData = response.data.quizzes || [];
-        console.log('📚 Loaded quizzes:', quizzesData);
+        console.log('📚 Loaded quizzes (first item):', quizzesData[0]); // DEBUG
         setQuizzes(quizzesData);
         if (response.data.learner_form) setLearnerForm(response.data.learner_form);
       } else {
@@ -90,10 +90,23 @@ const QuizList = ({ onStartQuiz }) => {
     }
   };
 
+  // Get the integer quiz ID (supports both int_id and id)
+  const getQuizId = (quiz) => {
+    // Prefer int_id if it's a number
+    if (quiz.int_id && typeof quiz.int_id === 'number') return quiz.int_id;
+    if (quiz.int_id && typeof quiz.int_id === 'string' && /^\d+$/.test(quiz.int_id)) 
+      return parseInt(quiz.int_id, 10);
+    // Fallback to id
+    if (typeof quiz.id === 'number') return quiz.id;
+    if (typeof quiz.id === 'string' && /^\d+$/.test(quiz.id)) 
+      return parseInt(quiz.id, 10);
+    console.warn('⚠️ No numeric quiz ID found. Quiz object:', quiz);
+    return quiz.id; // may be UUID – will cause error
+  };
+
   const handleStartQuiz = (quiz) => {
-    // Backend now returns integer `id` (int_id)
-    const quizId = quiz.id;
-    console.log('Starting quiz with ID:', quizId);
+    const quizId = getQuizId(quiz);
+    console.log('Starting quiz with ID:', quizId, '(type:', typeof quizId, ')');
     setVerifyingQuiz({ ...quiz, _startId: quizId });
     setShowVerificationModal(true);
     setRegNumber('');
@@ -124,7 +137,7 @@ const QuizList = ({ onStartQuiz }) => {
       }
     } catch (error) {
       console.error('Verification error:', error);
-      setVerificationError('Security verification error');
+      setVerificationError(error.response?.data?.message || 'Security verification error');
     } finally {
       setVerifying(false);
     }
@@ -221,8 +234,9 @@ const QuizList = ({ onStartQuiz }) => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {quizzes.map((quiz) => {
+            const quizId = getQuizId(quiz);
             const subjectName = getSubjectName(quiz);
-            const attempted = quizHistory[quiz.id];
+            const attempted = quizHistory[quizId];
             const isCompleted = attempted?.status === 'completed';
             const score = attempted?.percentage ? Math.round(attempted.percentage) : 0;
             const isFormRestricted = quiz.target_form && quiz.target_form !== 'All' && quiz.target_form !== learnerForm;
@@ -231,7 +245,7 @@ const QuizList = ({ onStartQuiz }) => {
               : `${score}%`;
             
             return (
-              <div key={quiz.id} className="group relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden border border-slate-100">
+              <div key={quizId} className="group relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden border border-slate-100">
                 {isFormRestricted && !isCompleted && (
                   <div className="absolute inset-0 bg-blue-900/60 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl">
                     <div className="bg-white/95 backdrop-blur-sm rounded-xl p-4 text-center max-w-[90%] shadow-xl border border-amber-200">
