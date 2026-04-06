@@ -6,8 +6,6 @@ import {
   StarIcon,
   ShieldCheckIcon,
   LockClosedIcon,
-  InformationCircleIcon,
-  PhotoIcon,
   SparklesIcon,
   AcademicCapIcon,
   ChatBubbleLeftRightIcon
@@ -19,11 +17,6 @@ const QuizList = ({ onStartQuiz }) => {
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [quizHistory, setQuizHistory] = useState({});
-  const [verifyingQuiz, setVerifyingQuiz] = useState(null);
-  const [regNumber, setRegNumber] = useState('');
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [verifying, setVerifying] = useState(false);
-  const [verificationError, setVerificationError] = useState('');
   const [learnerForm, setLearnerForm] = useState('');
 
   useEffect(() => {
@@ -52,7 +45,6 @@ const QuizList = ({ onStartQuiz }) => {
       });
       if (response.data.success) {
         const quizzesData = response.data.quizzes || [];
-        console.log('📚 Loaded quizzes (first item):', quizzesData[0]); // DEBUG
         setQuizzes(quizzesData);
         if (response.data.learner_form) setLearnerForm(response.data.learner_form);
       } else {
@@ -90,60 +82,32 @@ const QuizList = ({ onStartQuiz }) => {
     }
   };
 
-  // Get the integer quiz ID (supports both int_id and id)
   const getQuizId = (quiz) => {
-    // Prefer int_id if it's a number
-    if (quiz.int_id && typeof quiz.int_id === 'number') return quiz.int_id;
-    if (quiz.int_id && typeof quiz.int_id === 'string' && /^\d+$/.test(quiz.int_id)) 
-      return parseInt(quiz.int_id, 10);
-    // Fallback to id
-    if (typeof quiz.id === 'number') return quiz.id;
-    if (typeof quiz.id === 'string' && /^\d+$/.test(quiz.id)) 
-      return parseInt(quiz.id, 10);
-    console.warn('⚠️ No numeric quiz ID found. Quiz object:', quiz);
-    return quiz.id; // may be UUID – will cause error
+    if (quiz.id != null && quiz.id !== '') {
+      if (typeof quiz.id === 'number') return quiz.id;
+      if (typeof quiz.id === 'string' && /^\d+$/.test(quiz.id))
+        return parseInt(quiz.id, 10);
+      return quiz.id;
+    }
+    if (quiz.int_id != null && quiz.int_id !== '') {
+      if (typeof quiz.int_id === 'number') return quiz.int_id;
+      if (typeof quiz.int_id === 'string' && /^\d+$/.test(quiz.int_id))
+        return parseInt(quiz.int_id, 10);
+    }
+    console.warn('⚠️ No quiz ID found. Quiz object:', quiz);
+    return quiz.id;
   };
 
   const handleStartQuiz = (quiz) => {
     const quizId = getQuizId(quiz);
-    console.log('Starting quiz with ID:', quizId, '(type:', typeof quizId, ')');
-    setVerifyingQuiz({ ...quiz, _startId: quizId });
-    setShowVerificationModal(true);
-    setRegNumber('');
-    setVerificationError('');
-  };
-
-  const handleVerifyAndStart = async () => {
-    if (!regNumber.trim()) {
-      setVerificationError('Registration number required');
+    if (!quizId) {
+      toast.error('Invalid quiz ID');
       return;
     }
-    setVerifying(true);
-    setVerificationError('');
-    try {
-      const token = localStorage.getItem('token');
-      const quizId = verifyingQuiz._startId;
-      const response = await api.post(`/api/quiz/${quizId}/verify`, {
-        regNumber: regNumber.trim()
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.data.success) {
-        toast.success('Identity Verified');
-        setShowVerificationModal(false);
-        onStartQuiz(quizId);
-      } else {
-        setVerificationError(response.data.message || 'Verification failed');
-      }
-    } catch (error) {
-      console.error('Verification error:', error);
-      setVerificationError(error.response?.data?.message || 'Security verification error');
-    } finally {
-      setVerifying(false);
-    }
+    onStartQuiz(quizId);
   };
 
-  // --- Color helpers (unchanged) ---
+  // --- Color helpers ---
   const getSubjectStyles = (subject) => {
     const subjectName = typeof subject === 'string' ? subject : subject?.name || '';
     switch(subjectName) {
@@ -350,83 +314,6 @@ const QuizList = ({ onStartQuiz }) => {
           })}
         </div>
       </div>
-
-      {/* Verification Modal (unchanged) */}
-      {showVerificationModal && verifyingQuiz && (
-        <div className="fixed inset-0 bg-blue-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden transform transition-all animate-in zoom-in-95 duration-200">
-            <div className="relative">
-              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-500 via-blue-600 to-cyan-500"></div>
-              <div className="p-6 sm:p-8">
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center mb-4 shadow-inner">
-                    <ShieldCheckIcon className="w-8 h-8 text-amber-500" />
-                  </div>
-                  <h3 className="text-xl font-bold text-blue-900">Identity Verification</h3>
-                  <p className="text-sm text-slate-500 mt-1">Confirm your identity to proceed</p>
-                </div>
-                <div className="mt-6 space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-blue-800 uppercase tracking-wide mb-2">
-                      Registration Number
-                    </label>
-                    <input
-                      type="text"
-                      value={regNumber}
-                      onChange={(e) => {
-                        setRegNumber(e.target.value.toUpperCase());
-                        setVerificationError('');
-                      }}
-                      onKeyPress={(e) => e.key === 'Enter' && handleVerifyAndStart()}
-                      placeholder="e.g., PSS/2026/001"
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 font-mono text-sm uppercase transition-all"
-                      autoFocus
-                    />
-                    {verificationError && (
-                      <p className="mt-2 text-xs text-rose-600 flex items-center gap-1">
-                        <InformationCircleIcon className="w-3 h-3" /> {verificationError}
-                      </p>
-                    )}
-                  </div>
-                  <div className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-xl p-4 border border-slate-100">
-                    <div className="flex gap-3">
-                      <InformationCircleIcon className="w-5 h-5 text-slate-500 shrink-0" />
-                      <p className="text-xs text-slate-600 leading-relaxed">
-                        Your registration number is used to verify your identity and record your progress securely.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2 pt-4">
-                    <button
-                      onClick={handleVerifyAndStart}
-                      disabled={verifying}
-                      className="w-full py-3 bg-blue-900 text-white rounded-xl hover:bg-blue-800 transition-all font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      {verifying ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          Verifying...
-                        </>
-                      ) : (
-                        <>
-                          Verify & Start Assessment
-                          <SparklesIcon className="w-4 h-4 text-amber-400" />
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setShowVerificationModal(false)}
-                      className="w-full py-3 bg-white text-slate-500 rounded-xl hover:text-slate-700 transition-all font-medium text-sm border border-slate-200"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

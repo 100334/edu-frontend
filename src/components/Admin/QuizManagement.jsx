@@ -69,7 +69,6 @@ const QuizManagement = () => {
       const response = await api.get('/api/admin/quiz-subjects', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      console.log('Subjects API response:', response.data);
       if (response.data.success) {
         setSubjects(response.data.subjects || []);
       } else {
@@ -143,8 +142,6 @@ const QuizManagement = () => {
 
   // Create quiz with proper validation
   const handleCreateQuiz = async () => {
-    console.log('Quiz form data before submit:', quizForm);
-    
     if (!quizForm.subject_id) {
       toast.error('Please select a subject');
       return;
@@ -165,7 +162,6 @@ const QuizManagement = () => {
         is_active: quizForm.is_active,
         target_form: quizForm.target_form
       };
-      console.log('Creating quiz with payload:', payload);
       const response = await api.post('/api/admin/quizzes', payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -224,7 +220,7 @@ const QuizManagement = () => {
         toast.success('Quiz deleted successfully!');
         loadQuizzes();
         if (selectedQuiz?.id === quiz.id) setSelectedQuiz(null);
-        if (gradingQuizId === quiz.id) {
+        if (gradingQuizId === quiz.int_id) {  // compare with int_id
           setGradingQuizId(null);
           setSubmissions([]);
         }
@@ -282,8 +278,8 @@ const QuizManagement = () => {
         toast.success('Question added successfully!');
         setShowQuestionModal(false);
         resetQuestionForm();
-        // Refresh the selected quiz details
-        const updatedQuiz = await api.get(`/api/quiz/${selectedQuiz.id}/questions`, {
+        // Refresh the selected quiz details using ADMIN endpoint
+        const updatedQuiz = await api.get(`/api/admin/quizzes/${selectedQuiz.id}/questions`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setSelectedQuiz({
@@ -341,10 +337,15 @@ const QuizManagement = () => {
     setShowQuizModal(true);
   };
 
+  // FIXED: Use admin endpoint for fetching questions
   const viewQuizDetails = async (quiz) => {
+    if (!quiz?.id) {
+      toast.error('Invalid quiz');
+      return;
+    }
     try {
       const token = localStorage.getItem('token');
-      const response = await api.get(`/api/quiz/${quiz.id}/questions`, {
+      const response = await api.get(`/api/admin/quizzes/${quiz.id}/questions`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setSelectedQuiz({
@@ -353,18 +354,19 @@ const QuizManagement = () => {
       });
     } catch (error) {
       console.error('Error fetching quiz details:', error);
-      toast.error('Failed to load quiz details');
+      toast.error(error.response?.data?.message || 'Failed to load quiz details');
     }
   };
 
-  // Grading handlers
+  // Grading handlers - UPDATED to use int_id
   const handleGradingTab = () => {
     setActiveTab('grading');
     if (gradingQuizId) {
       loadSubmissions(gradingQuizId);
-    } else if (selectedQuiz) {
-      setGradingQuizId(selectedQuiz.id);
-      loadSubmissions(selectedQuiz.id);
+    } else if (selectedQuiz && selectedQuiz.int_id) {
+      const intId = selectedQuiz.int_id;
+      setGradingQuizId(intId);
+      loadSubmissions(intId);
     }
   };
 
@@ -510,7 +512,7 @@ const QuizManagement = () => {
         </div>
       </div>
 
-      {/* Grading View */}
+      {/* Grading View - FIXED: use int_id for select options */}
       {activeTab === 'grading' ? (
         <div className="bg-white rounded-2xl shadow p-6">
           <div className="mb-6">
@@ -518,12 +520,12 @@ const QuizManagement = () => {
             <div className="flex gap-3">
               <select
                 value={gradingQuizId || ''}
-                onChange={(e) => handleSelectQuizForGrading(parseInt(e.target.value))}
+                onChange={(e) => handleSelectQuizForGrading(e.target.value)}
                 className="flex-1 px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">-- Choose a quiz --</option>
                 {quizzes.map(quiz => (
-                  <option key={quiz.id} value={quiz.id}>
+                  <option key={quiz.int_id} value={quiz.int_id}>
                     {quiz.title} ({quiz.subject_name || 'No subject'}) - {quiz.question_count || 0} questions
                   </option>
                 ))}
@@ -632,7 +634,7 @@ const QuizManagement = () => {
         )
       )}
 
-      {/* Quiz Details Side Panel (if needed) */}
+      {/* Quiz Details Side Panel */}
       {selectedQuiz && activeTab !== 'grading' && (
         <div className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl z-50 transform transition-transform duration-300 border-l border-gray-200">
           <div className="h-full flex flex-col">
@@ -779,7 +781,7 @@ const QuizManagement = () => {
         </div>
       )}
 
-      {/* Add Question Modal (simplified but functional) */}
+      {/* Add Question Modal */}
       {showQuestionModal && selectedQuiz && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => e.target === e.currentTarget && setShowQuestionModal(false)}>
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">

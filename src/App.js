@@ -25,7 +25,8 @@ import RegisterTeacher from './components/Admin/RegisterTeacher';
 import AdminClassManagement from './components/Admin/AdminClassManagement';
 import AdminSubjectManagement from './components/Admin/AdminSubjectManagement';
 import SecurityLogs from './components/Admin/SecurityLogs';
-import QuizManagement from './components/Admin/QuizManagement'; // Add this import
+import QuizManagement from './components/Admin/QuizManagement';
+import QuizResults from './components/Learner/QuizResults';
 
 const LoadingScreen = () => (
   <div style={{
@@ -174,13 +175,10 @@ function AppContent() {
   useEffect(() => {
     const checkServer = async () => {
       setIsCheckingServer(true);
-      
       try {
         console.log('🔍 Checking server connection...');
         console.log('API URL:', api.defaults.baseURL);
-        
         const healthResult = await checkHealth();
-        
         if (healthResult.success) {
           console.log('✅ Server connected:', healthResult.data);
           setServerStatus({ status: 'online', data: healthResult.data });
@@ -203,7 +201,6 @@ function AppContent() {
         setIsCheckingServer(false);
       }
     };
-
     checkServer();
   }, []);
 
@@ -237,24 +234,16 @@ function AppContent() {
       <Routes>
         {/* Learner Login as Default Home Page */}
         <Route path="/" element={<LearnerLogin serverStatus={serverStatus} />} />
-        
-        {/* Teacher Login */}
         <Route path="/teacher/login" element={<TeacherLogin serverStatus={serverStatus} />} />
-        
-        {/* Admin Login */}
         <Route path="/admin/login" element={<AdminLogin serverStatus={serverStatus} />} />
-        
-        {/* Debug Route - Remove in production */}
         <Route path="/debug" element={<DebugAuth />} />
-        
+
         {/* Teacher Routes */}
         <Route 
           path="/teacher/dashboard" 
           element={
             <ProtectedRoute allowedRole="teacher">
-              <ErrorBoundary>
-                <TeacherDashboard />
-              </ErrorBoundary>
+              <ErrorBoundary><TeacherDashboard /></ErrorBoundary>
             </ProtectedRoute>
           } 
         />
@@ -264,146 +253,35 @@ function AppContent() {
           path="/learner/dashboard" 
           element={
             <ProtectedRoute allowedRole="learner">
-              <ErrorBoundary>
-                <LearnerDashboard />
-              </ErrorBoundary>
+              <ErrorBoundary><LearnerDashboard /></ErrorBoundary>
+            </ProtectedRoute>
+          } 
+        />
+
+        {/* Learner Results Page */}
+        <Route 
+          path="/learner/results" 
+          element={
+            <ProtectedRoute allowedRole="learner">
+              <ErrorBoundary><QuizResults /></ErrorBoundary>
             </ProtectedRoute>
           } 
         />
         
         {/* Admin Routes */}
-        <Route 
-          path="/admin" 
-          element={
-            <AdminRoute>
-              <ErrorBoundary>
-                <AdminDashboard />
-              </ErrorBoundary>
-            </AdminRoute>
-          } 
-        />
+        <Route path="/admin" element={<AdminRoute><ErrorBoundary><AdminDashboard /></ErrorBoundary></AdminRoute>} />
+        <Route path="/admin/teachers" element={<AdminRoute><ErrorBoundary><TeachersList /></ErrorBoundary></AdminRoute>} />
+        <Route path="/admin/learners" element={<AdminRoute><ErrorBoundary><LearnersList /></ErrorBoundary></AdminRoute>} />
+        <Route path="/admin/add-teacher" element={<AdminRoute><ErrorBoundary><AddTeacher onSuccess={() => window.location.href = '/admin/teachers'} /></ErrorBoundary></AdminRoute>} />
+        <Route path="/admin/register-teacher" element={<AdminRoute><ErrorBoundary><RegisterTeacher /></ErrorBoundary></AdminRoute>} />
+        <Route path="/admin/add-learner" element={<AdminRoute><ErrorBoundary><AddLearner onSuccess={() => window.location.href = '/admin/learners'} /></ErrorBoundary></AdminRoute>} />
+        <Route path="/admin/register-learner" element={<AdminRoute><ErrorBoundary><RegisterLearner /></ErrorBoundary></AdminRoute>} />
+        <Route path="/admin/class-management" element={<AdminRoute><ErrorBoundary><AdminClassManagement /></ErrorBoundary></AdminRoute>} />
+        <Route path="/admin/class/:classId/subjects" element={<AdminRoute><ErrorBoundary><AdminSubjectManagementWrapper /></ErrorBoundary></AdminRoute>} />
+        <Route path="/admin/quiz-management" element={<AdminRoute><ErrorBoundary><QuizManagement /></ErrorBoundary></AdminRoute>} />
+        <Route path="/admin/security-logs" element={<AdminRoute><ErrorBoundary><SecurityLogs /></ErrorBoundary></AdminRoute>} />
         
-        {/* Admin Teachers Management */}
-        <Route 
-          path="/admin/teachers" 
-          element={
-            <AdminRoute>
-              <ErrorBoundary>
-                <TeachersList />
-              </ErrorBoundary>
-            </AdminRoute>
-          } 
-        />
-        
-        {/* Admin Learners Management */}
-        <Route 
-          path="/admin/learners" 
-          element={
-            <AdminRoute>
-              <ErrorBoundary>
-                <LearnersList />
-              </ErrorBoundary>
-            </AdminRoute>
-          } 
-        />
-        
-        {/* Admin Add Teacher */}
-        <Route 
-          path="/admin/add-teacher" 
-          element={
-            <AdminRoute>
-              <ErrorBoundary>
-                <AddTeacher onSuccess={() => window.location.href = '/admin/teachers'} />
-              </ErrorBoundary>
-            </AdminRoute>
-          } 
-        />
-        
-        {/* Admin Register Teacher */}
-        <Route 
-          path="/admin/register-teacher" 
-          element={
-            <AdminRoute>
-              <ErrorBoundary>
-                <RegisterTeacher />
-              </ErrorBoundary>
-            </AdminRoute>
-          } 
-        />
-        
-        {/* Admin Add Learner */}
-        <Route 
-          path="/admin/add-learner" 
-          element={
-            <AdminRoute>
-              <ErrorBoundary>
-                <AddLearner onSuccess={() => window.location.href = '/admin/learners'} />
-              </ErrorBoundary>
-            </AdminRoute>
-          } 
-        />
-        
-        {/* Admin Register Learner */}
-        <Route 
-          path="/admin/register-learner" 
-          element={
-            <AdminRoute>
-              <ErrorBoundary>
-                <RegisterLearner />
-              </ErrorBoundary>
-            </AdminRoute>
-          } 
-        />
-        
-        {/* Admin Class Management */}
-        <Route 
-          path="/admin/class-management" 
-          element={
-            <AdminRoute>
-              <ErrorBoundary>
-                <AdminClassManagement />
-              </ErrorBoundary>
-            </AdminRoute>
-          } 
-        />
-        
-        {/* Admin Subject Management */}
-        <Route 
-          path="/admin/class/:classId/subjects" 
-          element={
-            <AdminRoute>
-              <ErrorBoundary>
-                <AdminSubjectManagementWrapper />
-              </ErrorBoundary>
-            </AdminRoute>
-          } 
-        />
-        
-        {/* Admin Quiz Management */}
-        <Route 
-          path="/admin/quiz-management" 
-          element={
-            <AdminRoute>
-              <ErrorBoundary>
-                <QuizManagement />
-              </ErrorBoundary>
-            </AdminRoute>
-          } 
-        />
-        
-        {/* Admin Security Logs */}
-        <Route 
-          path="/admin/security-logs" 
-          element={
-            <AdminRoute>
-              <ErrorBoundary>
-                <SecurityLogs />
-              </ErrorBoundary>
-            </AdminRoute>
-          } 
-        />
-        
-        {/* Catch all - redirect to learner login */}
+        {/* Catch all */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       

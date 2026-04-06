@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ClockIcon, FlagIcon, PaperAirplaneIcon, ExclamationCircleIcon,
@@ -9,6 +9,14 @@ import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import html2pdf from 'html2pdf.js';
+
+function normalizeQuizIdProp(q) {
+  if (q == null || q === '') return null;
+  if (typeof q === 'number' && Number.isFinite(q)) return String(Math.trunc(q));
+  const s = String(q).trim();
+  if (!s || s === 'undefined' || s === 'null' || s === 'NaN' || s === '[object Object]') return null;
+  return s;
+}
 
 const QuizTaking = ({ quizId, onComplete }) => {
   const [quiz, setQuiz] = useState(null);
@@ -24,6 +32,7 @@ const QuizTaking = ({ quizId, onComplete }) => {
   const reviewContentRef = useRef(null);
   const questionRef = useRef(null);
   const navigate = useNavigate();
+  const resolvedQuizId = useMemo(() => normalizeQuizIdProp(quizId), [quizId]);
 
   useEffect(() => {
     loadQuiz();
@@ -38,14 +47,21 @@ const QuizTaking = ({ quizId, onComplete }) => {
   }, [timeLeft, submitting]);
 
   const loadQuiz = async () => {
+    const idParam = resolvedQuizId;
+    if (!idParam) {
+      console.error('Load quiz error: invalid quizId', quizId);
+      toast.error('Invalid quiz link. Go back and start the quiz again.');
+      navigate('/learner/dashboard');
+      return;
+    }
     try {
       const token = localStorage.getItem('token');
-      const startRes = await api.post(`/api/quiz/${quizId}/start`, {}, {
+      const startRes = await api.post(`/api/quiz/${encodeURIComponent(idParam)}/start`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (startRes.data.success) setAttemptId(startRes.data.attempt_id);
       
-      const res = await api.get(`/api/quiz/${quizId}/questions`, {
+      const res = await api.get(`/api/quiz/${encodeURIComponent(idParam)}/questions`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data.already_completed) {
@@ -60,7 +76,10 @@ const QuizTaking = ({ quizId, onComplete }) => {
       if (res.data.saved_answers) setAnswers(res.data.saved_answers);
     } catch (error) {
       console.error('Load quiz error:', error);
-      toast.error('Failed to load quiz. Please refresh.');
+      if (!error.response?.data?.message) {
+        toast.error('Failed to load quiz. Please refresh.');
+      }
+      navigate('/learner/dashboard');
     }
   };
 
@@ -75,10 +94,10 @@ const QuizTaking = ({ quizId, onComplete }) => {
   };
 
   const autoSaveAnswer = async (idx, ans) => {
-    if (!attemptId) return;
+    if (!attemptId || !resolvedQuizId) return;
     try {
       const token = localStorage.getItem('token');
-      await api.post(`/api/quiz/${quizId}/save-answer`, {
+      await api.post(`/api/quiz/${encodeURIComponent(resolvedQuizId)}/save-answer`, {
         question_index: idx,
         answer: ans,
         attempt_id: attemptId
@@ -86,7 +105,6 @@ const QuizTaking = ({ quizId, onComplete }) => {
     } catch (error) { console.warn('Auto-save failed:', error); }
   };
 
-  // ✅ Missing function – opens review modal
   const handleOpenReview = () => {
     setShowReviewModal(true);
   };
@@ -95,34 +113,35 @@ const QuizTaking = ({ quizId, onComplete }) => {
     setShowConfirmDialog(true);
   };
 
+  // Updated submit function – no immediate grading, just pending message
   const submitQuiz = async () => {
     setSubmitting(true);
     setShowConfirmDialog(false);
     setShowReviewModal(false);
     try {
       const token = localStorage.getItem('token');
-      // Flat array of answers (by index)
       const answersPayload = questions.map((_, idx) => answers[idx] !== undefined ? answers[idx] : null);
       const payload = {
         attempt_id: attemptId,
         answers: answersPayload,
         time_taken: (quiz.duration * 60) - timeLeft
       };
-      console.log('Submitting payload:', payload);
-      const response = await api.post(`/api/quiz/${quizId}/submit`, payload, {
+      const response = await api.post(`/api/quiz/${encodeURIComponent(resolvedQuizId)}/submit`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.data.success) {
-        toast.success(`Quiz submitted! Score: ${response.data.percentage}%`);
-        if (onComplete) onComplete(response.data);
-        else navigate('/learner/dashboard');
+        toast.success(response.data.message || 'Quiz submitted! The admin will review your answers.');
+        // Redirect after a short delay
+        setTimeout(() => {
+          if (onComplete) onComplete(response.data);
+          else navigate('/learner/dashboard');
+        }, 2000);
       } else {
         throw new Error(response.data.message || 'Submission failed');
       }
     } catch (error) {
       console.error('Submit error:', error);
       toast.error(error.response?.data?.message || 'Submission failed');
-    } finally {
       setSubmitting(false);
     }
   };
@@ -172,7 +191,6 @@ const QuizTaking = ({ quizId, onComplete }) => {
   return (
     <>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white dark:from-slate-900 dark:to-slate-800">
-        {/* Header (same as before) */}
         <div className="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border-b border-slate-200 dark:border-slate-700 shadow-sm">
           <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -211,7 +229,6 @@ const QuizTaking = ({ quizId, onComplete }) => {
           </div>
         </div>
 
-        {/* Main content (unchanged) */}
         <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             <div className="lg:col-span-3 space-y-6">
@@ -296,7 +313,7 @@ const QuizTaking = ({ quizId, onComplete }) => {
               <div className="bg-gradient-to-br from-amber-50 to-cyan-50 dark:from-amber-900/20 dark:to-cyan-900/20 rounded-2xl p-5 border border-amber-100 dark:border-amber-800">
                 <ExclamationCircleIcon className="w-8 h-8 text-amber-500 dark:text-amber-400 mb-3" />
                 <h4 className="text-sm font-bold text-amber-800 dark:text-amber-300 mb-1">Assessment Tips</h4>
-                <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">{hasDiagram ? "📸 Click on images to enlarge. Your answers are saved automatically as you type." : "💡 Answers are auto-saved. You can review all answers before submitting. Submission is final."}</p>
+                <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">{hasDiagram ? "📸 Click on images to enlarge. Your answers are saved automatically as you type." : "💡 Answers are auto-saved. You can review all answers before submitting. Once submitted, the admin will review your answers."}</p>
               </div>
             </div>
           </div>
@@ -381,7 +398,7 @@ const QuizTaking = ({ quizId, onComplete }) => {
             <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 text-center mb-2">Submit Assessment?</h3>
             <div className="text-center mb-4">
               <p className="text-slate-500 dark:text-slate-400 text-sm">You have answered <strong className="text-amber-600 dark:text-amber-400">{stats.answered}</strong> out of <strong>{stats.total}</strong> questions.{unansweredCount > 0 && <span className="block mt-1 text-red-600 dark:text-red-400">⚠️ {unansweredCount} question{unansweredCount !== 1 ? 's are' : ' is'} unanswered.</span>}</p>
-              <p className="text-xs text-slate-400 mt-3">Once submitted, you cannot change your answers.</p>
+              <p className="text-xs text-slate-400 mt-3">Once submitted, you cannot change your answers. The admin will review your submission.</p>
             </div>
             <div className="flex gap-3">
               <button onClick={() => setShowConfirmDialog(false)} className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-600 transition">Cancel</button>

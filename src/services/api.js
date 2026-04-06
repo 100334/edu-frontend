@@ -81,19 +81,29 @@ api.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    // Handle 404 - Endpoint not found
+    // Handle 404 — only treat as "missing route" when the server says so (avoids
+    // confusing verify/quiz 404s with a dead endpoint).
     if (error.response?.status === 404) {
-      console.error(`❌ 404 - Endpoint not found: ${fullUrl}`);
-      
-      // Check if it's a double /api issue
+      const msg = String(error.response?.data?.message ?? '');
+      const looksLikeMissingRoute =
+        msg.startsWith('Route not found:') || msg === '' || msg === 'undefined';
+
+      if (looksLikeMissingRoute) {
+        console.error(`❌ 404 - Endpoint not found: ${fullUrl}`);
+      } else {
+        console.warn(`❌ 404 - ${msg} (${fullUrl})`);
+      }
+
       if (fullUrl.includes('/api/api/')) {
         console.error('⚠️ Detected double /api in URL! Check your API calls.');
         toast.error('API configuration error: Double /api in URL. Please check your API service configuration.', {
           duration: 5000,
           icon: '🔧'
         });
-      } else {
+      } else if (looksLikeMissingRoute) {
         toast.error(`API endpoint not found: ${error.config?.url}`, { duration: 3000 });
+      } else if (msg) {
+        toast.error(msg, { duration: 4000 });
       }
     }
 

@@ -144,7 +144,7 @@ const MobileMenuButton = ({ isOpen, onClick }) => (
   </button>
 );
 
-// QuizHistory Component (inline for revision) - UPDATED with Download PDF button
+// QuizHistory Component (inline for revision)
 const QuizHistory = ({ attempts, onReview, onDownloadPDF }) => {
   if (!attempts || attempts.length === 0) return null;
   
@@ -757,7 +757,7 @@ export default function LearnerDashboard() {
     }
   };
 
-  // Download quiz review as PDF directly from attempt ID (includes image URLs as text)
+  // Download quiz review as PDF directly from attempt ID
   const downloadQuizReviewPDFById = async (attemptId) => {
     try {
       toast.loading('Generating PDF...', { id: 'quiz-pdf' });
@@ -805,7 +805,7 @@ export default function LearnerDashboard() {
 
       y += 38;
 
-      // Table of answers (include image URLs in question text)
+      // Table of answers
       const tableHeaders = ['#', 'Question', 'Your Answer', 'Correct Answer', 'Marks', 'Explanation'];
       const tableData = attempt.answers.map((q, idx) => [
         (idx + 1).toString(),
@@ -934,7 +934,7 @@ export default function LearnerDashboard() {
                   <th style="padding: 10px; text-align: left; font-size: 12px; font-weight: 600;">Subject</th>
                   <th style="padding: 10px; text-align: center; font-size: 12px; font-weight: 600;">Score</th>
                   <th style="padding: 10px; text-align: center; font-size: 12px; font-weight: 600;">Grade</th>
-                </tr>
+                </table>
               </thead>
               <tbody>
                 ${bestSubjects.map(s => {
@@ -946,7 +946,7 @@ export default function LearnerDashboard() {
                       <td style="padding: 10px; text-align: center;">
                         <span style="display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: ${grade.bgColor}; color: ${grade.color};">${grade.letter}</span>
                       </td>
-                    </tr>
+                    </td>
                   `;
                 }).join('')}
                 <tr style="background: #fef9e6; border-top: 2px solid #c9933a;">
@@ -1075,7 +1075,7 @@ export default function LearnerDashboard() {
         </div>
       </div>
 
-      {/* Mobile Navigation Drawer */}
+      {/* Mobile Navigation Drawer - ADDED Results link */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="fixed inset-0 bg-black/50" onClick={() => setMobileMenuOpen(false)} />
@@ -1136,12 +1136,22 @@ export default function LearnerDashboard() {
               >
                 <span className="mr-2">📅</span> Attendance
               </button>
+              {/* NEW: Results link in mobile menu */}
+              <button
+                onClick={() => {
+                  navigate('/learner/results');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full text-left px-3 py-2.5 rounded-lg mb-1 transition text-gray-700 hover:bg-gray-100"
+              >
+                <span className="mr-2">🏆</span> My Results
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Navigation Bar - Desktop */}
+      {/* Desktop Navigation Bar - ADDED Results tab */}
       <div className="hidden lg:block sticky top-[72px] sm:top-[88px] md:top-[96px] z-20 bg-white border-b border-gray-200 shadow-sm overflow-x-auto">
         <div className="container mx-auto px-3 sm:px-4 lg:px-6">
           <div className="flex gap-0.5 sm:gap-1 py-2 sm:py-3 min-w-max">
@@ -1149,6 +1159,7 @@ export default function LearnerDashboard() {
             <NavItem icon="📝" label="Quizzes" isActive={activeTab === 'quizzes'} onClick={() => setActiveTab('quizzes')} />
             <NavItem icon="📋" label="Reports" isActive={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
             <NavItem icon="📅" label="Attendance" isActive={activeTab === 'attendance'} onClick={() => setActiveTab('attendance')} />
+            <NavItem icon="🏆" label="Results" isActive={false} onClick={() => navigate('/learner/results')} />
           </div>
         </div>
       </div>
@@ -1169,7 +1180,7 @@ export default function LearnerDashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
-              {/* Latest Report Card Section */}
+              {/* Latest Report Card Section (unchanged) */}
               <div className="lg:col-span-2">
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden h-full">
                   <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2.5 sm:py-3 md:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
@@ -1197,6 +1208,7 @@ export default function LearnerDashboard() {
                   <div className="p-3 sm:p-4 md:p-5 lg:p-6">
                     {latestReport && latestReport.subjects && latestReport.subjects.length > 0 ? (
                       <div className="space-y-3 sm:space-y-4">
+                        {/* ... existing report content ... */}
                         <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-3 sm:mb-4">
                           <div className="bg-[#f7f4ef] p-2 sm:p-3 md:p-4 rounded-xl border border-[#d4cfc6]">
                             <p className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs text-gray-500 mb-0.5">Subjects</p>
@@ -1274,9 +1286,9 @@ export default function LearnerDashboard() {
                 </div>
               </div>
 
-              {/* Side Panel */}
+              {/* Side Panel - Quick Actions with Results link added */}
               <div className="space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6">
-                {/* Quiz Performance Card */}
+                {/* Quiz Performance Card (unchanged) */}
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
                   <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
                     <div className="flex items-center justify-between">
@@ -1307,7 +1319,7 @@ export default function LearnerDashboard() {
                   </div>
                 </div>
 
-                {/* Recent Quiz Attempts Card */}
+                {/* Recent Quiz Attempts Card (unchanged) */}
                 {quizAttempts.length > 0 && (
                   <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
                     <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
@@ -1347,7 +1359,7 @@ export default function LearnerDashboard() {
                   </div>
                 )}
 
-                {/* Attendance Summary Card */}
+                {/* Attendance Summary Card (unchanged) */}
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
                   <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
                     <div className="flex items-center justify-between">
@@ -1409,7 +1421,7 @@ export default function LearnerDashboard() {
                   </div>
                 </div>
 
-                {/* Quick Actions Card */}
+                {/* Quick Actions Card - ADDED Results link */}
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
                   <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
                     <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0f1923] flex items-center gap-2">
@@ -1442,6 +1454,22 @@ export default function LearnerDashboard() {
                         <span className="text-xs text-gray-400 group-hover:translate-x-1 transition-transform">→</span>
                       </div>
                     </button>
+                    {/* NEW: Results quick action */}
+                    <button 
+                      onClick={() => navigate('/learner/results')} 
+                      className="w-full text-left p-2.5 sm:p-3 md:p-4 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-all group border border-indigo-200 hover:border-indigo-400"
+                    >
+                      <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-200">
+                          <TrophyIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-indigo-600" />
+                        </div>
+                        <div className="flex-1">
+                          <span className="text-[11px] sm:text-xs md:text-sm font-medium text-indigo-700">My Results</span>
+                          <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5 hidden sm:block">View graded quizzes & feedback</p>
+                        </div>
+                        <span className="text-xs text-gray-400 group-hover:translate-x-1 transition-transform">→</span>
+                      </div>
+                    </button>
                     {stats.reportsCount > 0 && latestReport && (
                       <button onClick={() => downloadReportPDF(latestReport)} className="w-full text-left p-2.5 sm:p-3 md:p-4 bg-[#c9933a]/5 rounded-xl hover:bg-[#c9933a]/10 transition-all group border border-[#c9933a]/30">
                         <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3">
@@ -1458,7 +1486,7 @@ export default function LearnerDashboard() {
                   </div>
                 </div>
 
-                {/* Recent Activity Card */}
+                {/* Recent Activity Card (unchanged) */}
                 {recentActivity.length > 0 && (
                   <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
                     <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
@@ -1491,7 +1519,7 @@ export default function LearnerDashboard() {
           </>
         )}
 
-        {/* Quizzes Tab */}
+        {/* Quizzes Tab (unchanged) */}
         {activeTab === 'quizzes' && (
           <div className="space-y-6">
             {!showQuiz ? (
@@ -1512,7 +1540,7 @@ export default function LearnerDashboard() {
           </div>
         )}
 
-        {/* Reports Tab */}
+        {/* Reports Tab (unchanged) */}
         {activeTab === 'reports' && (
           <>
             <div className="mb-3 sm:mb-4 md:mb-5 lg:mb-6">
@@ -1605,7 +1633,7 @@ export default function LearnerDashboard() {
           </>
         )}
 
-        {/* Attendance Tab */}
+        {/* Attendance Tab (unchanged) */}
         {activeTab === 'attendance' && (
           <>
             <div className="mb-3 sm:mb-4 md:mb-5 lg:mb-6">
@@ -1647,7 +1675,7 @@ export default function LearnerDashboard() {
         )}
       </main>
 
-      {/* View Report Modal */}
+      {/* View Report Modal (unchanged) */}
       {showReportModal && selectedReport && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-3 md:p-4" onClick={() => setShowReportModal(false)}>
           <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -1657,13 +1685,12 @@ export default function LearnerDashboard() {
         </div>
       )}
 
-      {/* Quiz Review Modal */}
+      {/* Quiz Review Modal (unchanged) */}
       {showReviewModal && reviewAttempt && (
         <div className="fixed inset-0 z-50 overflow-y-auto" onClick={() => setShowReviewModal(false)}>
           <div className="flex items-center justify-center min-h-screen p-4">
             <div className="fixed inset-0 bg-black/50" onClick={() => setShowReviewModal(false)}></div>
             <div className="relative bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
-              {/* Header */}
               <div className="sticky top-0 bg-gradient-to-r from-[#0f1923] to-[#1a2d3f] text-white p-4 rounded-t-xl flex justify-between items-center">
                 <div>
                   <h3 className="text-lg font-bold">{reviewAttempt.quiz_title}</h3>
@@ -1689,7 +1716,6 @@ export default function LearnerDashboard() {
                 </div>
               </div>
 
-              {/* Content */}
               <div className="p-6 space-y-6">
                 {reviewLoading && (
                   <div className="flex justify-center py-8">
@@ -1706,8 +1732,6 @@ export default function LearnerDashboard() {
                       <div className="flex justify-between items-start gap-2">
                         <div className="flex-1">
                           <p className="font-bold text-gray-800">Q{idx+1}. {q.question_text || 'Question text not available'}</p>
-                          
-                          {/* Show question diagram if exists */}
                           {q.question_image && (
                             <div className="mt-2 mb-3">
                               <img 
@@ -1717,7 +1741,6 @@ export default function LearnerDashboard() {
                               />
                             </div>
                           )}
-
                           <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                             <div className="space-y-1">
                               <p><span className="font-medium">📝 Your answer:</span> <span className={isCorrect ? 'text-green-700' : 'text-red-700'}>{q.selected_answer_text || 'Not answered'}</span></p>
@@ -1730,8 +1753,6 @@ export default function LearnerDashboard() {
                               </div>
                             )}
                           </div>
-
-                          {/* Show option images for multiple choice (optional) */}
                           {q.question_type === 'multiple_choice' && q.option_images && q.option_images.length > 0 && (
                             <div className="mt-3 text-xs text-gray-500">
                               <span className="font-medium">Option images:</span>
@@ -1756,7 +1777,6 @@ export default function LearnerDashboard() {
                 })}
               </div>
 
-              {/* Footer */}
               <div className="sticky bottom-0 bg-gray-50 p-3 border-t text-center text-xs text-gray-500">
                 Review completed on {new Date(reviewAttempt.completed_at).toLocaleString()}
               </div>
