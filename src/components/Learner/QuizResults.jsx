@@ -2,13 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   DocumentTextIcon, TrophyIcon, EyeIcon, XMarkIcon,
-  CheckCircleIcon, XMarkIcon as XIcon, ChatBubbleLeftRightIcon,
-  ArrowDownTrayIcon
+  CheckCircleIcon, ChatBubbleLeftRightIcon, ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 const QuizResults = () => {
   const [attempts, setAttempts] = useState([]);
@@ -56,12 +53,6 @@ const QuizResults = () => {
       console.error(error);
       toast.error('Failed to load quiz details');
     }
-  };
-
-  const downloadPDF = (attempt) => {
-    // Reuse the PDF generation from LearnerDashboard (or implement a simple version)
-    // For brevity, you can copy the downloadQuizReviewPDFById function from your dashboard.
-    toast.info('PDF download coming soon');
   };
 
   if (loading) {
@@ -180,6 +171,13 @@ const QuizResults = () => {
                       <div className="bg-blue-50 rounded-lg p-3 mt-2">
                         <p className="text-sm text-blue-800">
                           <span className="font-medium">Feedback:</span> {ans.feedback}
+                        </p>
+                      </div>
+                    )}
+                    {ans.explanation && !ans.feedback && (
+                      <div className="bg-gray-50 rounded-lg p-3 mt-2">
+                        <p className="text-sm text-gray-700">
+                          <span className="font-medium">Explanation:</span> {ans.explanation}
                         </p>
                       </div>
                     )}
