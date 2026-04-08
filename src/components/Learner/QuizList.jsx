@@ -1,14 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ClockIcon, 
-  TrophyIcon, 
-  CheckCircleIcon,
-  StarIcon,
-  ShieldCheckIcon,
-  LockClosedIcon,
-  SparklesIcon,
-  AcademicCapIcon,
-  ChatBubbleLeftRightIcon
+  ClockIcon, TrophyIcon, CheckCircleIcon, StarIcon,
+  ShieldCheckIcon, LockClosedIcon, SparklesIcon,
+  AcademicCapIcon, ChatBubbleLeftRightIcon, ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -44,8 +38,7 @@ const QuizList = ({ onStartQuiz }) => {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.data.success) {
-        const quizzesData = response.data.quizzes || [];
-        setQuizzes(quizzesData);
+        setQuizzes(response.data.quizzes || []);
         if (response.data.learner_form) setLearnerForm(response.data.learner_form);
       } else {
         setQuizzes([]);
@@ -72,7 +65,6 @@ const QuizList = ({ onStartQuiz }) => {
             marks_earned: attempt.marks_earned ?? attempt.earned_points ?? 0,
             total_marks: attempt.total_marks ?? attempt.total_points ?? 0,
             percentage: attempt.percentage ?? (attempt.marks_earned && attempt.total_marks ? (attempt.marks_earned / attempt.total_marks * 100) : 0),
-            feedback: attempt.feedback || null
           };
         });
         setQuizHistory(historyMap);
@@ -83,236 +75,159 @@ const QuizList = ({ onStartQuiz }) => {
   };
 
   const getQuizId = (quiz) => {
-    if (quiz.id != null && quiz.id !== '') {
-      if (typeof quiz.id === 'number') return quiz.id;
-      if (typeof quiz.id === 'string' && /^\d+$/.test(quiz.id))
-        return parseInt(quiz.id, 10);
-      return quiz.id;
-    }
-    if (quiz.int_id != null && quiz.int_id !== '') {
-      if (typeof quiz.int_id === 'number') return quiz.int_id;
-      if (typeof quiz.int_id === 'string' && /^\d+$/.test(quiz.int_id))
-        return parseInt(quiz.int_id, 10);
-    }
-    console.warn('⚠️ No quiz ID found. Quiz object:', quiz);
-    return quiz.id;
+    const id = quiz.id || quiz.int_id;
+    return (typeof id === 'string' && /^\d+$/.test(id)) ? parseInt(id, 10) : id;
   };
 
-  const handleStartQuiz = (quiz) => {
-    const quizId = getQuizId(quiz);
-    if (!quizId) {
-      toast.error('Invalid quiz ID');
-      return;
-    }
-    onStartQuiz(quizId);
-  };
-
-  // --- Color helpers ---
   const getSubjectStyles = (subject) => {
-    const subjectName = typeof subject === 'string' ? subject : subject?.name || '';
-    switch(subjectName) {
-      case 'Geography': return 'bg-amber-50 text-amber-700 border-amber-200';
-      case 'English': return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'Biology': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      default: return 'bg-slate-100 text-slate-700 border-slate-200';
+    const name = typeof subject === 'string' ? subject : subject?.name || '';
+    switch(name) {
+      case 'Geography': return 'bg-cyan-50 text-cyan-700 border-cyan-100';
+      case 'English': return 'bg-indigo-50 text-indigo-700 border-indigo-100';
+      case 'Biology': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+      default: return 'bg-slate-50 text-slate-600 border-slate-100';
     }
-  };
-
-  const getSubjectIcon = (subject) => {
-    const subjectName = typeof subject === 'string' ? subject : subject?.name || '';
-    switch(subjectName) {
-      case 'Geography': return '🌍';
-      case 'English': return '📖';
-      case 'Biology': return '🧬';
-      default: return '📘';
-    }
-  };
-
-  const getSubjectName = (quiz) => {
-    if (typeof quiz.subject_name === 'string') return quiz.subject_name;
-    if (quiz.subject && typeof quiz.subject === 'object') return quiz.subject.name;
-    return 'General';
-  };
-
-  const getTargetFormColor = (targetForm) => {
-    if (targetForm === 'Form 4') return 'bg-amber-100 text-amber-800 border-amber-200';
-    if (targetForm === 'Form 3') return 'bg-blue-100 text-blue-800 border-blue-200';
-    if (targetForm === 'Form 2') return 'bg-cyan-100 text-cyan-800 border-cyan-200';
-    if (targetForm === 'Form 1') return 'bg-sky-100 text-sky-800 border-sky-200';
-    return 'bg-gray-100 text-gray-600 border-gray-200';
-  };
-
-  const hasDiagrams = (quiz) => {
-    return quiz.question_image || (quiz.questions && quiz.questions.some(q => q.question_image || q.answer_image));
   };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-20">
-        <div className="relative">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-200 border-t-blue-900"></div>
-          <SparklesIcon className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-4 h-4 text-amber-500 animate-pulse" />
-        </div>
+      <div className="flex flex-col justify-center items-center py-24 gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-100 border-t-[#007FFF]"></div>
+        <p className="text-navy-900 font-medium animate-pulse">Syncing assessments...</p>
       </div>
     );
   }
 
-  if (!quizzes || quizzes.length === 0) {
+  if (!quizzes.length) {
     return (
-      <div className="bg-gradient-to-br from-blue-50 to-white rounded-3xl p-12 text-center border border-blue-100 shadow-sm">
-        <div className="text-6xl mb-4 opacity-60">✨</div>
-        <h3 className="text-sm font-bold text-blue-900 uppercase tracking-widest mb-2">No Quizzes Available</h3>
-        <p className="text-sm text-slate-500">Check back later for new assessments.</p>
-        {learnerForm && (
-          <p className="text-xs text-slate-400 mt-3">Your Form: <span className="font-bold text-amber-600">{learnerForm}</span></p>
-        )}
+      <div className="bg-white rounded-[2rem] p-16 text-center border border-slate-100 shadow-sm">
+        <SparklesIcon className="w-16 h-16 mx-auto text-slate-200 mb-6" />
+        <h3 className="text-2xl font-black text-[#0F172A] mb-2">Hub Empty</h3>
+        <p className="text-slate-500 max-w-xs mx-auto">New assessments will appear here as they are published by your instructors.</p>
       </div>
     );
   }
 
   return (
-    <div className="bg-gradient-to-br from-blue-50 via-white to-cyan-50 min-h-screen py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-10">
-          <div className="flex justify-between items-start flex-wrap gap-4">
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <AcademicCapIcon className="w-8 h-8 text-amber-500" />
-                <h2 className="text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-blue-900 to-cyan-700 bg-clip-text text-transparent">
-                  Assessment Hub
-                </h2>
-              </div>
-              <p className="text-sm text-slate-600 max-w-2xl">
-                Select a module below to begin. Each assessment is designed to challenge and help you grow.
-              </p>
+    <div className="animate-in fade-in duration-700">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+        <div>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-[#007FFF] rounded-xl shadow-lg shadow-blue-500/20">
+              <AcademicCapIcon className="w-6 h-6 text-white" />
             </div>
-            {learnerForm && (
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-800 rounded-full border border-blue-100 shadow-sm">
-                <ShieldCheckIcon className="w-4 h-4 text-amber-500" />
-                <span className="text-xs font-bold uppercase tracking-wide">Form: {learnerForm}</span>
-              </div>
-            )}
+            <h2 className="text-3xl font-black text-[#0F172A] tracking-tight">Assessment Hub</h2>
           </div>
-          <div className="mt-4 h-1 w-20 bg-gradient-to-r from-amber-500 to-blue-600 rounded-full"></div>
+          <p className="text-slate-500 font-medium">Test your mastery across active modules</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {quizzes.map((quiz) => {
-            const quizId = getQuizId(quiz);
-            const subjectName = getSubjectName(quiz);
-            const attempted = quizHistory[quizId];
-            const isCompleted = attempted?.status === 'completed';
-            const score = attempted?.percentage ? Math.round(attempted.percentage) : 0;
-            const isFormRestricted = quiz.target_form && quiz.target_form !== 'All' && quiz.target_form !== learnerForm;
-            const marksDisplay = attempted?.marks_earned !== undefined && attempted?.total_marks
-              ? `${attempted.marks_earned}/${attempted.total_marks} marks`
-              : `${score}%`;
-            
-            return (
-              <div key={quizId} className="group relative bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 overflow-hidden border border-slate-100">
-                {isFormRestricted && !isCompleted && (
-                  <div className="absolute inset-0 bg-blue-900/60 backdrop-blur-sm z-10 flex items-center justify-center rounded-2xl">
-                    <div className="bg-white/95 backdrop-blur-sm rounded-xl p-4 text-center max-w-[90%] shadow-xl border border-amber-200">
-                      <LockClosedIcon className="w-8 h-8 text-amber-500 mx-auto mb-2" />
-                      <p className="text-xs font-bold text-blue-800">Form Restricted</p>
-                      <p className="text-[10px] text-slate-500 mt-1">Available for {quiz.target_form} only</p>
-                    </div>
+        {learnerForm && (
+          <div className="px-5 py-2.5 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
+            <ShieldCheckIcon className="w-5 h-5 text-[#007FFF]" />
+            <div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Your Level</p>
+              <p className="text-sm font-black text-[#0F172A]">{learnerForm}</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Quiz Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {quizzes.map((quiz) => {
+          const quizId = getQuizId(quiz);
+          const attempted = quizHistory[quizId];
+          const isCompleted = attempted?.status === 'completed';
+          const score = Math.round(attempted?.percentage || 0);
+          const isRestricted = quiz.target_form && quiz.target_form !== 'All' && quiz.target_form !== learnerForm;
+
+          return (
+            <div key={quizId} className="group relative bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 flex flex-col overflow-hidden">
+              
+              {/* Restricted Overlay */}
+              {isRestricted && !isCompleted && (
+                <div className="absolute inset-0 bg-[#0F172A]/40 backdrop-blur-[2px] z-20 flex items-center justify-center p-6">
+                  <div className="bg-white rounded-2xl p-6 text-center shadow-xl transform group-hover:scale-105 transition-transform">
+                    <LockClosedIcon className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                    <p className="text-sm font-black text-[#0F172A] mb-1">Access Locked</p>
+                    <p className="text-xs text-slate-500">Requires {quiz.target_form}</p>
                   </div>
-                )}
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-500 via-blue-600 to-cyan-500 transform origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500"></div>
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 flex items-center justify-center text-2xl shadow-inner group-hover:scale-105 transition-transform">
-                        {getSubjectIcon(subjectName)}
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getSubjectStyles(subjectName)}`}>
-                          {subjectName}
-                        </span>
-                        {quiz.target_form && quiz.target_form !== 'All' && (
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase border ${getTargetFormColor(quiz.target_form)}`}>
-                            {quiz.target_form}
-                          </span>
-                        )}
-                      </div>
+                </div>
+              )}
+
+              <div className="p-8 flex flex-col h-full">
+                {/* Subject & Status */}
+                <div className="flex justify-between items-start mb-6">
+                  <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${getSubjectStyles(quiz.subject_name)}`}>
+                    {quiz.subject_name || 'General'}
+                  </span>
+                  {isCompleted && (
+                    <div className="flex items-center gap-1.5 text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter">
+                      <CheckCircleIcon className="w-3.5 h-3.5" />
+                      Passed
                     </div>
-                    {isCompleted && (
-                      <span className="flex items-center gap-1 bg-emerald-50 text-emerald-600 px-2 py-1 rounded-full text-[10px] font-bold">
-                        <CheckCircleIcon className="w-3 h-3" />
-                        Completed
-                      </span>
-                    )}
-                  </div>
-                  <h3 className="text-lg font-bold text-blue-900 mb-2 line-clamp-1 group-hover:text-amber-600 transition-colors">
-                    {quiz.title || 'Untitled Assessment'}
-                  </h3>
-                  <p className="text-sm text-slate-500 mb-4 line-clamp-2">
-                    {quiz.description || 'Challenge your knowledge with this interactive quiz.'}
-                  </p>
-                  <div className="flex items-center justify-between gap-2 mb-5 py-2 border-t border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1 text-slate-500">
-                        <ClockIcon className="w-4 h-4" />
-                        <span className="text-xs font-medium">{quiz.duration || 30}m</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-slate-500">
-                        <TrophyIcon className="w-4 h-4" />
-                        <span className="text-xs font-medium">{quiz.question_count || 0} Qs</span>
-                      </div>
-                      <div className="flex items-center gap-1 text-slate-500">
-                        <StarIcon className="w-4 h-4" />
-                        <span className="text-xs font-medium">{quiz.total_marks || quiz.total_points || 0} marks</span>
-                      </div>
-                    </div>
-                    {hasDiagrams(quiz) && (
-                      <div className="text-amber-500 text-sm" title="Contains diagrams">📷</div>
-                    )}
-                  </div>
-                  {isCompleted ? (
-                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 border border-blue-100">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-bold text-blue-800 uppercase tracking-wide">Your Score</span>
-                        <span className="text-xl font-black text-amber-600">{marksDisplay}</span>
-                      </div>
-                      <div className="h-2 bg-white rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-amber-500 to-blue-600 rounded-full transition-all duration-500" style={{ width: `${score}%` }} />
-                      </div>
-                      {attempted?.feedback && (
-                        <div className="mt-3 flex items-start gap-1 text-xs text-amber-700 bg-amber-50 p-2 rounded-lg">
-                          <ChatBubbleLeftRightIcon className="w-3 h-3 mt-0.5 shrink-0" />
-                          <span>{attempted.feedback}</span>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => handleStartQuiz(quiz)}
-                      disabled={isFormRestricted}
-                      className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl transition-all duration-200 text-sm font-semibold ${
-                        isFormRestricted
-                          ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                          : 'bg-blue-900 text-white hover:bg-blue-800 hover:shadow-lg hover:scale-[1.02] active:scale-95 shadow-md'
-                      }`}
-                    >
-                      {isFormRestricted ? (
-                        <>
-                          <LockClosedIcon className="w-4 h-4" />
-                          Not Available
-                        </>
-                      ) : (
-                        <>
-                          <SparklesIcon className="w-4 h-4 text-amber-400" />
-                          Start Assessment
-                        </>
-                      )}
-                    </button>
                   )}
                 </div>
+
+                {/* Title & Info */}
+                <h3 className="text-xl font-black text-[#0F172A] mb-3 line-clamp-1 group-hover:text-[#007FFF] transition-colors">
+                  {quiz.title}
+                </h3>
+                <p className="text-sm text-slate-500 leading-relaxed line-clamp-2 mb-6 flex-grow">
+                  {quiz.description || "Master the core concepts of this module through this structured assessment."}
+                </p>
+
+                {/* Stats Row */}
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Duration</span>
+                    <div className="flex items-center gap-1 text-[#0F172A] font-bold text-sm">
+                      <ClockIcon className="w-3.5 h-3.5" /> {quiz.duration || 30}m
+                    </div>
+                  </div>
+                  <div className="w-px h-8 bg-slate-100"></div>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Questions</span>
+                    <div className="flex items-center gap-1 text-[#0F172A] font-bold text-sm">
+                      <TrophyIcon className="w-3.5 h-3.5" /> {quiz.question_count || 0}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action / Results Area */}
+                {isCompleted ? (
+                  <div className="bg-[#F8FAFC] rounded-2xl p-5 border border-slate-100">
+                    <div className="flex justify-between items-end mb-3">
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Best Performance</p>
+                        <p className="text-2xl font-black text-[#0F172A]">{score}%</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs font-bold text-[#007FFF]">{attempted.marks_earned}/{attempted.total_marks} Pts</p>
+                      </div>
+                    </div>
+                    <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-[#007FFF] to-[#0F172A] rounded-full transition-all duration-1000"
+                        style={{ width: `${score}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => onStartQuiz(getQuizId(quiz))}
+                    disabled={isRestricted}
+                    className="w-full py-4 bg-[#0F172A] text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-navy-900/20 hover:bg-[#007FFF] hover:shadow-blue-500/30 transition-all duration-300 group/btn"
+                  >
+                    Take Assessment
+                    <ChevronRightIcon className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                  </button>
+                )}
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

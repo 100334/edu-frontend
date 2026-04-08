@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import LearningSpace from './LearningSpace';
 import { 
   DocumentTextIcon, 
   CalendarIcon, 
@@ -18,10 +19,6 @@ import {
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-
-// Import Quiz Components
-import QuizList from './QuizList';
-import QuizTaking from './QuizTaking';
 
 // Theme constants
 const NAVY_DARK = '#0A192F';
@@ -144,64 +141,6 @@ const MobileMenuButton = ({ isOpen, onClick }) => (
   </button>
 );
 
-// QuizHistory Component (inline for revision)
-const QuizHistory = ({ attempts, onReview, onDownloadPDF }) => {
-  if (!attempts || attempts.length === 0) return null;
-  
-  return (
-    <div className="mt-8 bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
-      <div className="px-4 py-3 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
-        <h3 className="font-serif text-base font-bold text-[#0f1923] flex items-center gap-2">
-          <span className="text-purple-600">📚</span>
-          My Quiz History
-        </h3>
-      </div>
-      <div className="divide-y divide-gray-100">
-        {attempts.map((attempt) => (
-          <div key={attempt.id} className="p-4 hover:bg-gray-50 transition">
-            <div className="flex justify-between items-start flex-wrap gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium text-gray-800 text-sm">
-                    {attempt.quiz_title || attempt.subject || 'Quiz'}
-                  </span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${attempt.passed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {attempt.passed ? 'Passed' : 'Failed'}
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-3 mt-1 text-xs text-gray-500">
-                  <span>📅 {new Date(attempt.completed_at || attempt.created_at).toLocaleDateString()}</span>
-                  <span>🎯 Score: {attempt.marks_earned !== undefined ? `${attempt.marks_earned}/${attempt.total_marks}` : `${Math.round(attempt.percentage)}%`}</span>
-                </div>
-                {attempt.feedback && (
-                  <div className="mt-2 text-xs text-amber-600 bg-amber-50 p-2 rounded flex items-start gap-1">
-                    <ChatBubbleLeftRightIcon className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                    <span>{attempt.feedback}</span>
-                  </div>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => onReview(attempt.id)}
-                  className="px-3 py-1.5 text-xs font-medium text-purple-600 border border-purple-300 rounded-lg hover:bg-purple-50 transition"
-                >
-                  Review
-                </button>
-                <button
-                  onClick={() => onDownloadPDF(attempt.id)}
-                  className="px-3 py-1.5 text-xs font-medium text-[#c9933a] border border-[#c9933a] rounded-lg hover:bg-[#c9933a]/10 transition flex items-center gap-1"
-                >
-                  <ArrowDownTrayIcon className="w-3 h-3" /> PDF
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 export default function LearnerDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -213,13 +152,9 @@ export default function LearnerDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // Quiz states
+  // Quiz states (for when a quiz is started from LearningSpace)
   const [showQuiz, setShowQuiz] = useState(null);
   const [quizResult, setQuizResult] = useState(null);
-  const [quizAttempts, setQuizAttempts] = useState([]);
-  const [showReviewModal, setShowReviewModal] = useState(false);
-  const [reviewAttempt, setReviewAttempt] = useState(null);
-  const [reviewLoading, setReviewLoading] = useState(false);
   
   // Data states
   const [reports, setReports] = useState([]);
@@ -332,7 +267,7 @@ export default function LearnerDashboard() {
         toast.error('Could not load attendance');
       }
 
-      // Fetch quiz history
+      // Fetch quiz history (just for stats)
       let quizHistoryData = [];
       let totalQuizScore = 0;
       let quizzesCompleted = 0;
@@ -352,7 +287,6 @@ export default function LearnerDashboard() {
             totalMarks = quizHistoryData.reduce((sum, q) => sum + (q.marks_earned || 0), 0);
             totalPossibleMarks = quizHistoryData.reduce((sum, q) => sum + (q.total_marks || 0), 0);
           }
-          setQuizAttempts(quizHistoryData);
         }
       } catch (quizError) {
         console.error('Error fetching quiz history:', quizError);
@@ -757,102 +691,6 @@ export default function LearnerDashboard() {
     }
   };
 
-  // Download quiz review as PDF directly from attempt ID
-  const downloadQuizReviewPDFById = async (attemptId) => {
-    try {
-      toast.loading('Generating PDF...', { id: 'quiz-pdf' });
-      const res = await api.get(`/api/quiz/attempt/${attemptId}`);
-      if (!res.data.success) throw new Error('Failed to fetch attempt');
-      const attempt = res.data.attempt;
-
-      const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const navy = [26, 35, 126];
-      const gold = [201, 147, 58];
-      const lightGray = [248, 250, 252];
-      const darkGray = [15, 25, 35];
-
-      // Header
-      doc.setFillColor(navy[0], navy[1], navy[2]);
-      doc.rect(0, 0, pageWidth, 45, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.text('PROGRESS SECONDARY SCHOOL', pageWidth / 2, 20, { align: 'center' });
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(220, 220, 220);
-      doc.text('Quiz Review', pageWidth / 2, 30, { align: 'center' });
-      doc.setFontSize(9);
-      doc.setTextColor(gold[0], gold[1], gold[2]);
-      doc.text(attempt.quiz_title || 'Quiz', pageWidth / 2, 38, { align: 'center' });
-
-      // Student info box
-      let y = 55;
-      doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-      doc.roundedRect(15, y, pageWidth - 30, 28, 3, 3, 'F');
-      doc.setDrawColor(gold[0], gold[1], gold[2]);
-      doc.roundedRect(15, y, pageWidth - 30, 28, 3, 3, 'S');
-      doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Student Information', 20, y + 8);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Name: ${user?.name || user?.full_name || 'N/A'}`, 20, y + 16);
-      doc.text(`Registration: ${user?.reg_number || user?.registration_number || 'N/A'}`, 20, y + 22);
-      doc.text(`Date: ${new Date(attempt.completed_at).toLocaleDateString()}`, pageWidth - 65, y + 22);
-      doc.text(`Score: ${attempt.earned_points} / ${attempt.total_points} (${Math.round(attempt.percentage)}%)`, pageWidth - 65, y + 16);
-
-      y += 38;
-
-      // Table of answers
-      const tableHeaders = ['#', 'Question', 'Your Answer', 'Correct Answer', 'Marks', 'Explanation'];
-      const tableData = attempt.answers.map((q, idx) => [
-        (idx + 1).toString(),
-        (q.question_text || 'N/A') + (q.question_image ? `\n[Diagram: ${q.question_image}]` : ''),
-        q.selected_answer_text || 'Not answered',
-        q.correct_answer || 'N/A',
-        `${q.points_obtained}/${q.max_points}`,
-        q.explanation || '—'
-      ]);
-
-      autoTable(doc, {
-        startY: y,
-        margin: { left: 15, right: 15 },
-        head: [tableHeaders],
-        body: tableData,
-        theme: 'grid',
-        headStyles: { fillColor: navy, textColor: 255, fontStyle: 'bold', fontSize: 8, halign: 'center' },
-        bodyStyles: { fontSize: 7, cellPadding: 2 },
-        alternateRowStyles: { fillColor: lightGray },
-        columnStyles: {
-          0: { cellWidth: 10, halign: 'center' },
-          1: { cellWidth: 60 },
-          2: { cellWidth: 35 },
-          3: { cellWidth: 35 },
-          4: { cellWidth: 20, halign: 'center' },
-          5: { cellWidth: 50 }
-        }
-      });
-
-      // Footer
-      const footerY = doc.internal.pageSize.getHeight() - 12;
-      doc.setDrawColor(gold[0], gold[1], gold[2]);
-      doc.line(15, footerY - 5, pageWidth - 15, footerY - 5);
-      doc.setFontSize(7);
-      doc.setTextColor(150, 150, 150);
-      doc.text('This is an official quiz review document.', pageWidth / 2, footerY, { align: 'center' });
-      doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, footerY + 4, { align: 'center' });
-
-      const fileName = `${user?.name?.replace(/\s+/g, '_') || 'student'}_quiz_review_${attempt.quiz_title?.replace(/\s+/g, '_') || 'quiz'}.pdf`;
-      doc.save(fileName);
-      toast.success('Quiz review PDF downloaded!', { id: 'quiz-pdf' });
-    } catch (error) {
-      console.error('PDF error:', error);
-      toast.error('Failed to generate PDF', { id: 'quiz-pdf' });
-    }
-  };
-
   const handleLogout = async () => {
     sessionStorage.removeItem('learnerActiveTab');
     await logout();
@@ -869,25 +707,7 @@ export default function LearnerDashboard() {
     setQuizResult(result);
     setShowQuiz(null);
     toast.success(`Quiz submitted! Score: ${Math.round(result.percentage)}%`);
-    loadDashboardData(); // refresh to show new attempt
-  };
-
-  const handleReviewQuiz = async (attemptId) => {
-    setReviewLoading(true);
-    try {
-      const res = await api.get(`/api/quiz/attempt/${attemptId}`);
-      if (res.data.success) {
-        setReviewAttempt(res.data.attempt);
-        setShowReviewModal(true);
-      } else {
-        toast.error(res.data.message || 'Could not load quiz details');
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error('Failed to load quiz details');
-    } finally {
-      setReviewLoading(false);
-    }
+    loadDashboardData(); // refresh to show new attempt in stats
   };
 
   const getReportHTML = (report) => {
@@ -934,7 +754,7 @@ export default function LearnerDashboard() {
                   <th style="padding: 10px; text-align: left; font-size: 12px; font-weight: 600;">Subject</th>
                   <th style="padding: 10px; text-align: center; font-size: 12px; font-weight: 600;">Score</th>
                   <th style="padding: 10px; text-align: center; font-size: 12px; font-weight: 600;">Grade</th>
-                </table>
+                </tr>
               </thead>
               <tbody>
                 ${bestSubjects.map(s => {
@@ -946,7 +766,7 @@ export default function LearnerDashboard() {
                       <td style="padding: 10px; text-align: center;">
                         <span style="display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: ${grade.bgColor}; color: ${grade.color};">${grade.letter}</span>
                       </td>
-                    </td>
+                    </tr>
                   `;
                 }).join('')}
                 <tr style="background: #fef9e6; border-top: 2px solid #c9933a;">
@@ -1007,7 +827,7 @@ export default function LearnerDashboard() {
     );
   }
 
-  // If showing a quiz
+  // If showing a quiz (from LearningSpace)
   if (showQuiz) {
     return (
       <div className="min-h-screen bg-[#f7f4ef]">
@@ -1075,7 +895,7 @@ export default function LearnerDashboard() {
         </div>
       </div>
 
-      {/* Mobile Navigation Drawer - ADDED Results link */}
+      {/* Mobile Navigation Drawer - Simplified (no Quizzes, no Results) */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="fixed inset-0 bg-black/50" onClick={() => setMobileMenuOpen(false)} />
@@ -1105,14 +925,14 @@ export default function LearnerDashboard() {
               </button>
               <button
                 onClick={() => {
-                  setActiveTab('quizzes');
+                  setActiveTab('learning');
                   setMobileMenuOpen(false);
                 }}
                 className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${
-                  activeTab === 'quizzes' ? 'bg-[#1A237E] text-white' : 'text-gray-700 hover:bg-gray-100'
+                  activeTab === 'learning' ? 'bg-[#1A237E] text-white' : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                <span className="mr-2">📝</span> Quizzes
+                <span className="mr-2">🎓</span> Learning Space
               </button>
               <button
                 onClick={() => {
@@ -1136,36 +956,25 @@ export default function LearnerDashboard() {
               >
                 <span className="mr-2">📅</span> Attendance
               </button>
-              {/* NEW: Results link in mobile menu */}
-              <button
-                onClick={() => {
-                  navigate('/learner/results');
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-left px-3 py-2.5 rounded-lg mb-1 transition text-gray-700 hover:bg-gray-100"
-              >
-                <span className="mr-2">🏆</span> My Results
-              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Desktop Navigation Bar - ADDED Results tab */}
+      {/* Desktop Navigation Bar - Simplified (no Quizzes, no Results) */}
       <div className="hidden lg:block sticky top-[72px] sm:top-[88px] md:top-[96px] z-20 bg-white border-b border-gray-200 shadow-sm overflow-x-auto">
         <div className="container mx-auto px-3 sm:px-4 lg:px-6">
           <div className="flex gap-0.5 sm:gap-1 py-2 sm:py-3 min-w-max">
             <NavItem icon="📊" label="Overview" isActive={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
-            <NavItem icon="📝" label="Quizzes" isActive={activeTab === 'quizzes'} onClick={() => setActiveTab('quizzes')} />
+            <NavItem icon="🎓" label="Learning Space" isActive={activeTab === 'learning'} onClick={() => setActiveTab('learning')} />
             <NavItem icon="📋" label="Reports" isActive={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
             <NavItem icon="📅" label="Attendance" isActive={activeTab === 'attendance'} onClick={() => setActiveTab('attendance')} />
-            <NavItem icon="🏆" label="Results" isActive={false} onClick={() => navigate('/learner/results')} />
           </div>
         </div>
       </div>
 
       <main className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 md:py-8 max-w-7xl">
-        {/* Overview Tab */}
+        {/* Overview Tab (unchanged) */}
         {activeTab === 'overview' && (
           <>
             <div className="mb-3 sm:mb-4 md:mb-6 lg:mb-8">
@@ -1180,7 +989,7 @@ export default function LearnerDashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
-              {/* Latest Report Card Section (unchanged) */}
+              {/* Latest Report Card Section (shortened for brevity, keep as before) */}
               <div className="lg:col-span-2">
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden h-full">
                   <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2.5 sm:py-3 md:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
@@ -1208,7 +1017,6 @@ export default function LearnerDashboard() {
                   <div className="p-3 sm:p-4 md:p-5 lg:p-6">
                     {latestReport && latestReport.subjects && latestReport.subjects.length > 0 ? (
                       <div className="space-y-3 sm:space-y-4">
-                        {/* ... existing report content ... */}
                         <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-3 sm:mb-4">
                           <div className="bg-[#f7f4ef] p-2 sm:p-3 md:p-4 rounded-xl border border-[#d4cfc6]">
                             <p className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs text-gray-500 mb-0.5">Subjects</p>
@@ -1286,142 +1094,9 @@ export default function LearnerDashboard() {
                 </div>
               </div>
 
-              {/* Side Panel - Quick Actions with Results link added */}
+              {/* Side Panel (quick actions etc.) - simplified, keep as before but without quiz actions */}
               <div className="space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6">
-                {/* Quiz Performance Card (unchanged) */}
-                <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
-                  <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
-                    <div className="flex items-center justify-between">
-                      <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0f1923] flex items-center gap-2">
-                        <span className="text-purple-600">📝</span>
-                        Quiz Performance
-                      </h2>
-                      <button onClick={() => setActiveTab('quizzes')} className="text-xs text-purple-600 hover:text-purple-700">Take Quiz →</button>
-                    </div>
-                  </div>
-                  <div className="p-3 sm:p-4 md:p-5 lg:p-6">
-                    <div className="text-center mb-3 sm:mb-4">
-                      <div className="relative inline-flex items-center justify-center mb-2 sm:mb-3">
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full border-4 border-purple-200 flex items-center justify-center">
-                          <span className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-purple-600">{stats.quizScore}</span>
-                        </div>
-                      </div>
-                      <p className="text-[10px] sm:text-xs text-gray-600">{stats.quizzesCompleted > 0 ? `${stats.quizzesCompleted} quiz(zes) completed` : "No quizzes taken yet"}</p>
-                      {stats.totalPossibleMarks > 0 && (
-                        <p className="text-[9px] sm:text-[10px] text-gray-500 mt-1">Total marks: {stats.totalMarks} / {stats.totalPossibleMarks}</p>
-                      )}
-                    </div>
-                    {stats.quizzesCompleted === 0 && (
-                      <button onClick={() => setActiveTab('quizzes')} className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-xs sm:text-sm">
-                        <PlayIcon className="w-4 h-4" /> Start a Quiz
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Recent Quiz Attempts Card (unchanged) */}
-                {quizAttempts.length > 0 && (
-                  <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
-                    <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
-                      <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0f1923] flex items-center gap-2">
-                        <span className="text-purple-600">📊</span>
-                        Recent Quiz Attempts
-                      </h2>
-                    </div>
-                    <div className="divide-y divide-gray-100">
-                      {quizAttempts.slice(0, 3).map((attempt, idx) => (
-                        <div key={attempt.id || idx} className="p-3 sm:p-4">
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <p className="text-xs sm:text-sm font-medium text-gray-800">{attempt.quiz?.title || attempt.subject || 'Quiz'}</p>
-                              <div className="flex flex-wrap gap-2 mt-1">
-                                <span className="text-[9px] sm:text-[10px] font-medium text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
-                                  {attempt.marks_earned !== undefined ? `${attempt.marks_earned}/${attempt.total_marks} marks` : `${Math.round(attempt.percentage || 0)}%`}
-                                </span>
-                                <span className="text-[9px] sm:text-[10px] text-gray-500">{new Date(attempt.completed_at || attempt.created_at).toLocaleDateString()}</span>
-                              </div>
-                              {attempt.feedback && (
-                                <div className="mt-2 flex items-start gap-1 text-[9px] sm:text-[10px] text-amber-600 bg-amber-50 p-1.5 rounded">
-                                  <ChatBubbleLeftRightIcon className="w-3 h-3 mt-0.5" />
-                                  <span>{attempt.feedback}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      {quizAttempts.length > 3 && (
-                        <div className="p-2 text-center">
-                          <button onClick={() => setActiveTab('quizzes')} className="text-[10px] text-purple-600 hover:underline">View all {quizAttempts.length} attempts →</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Attendance Summary Card (unchanged) */}
-                <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
-                  <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
-                    <div className="flex items-center justify-between">
-                      <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0f1923] flex items-center gap-2">
-                        <span className="text-[#c9933a]">📊</span>
-                        <span className="hidden xs:inline">Attendance</span>
-                        <span className="xs:hidden">Attend</span>
-                      </h2>
-                      {attendanceRecords.length > 0 && (
-                        <button onClick={downloadAttendancePDF} className="p-1.5 sm:p-2 text-[#c9933a] hover:bg-[#c9933a]/10 rounded-lg transition-all hover:scale-110 border border-[#d4cfc6] hover:border-[#c9933a]/40" title="Download Attendance PDF">
-                          <ArrowDownTrayIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="p-3 sm:p-4 md:p-5 lg:p-6">
-                    <div className="text-center mb-3 sm:mb-4 md:mb-5 lg:mb-6">
-                      <div className="relative inline-flex items-center justify-center mb-2 sm:mb-3 md:mb-4">
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full border-4 border-[#c9933a]/20 flex items-center justify-center">
-                          <span className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-[#c9933a]">{stats.attendanceRate}</span>
-                        </div>
-                      </div>
-                      <p className="text-[10px] sm:text-xs md:text-sm text-gray-600 bg-[#f7f4ef] py-1 sm:py-1.5 md:py-2 px-2 sm:px-3 md:px-4 rounded-full inline-block border border-[#d4cfc6]">
-                        {getAttendanceMessage()}
-                      </p>
-                    </div>
-                    {stats.totalDays > 0 ? (
-                      <div className="grid grid-cols-3 gap-1.5 sm:gap-2 md:gap-3 mt-2 sm:mt-3 md:mt-4">
-                        <div className="text-center p-1.5 sm:p-2 md:p-3 bg-green-50 rounded-xl border border-green-200">
-                          <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 mx-auto mb-0.5 sm:mb-1 md:mb-2 bg-green-100 rounded-lg flex items-center justify-center">
-                            <CheckCircleIcon className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-green-600" />
-                          </div>
-                          <div className="text-green-600 font-bold text-xs sm:text-sm md:text-base lg:text-xl">{stats.presentCount}</div>
-                          <div className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs text-gray-500">Present</div>
-                        </div>
-                        <div className="text-center p-1.5 sm:p-2 md:p-3 bg-[#c9933a]/5 rounded-xl border border-[#d4cfc6]">
-                          <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 mx-auto mb-0.5 sm:mb-1 md:mb-2 bg-[#c9933a]/10 rounded-lg flex items-center justify-center">
-                            <ClockIcon className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-[#c9933a]" />
-                          </div>
-                          <div className="text-[#c9933a] font-bold text-xs sm:text-sm md:text-base lg:text-xl">{stats.lateCount}</div>
-                          <div className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs text-gray-500">Late</div>
-                        </div>
-                        <div className="text-center p-1.5 sm:p-2 md:p-3 bg-red-50 rounded-xl border border-red-200">
-                          <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 mx-auto mb-0.5 sm:mb-1 md:mb-2 bg-red-100 rounded-lg flex items-center justify-center">
-                            <span className="text-red-600 text-xs sm:text-sm md:text-base lg:text-xl font-bold">✕</span>
-                          </div>
-                          <div className="text-red-600 font-bold text-xs sm:text-sm md:text-base lg:text-xl">{stats.absentCount}</div>
-                          <div className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs text-gray-500">Absent</div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center py-4 sm:py-5 md:py-6 lg:py-8">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 mx-auto mb-1.5 sm:mb-2 md:mb-3 bg-[#f7f4ef] rounded-full flex items-center justify-center border-2 border-[#d4cfc6]">
-                          <CalendarIcon className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-gray-400" />
-                        </div>
-                        <p className="text-[10px] sm:text-xs md:text-sm text-gray-500">No attendance records yet</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Quick Actions Card - ADDED Results link */}
+                {/* Quick Actions Card */}
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
                   <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
                     <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0f1923] flex items-center gap-2">
@@ -1430,14 +1105,14 @@ export default function LearnerDashboard() {
                     </h2>
                   </div>
                   <div className="p-3 sm:p-4 md:p-5 lg:p-6 space-y-2 sm:space-y-2.5 md:space-y-3">
-                    <button onClick={() => setActiveTab('quizzes')} className="w-full text-left p-2.5 sm:p-3 md:p-4 bg-purple-50 rounded-xl hover:bg-purple-100 transition-all group border border-purple-200 hover:border-purple-400">
+                    <button onClick={() => setActiveTab('learning')} className="w-full text-left p-2.5 sm:p-3 md:p-4 bg-purple-50 rounded-xl hover:bg-purple-100 transition-all group border border-purple-200 hover:border-purple-400">
                       <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3">
                         <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200">
                           <BookOpenIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-purple-600" />
                         </div>
                         <div className="flex-1">
-                          <span className="text-[11px] sm:text-xs md:text-sm font-medium text-purple-700 group-hover:text-purple-800 transition-colors">Take a Quiz</span>
-                          <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5 hidden sm:block">Test your knowledge</p>
+                          <span className="text-[11px] sm:text-xs md:text-sm font-medium text-purple-700 group-hover:text-purple-800 transition-colors">Go to Learning Space</span>
+                          <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5 hidden sm:block">Lessons, quizzes & results</p>
                         </div>
                         <span className="text-xs text-gray-400 group-hover:translate-x-1 transition-transform">→</span>
                       </div>
@@ -1450,22 +1125,6 @@ export default function LearnerDashboard() {
                         <div className="flex-1">
                           <span className="text-[11px] sm:text-xs md:text-sm font-medium text-[#0f1923] group-hover:text-[#c9933a] transition-colors">View All Reports</span>
                           <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5 hidden sm:block">Access your complete academic history</p>
-                        </div>
-                        <span className="text-xs text-gray-400 group-hover:translate-x-1 transition-transform">→</span>
-                      </div>
-                    </button>
-                    {/* NEW: Results quick action */}
-                    <button 
-                      onClick={() => navigate('/learner/results')} 
-                      className="w-full text-left p-2.5 sm:p-3 md:p-4 bg-indigo-50 rounded-xl hover:bg-indigo-100 transition-all group border border-indigo-200 hover:border-indigo-400"
-                    >
-                      <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3">
-                        <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-200">
-                          <TrophyIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-indigo-600" />
-                        </div>
-                        <div className="flex-1">
-                          <span className="text-[11px] sm:text-xs md:text-sm font-medium text-indigo-700">My Results</span>
-                          <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5 hidden sm:block">View graded quizzes & feedback</p>
                         </div>
                         <span className="text-xs text-gray-400 group-hover:translate-x-1 transition-transform">→</span>
                       </div>
@@ -1486,7 +1145,7 @@ export default function LearnerDashboard() {
                   </div>
                 </div>
 
-                {/* Recent Activity Card (unchanged) */}
+                {/* Recent Activity Card (keep as before) */}
                 {recentActivity.length > 0 && (
                   <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
                     <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
@@ -1519,25 +1178,9 @@ export default function LearnerDashboard() {
           </>
         )}
 
-        {/* Quizzes Tab (unchanged) */}
-        {activeTab === 'quizzes' && (
-          <div className="space-y-6">
-            {!showQuiz ? (
-              <>
-                <QuizList onStartQuiz={(quizId) => setShowQuiz(quizId)} />
-                <QuizHistory 
-                  attempts={quizAttempts} 
-                  onReview={handleReviewQuiz} 
-                  onDownloadPDF={downloadQuizReviewPDFById} 
-                />
-              </>
-            ) : (
-              <div>
-                <button onClick={() => setShowQuiz(null)} className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition">← Back to Quizzes</button>
-                <QuizTaking quizId={showQuiz} onComplete={handleQuizComplete} />
-              </div>
-            )}
-          </div>
+        {/* Learning Space Tab */}
+        {activeTab === 'learning' && (
+          <LearningSpace onStartQuiz={(quizId) => setShowQuiz(quizId)} />
         )}
 
         {/* Reports Tab (unchanged) */}
@@ -1681,106 +1324,6 @@ export default function LearnerDashboard() {
           <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div dangerouslySetInnerHTML={{ __html: getReportHTML(selectedReport) }} />
             <div className="mt-3 sm:mt-4 flex justify-end"><button onClick={() => setShowReportModal(false)} className="px-3 sm:px-4 py-1.5 sm:py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition text-xs sm:text-sm">Close</button></div>
-          </div>
-        </div>
-      )}
-
-      {/* Quiz Review Modal (unchanged) */}
-      {showReviewModal && reviewAttempt && (
-        <div className="fixed inset-0 z-50 overflow-y-auto" onClick={() => setShowReviewModal(false)}>
-          <div className="flex items-center justify-center min-h-screen p-4">
-            <div className="fixed inset-0 bg-black/50" onClick={() => setShowReviewModal(false)}></div>
-            <div className="relative bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
-              <div className="sticky top-0 bg-gradient-to-r from-[#0f1923] to-[#1a2d3f] text-white p-4 rounded-t-xl flex justify-between items-center">
-                <div>
-                  <h3 className="text-lg font-bold">{reviewAttempt.quiz_title}</h3>
-                  <div className="flex gap-3 mt-1 text-sm">
-                    <span className="bg-white/20 px-2 py-0.5 rounded">Score: {reviewAttempt.earned_points} / {reviewAttempt.total_points}</span>
-                    <span className="bg-white/20 px-2 py-0.5 rounded">Percentage: {Math.round(reviewAttempt.percentage)}%</span>
-                    <span className={`px-2 py-0.5 rounded ${reviewAttempt.passed ? 'bg-green-600' : 'bg-red-600'}`}>
-                      {reviewAttempt.passed ? 'Passed' : 'Failed'}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => downloadQuizReviewPDFById(reviewAttempt.id)}
-                    className="p-2 bg-[#c9933a] rounded-lg hover:bg-[#b5822e] transition"
-                    title="Download PDF"
-                  >
-                    <ArrowDownTrayIcon className="w-5 h-5 text-white" />
-                  </button>
-                  <button onClick={() => setShowReviewModal(false)} className="p-2 hover:bg-white/20 rounded-lg transition">
-                    <XMarkIcon className="w-5 h-5" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-6 space-y-6">
-                {reviewLoading && (
-                  <div className="flex justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#c9933a]"></div>
-                  </div>
-                )}
-                {!reviewLoading && reviewAttempt.answers && reviewAttempt.answers.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">No answer details available.</div>
-                )}
-                {!reviewLoading && reviewAttempt.answers && reviewAttempt.answers.map((q, idx) => {
-                  const isCorrect = q.is_correct;
-                  return (
-                    <div key={idx} className={`border rounded-lg p-4 transition ${isCorrect ? 'border-green-200 bg-green-50/30' : 'border-red-200 bg-red-50/30'}`}>
-                      <div className="flex justify-between items-start gap-2">
-                        <div className="flex-1">
-                          <p className="font-bold text-gray-800">Q{idx+1}. {q.question_text || 'Question text not available'}</p>
-                          {q.question_image && (
-                            <div className="mt-2 mb-3">
-                              <img 
-                                src={q.question_image} 
-                                alt="Question diagram" 
-                                className="max-h-48 rounded-lg border border-gray-200 object-contain bg-gray-50 p-2"
-                              />
-                            </div>
-                          )}
-                          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                            <div className="space-y-1">
-                              <p><span className="font-medium">📝 Your answer:</span> <span className={isCorrect ? 'text-green-700' : 'text-red-700'}>{q.selected_answer_text || 'Not answered'}</span></p>
-                              <p><span className="font-medium">✅ Correct answer:</span> {q.correct_answer || 'Not provided'}</p>
-                              <p><span className="font-medium">🏆 Marks:</span> {q.points_obtained} / {q.max_points}</p>
-                            </div>
-                            {q.explanation && (
-                              <div className="bg-gray-100 p-2 rounded text-xs text-gray-700">
-                                💡 <span className="font-medium">Explanation:</span> {q.explanation}
-                              </div>
-                            )}
-                          </div>
-                          {q.question_type === 'multiple_choice' && q.option_images && q.option_images.length > 0 && (
-                            <div className="mt-3 text-xs text-gray-500">
-                              <span className="font-medium">Option images:</span>
-                              <div className="flex gap-2 mt-1 flex-wrap">
-                                {q.option_images.map((img, i) => img && (
-                                  <img key={i} src={img} alt={`Option ${i+1}`} className="w-12 h-12 object-cover rounded border" />
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          {isCorrect ? (
-                            <CheckCircleIcon className="w-6 h-6 text-green-600" />
-                          ) : (
-                            <XMarkIcon className="w-6 h-6 text-red-500" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="sticky bottom-0 bg-gray-50 p-3 border-t text-center text-xs text-gray-500">
-                Review completed on {new Date(reviewAttempt.completed_at).toLocaleString()}
-              </div>
-            </div>
           </div>
         </div>
       )}

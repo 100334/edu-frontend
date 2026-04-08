@@ -6,22 +6,30 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        ink: '#0a192f',
-        paper: '#f0f4f8',
-        cream: '#e1e8f0',
-        azure: '#007fff',
-        'azure-light': '#3399ff',
-        'azure-dark': '#005bb5',
-        red: '#e63946',
-        green: '#2dce89',
-        muted: '#64748b',
-        border: '#cbd5e1',
-        teal: '#1a6b6b',
-        'teal-light': '#2a9090',
+        // Navy & Ice White Palette
+        ink: '#0F172A',          // Deep Navy Blue (Primary Text/Headers)
+        navy: {
+          700: '#1E293B',
+          800: '#0F172A',
+          900: '#020617',
+        },
+        paper: '#F8FAFC',         // Ice White (Main Background)
+        cream: '#F1F5F9',         // Subtle Slate (Card Backgrounds)
+        azure: {
+          DEFAULT: '#007FFF',     // Azure (Primary Action)
+          light: '#3399FF',
+          dark: '#005BB5',
+        },
+        // Semantic Colors
+        red: '#E63946',
+        green: '#10B981',
+        muted: '#64748B',         // Slate Gray (Secondary Text)
+        border: '#E2E8F0',        // Ice Blue Border
       },
       fontFamily: {
+        // Overriding sans to prioritize Calibri
+        sans: ['Calibri', 'Candara', 'Segoe UI', 'Optima', 'Arial', 'sans-serif'],
         serif: ['Playfair Display', 'serif'],
-        sans: ['DM Sans', 'sans-serif'],
         mono: ['DM Mono', 'monospace'],
       },
       animation: {
