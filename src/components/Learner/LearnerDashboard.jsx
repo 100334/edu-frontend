@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import LearningSpace from './LearningSpace';
+import QuizTaking from './QuizTaking';
 import { 
   DocumentTextIcon, 
   CalendarIcon, 
@@ -14,7 +15,8 @@ import {
   PlayIcon,
   TrophyIcon,
   BookOpenIcon,
-  ChatBubbleLeftRightIcon
+  ChatBubbleLeftRightIcon,
+  BellIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
@@ -52,7 +54,7 @@ const getGradeFromScore = (score, form = 'Form 1') => {
 // Calculate average
 const calculateAverage = (subjects, form = 'Form 1') => {
   if (!subjects || subjects.length === 0) return 0;
-  const validSubjects = subjects.filter(s => s && s.score !== undefined && s.score !== null && s.score !== '');
+  const validSubjects = subjects.filter(s => s && s.score !== undefined && s.score !== null);
   if (validSubjects.length === 0) return 0;
   const sum = validSubjects.reduce((acc, subj) => acc + (subj.score || 0), 0);
   return Math.round(sum / validSubjects.length);
@@ -63,7 +65,6 @@ const calculateTotalPoints = (subjects, form) => {
   if (!subjects || subjects.length === 0) return 0;
   const isUpperForm = form === 'Form 3' || form === 'Form 4';
   if (!isUpperForm) return null;
-  
   const totalPoints = subjects.reduce((sum, subject) => {
     const grade = getGradeFromScore(subject.score, form);
     return sum + (grade.points || 0);
@@ -75,12 +76,10 @@ const calculateTotalPoints = (subjects, form) => {
 const calculateBestSubjects = (subjects, form) => {
   const isUpperForm = form === 'Form 3' || form === 'Form 4';
   if (!isUpperForm) return subjects;
-  
   const subjectsWithPoints = subjects.map(subject => ({
     ...subject,
     points: getGradeFromScore(subject.score, form).points
   }));
-  
   const sortedSubjects = [...subjectsWithPoints].sort((a, b) => a.points - b.points);
   return sortedSubjects.slice(0, Math.min(6, sortedSubjects.length));
 };
@@ -152,13 +151,15 @@ export default function LearnerDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // Quiz states (for when a quiz is started from LearningSpace)
+  // Quiz states
   const [showQuiz, setShowQuiz] = useState(null);
   const [quizResult, setQuizResult] = useState(null);
   
   // Data states
   const [reports, setReports] = useState([]);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
+  // ✅ FIX: Added quizAttempts state
+  const [quizAttempts, setQuizAttempts] = useState([]);
   const [stats, setStats] = useState({
     reportsCount: 0,
     attendanceRate: '—',
@@ -186,6 +187,12 @@ export default function LearnerDashboard() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
 
+  // Notification states
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const notificationRef = useRef(null);
+
   // Save active tab to sessionStorage
   useEffect(() => {
     sessionStorage.setItem('learnerActiveTab', activeTab);
@@ -195,6 +202,7 @@ export default function LearnerDashboard() {
     setMobileMenuOpen(false);
   }, [activeTab]);
 
+  // Extract filter options from reports
   const extractFilters = useCallback((reportsData) => {
     const years = new Set();
     const assessments = new Set();
@@ -211,6 +219,7 @@ export default function LearnerDashboard() {
     if (sortedAssessments.length > 0 && !selectedAssessment) setSelectedAssessment(sortedAssessments[0]);
   }, [selectedYear, selectedAssessment]);
 
+  // Apply filters to reports
   useEffect(() => {
     if (reports.length > 0) {
       let filtered = [...reports];
@@ -233,6 +242,7 @@ export default function LearnerDashboard() {
     }
   }, [reports, selectedYear, selectedAssessment]);
 
+  // Main dashboard data loader
   const loadDashboardData = useCallback(async () => {
     if (!user?.id) {
       setLoading(false);
@@ -267,7 +277,7 @@ export default function LearnerDashboard() {
         toast.error('Could not load attendance');
       }
 
-      // Fetch quiz history (just for stats)
+      // Fetch quiz history (for stats AND for quizAttempts)
       let quizHistoryData = [];
       let totalQuizScore = 0;
       let quizzesCompleted = 0;
@@ -277,6 +287,8 @@ export default function LearnerDashboard() {
         const quizRes = await api.get('/api/quiz/history');
         if (quizRes.data && quizRes.data.attempts) {
           quizHistoryData = quizRes.data.attempts;
+          // ✅ Store in quizAttempts state for the "Recent Quiz Attempts" section
+          setQuizAttempts(quizHistoryData);
           quizzesCompleted = quizHistoryData.length;
           if (quizzesCompleted > 0) {
             const validScores = quizHistoryData.filter(q => q.percentage > 0);
@@ -287,9 +299,12 @@ export default function LearnerDashboard() {
             totalMarks = quizHistoryData.reduce((sum, q) => sum + (q.marks_earned || 0), 0);
             totalPossibleMarks = quizHistoryData.reduce((sum, q) => sum + (q.total_marks || 0), 0);
           }
+        } else {
+          setQuizAttempts([]);
         }
       } catch (quizError) {
         console.error('Error fetching quiz history:', quizError);
+        setQuizAttempts([]);
       }
 
       // Process reports
@@ -402,9 +417,43 @@ export default function LearnerDashboard() {
     }
   }, [user, extractFilters]);
 
+  // Fetch notifications
+  const fetchNotifications = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await api.get('/api/learner/notifications', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.success) {
+        const notifs = res.data.notifications || [];
+        setNotifications(notifs);
+        setUnreadCount(notifs.filter(n => !n.is_read).length);
+      }
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    }
+  };
+
+  const markAsRead = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      await api.put(`/api/learner/notifications/${id}/read`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchNotifications();
+    } catch (error) {
+      console.error('Failed to mark as read:', error);
+    }
+  };
+
+  // Initial data load and notification polling
   useEffect(() => {
-    if (user?.id) loadDashboardData();
-    else {
+    if (user?.id) {
+      loadDashboardData();
+      fetchNotifications();
+      const interval = setInterval(fetchNotifications, 30000);
+      return () => clearInterval(interval);
+    } else {
       const timer = setTimeout(() => {
         if (!user?.id) {
           setLoading(false);
@@ -415,6 +464,18 @@ export default function LearnerDashboard() {
     }
   }, [user, loadDashboardData]);
 
+  // Close notification dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Helper functions
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -707,7 +768,7 @@ export default function LearnerDashboard() {
     setQuizResult(result);
     setShowQuiz(null);
     toast.success(`Quiz submitted! Score: ${Math.round(result.percentage)}%`);
-    loadDashboardData(); // refresh to show new attempt in stats
+    loadDashboardData();
   };
 
   const getReportHTML = (report) => {
@@ -827,7 +888,6 @@ export default function LearnerDashboard() {
     );
   }
 
-  // If showing a quiz (from LearningSpace)
   if (showQuiz) {
     return (
       <div className="min-h-screen bg-[#f7f4ef]">
@@ -874,6 +934,50 @@ export default function LearnerDashboard() {
                   <div className="text-[8px] sm:text-[10px] text-white/70">Student</div>
                 </div>
               </div>
+              {/* Notification Bell */}
+              <div className="relative" ref={notificationRef}>
+                <button
+                  onClick={() => setShowNotifications(!showNotifications)}
+                  className="relative w-8 h-8 sm:w-10 sm:h-10 bg-white/10 backdrop-blur rounded-xl flex items-center justify-center hover:bg-white/20 transition"
+                >
+                  <BellIcon className="w-5 h-5 text-white" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
+                    <div className="px-4 py-2 border-b border-gray-200 font-semibold text-gray-700">
+                      Notifications
+                    </div>
+                    <div className="max-h-96 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <div className="px-4 py-6 text-center text-gray-500 text-sm">No notifications</div>
+                      ) : (
+                        notifications.map(notif => (
+                          <div
+                            key={notif.id}
+                            className={`px-4 py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${!notif.is_read ? 'bg-blue-50' : ''}`}
+                            onClick={() => {
+                              markAsRead(notif.id);
+                              if (notif.type === 'quiz_graded') {
+                                navigate('/learner/results');
+                              }
+                              setShowNotifications(false);
+                            }}
+                          >
+                            <div className="font-medium text-gray-800 text-sm">{notif.title}</div>
+                            <div className="text-xs text-gray-500 mt-0.5">{notif.message}</div>
+                            <div className="text-xs text-gray-400 mt-1">{new Date(notif.created_at).toLocaleString()}</div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
               <MobileMenuButton isOpen={mobileMenuOpen} onClick={() => setMobileMenuOpen(!mobileMenuOpen)} />
               <button
                 onClick={handleLogout}
@@ -895,7 +999,7 @@ export default function LearnerDashboard() {
         </div>
       </div>
 
-      {/* Mobile Navigation Drawer - Simplified (no Quizzes, no Results) */}
+      {/* Mobile Navigation Drawer */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="fixed inset-0 bg-black/50" onClick={() => setMobileMenuOpen(false)} />
@@ -912,48 +1016,16 @@ export default function LearnerDashboard() {
               </div>
             </div>
             <div className="p-2">
-              <button
-                onClick={() => {
-                  setActiveTab('overview');
-                  setMobileMenuOpen(false);
-                }}
-                className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${
-                  activeTab === 'overview' ? 'bg-[#1A237E] text-white' : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
+              <button onClick={() => { setActiveTab('overview'); setMobileMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${activeTab === 'overview' ? 'bg-[#1A237E] text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
                 <span className="mr-2">📊</span> Overview
               </button>
-              <button
-                onClick={() => {
-                  setActiveTab('learning');
-                  setMobileMenuOpen(false);
-                }}
-                className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${
-                  activeTab === 'learning' ? 'bg-[#1A237E] text-white' : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
+              <button onClick={() => { setActiveTab('learning'); setMobileMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${activeTab === 'learning' ? 'bg-[#1A237E] text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
                 <span className="mr-2">🎓</span> Learning Space
               </button>
-              <button
-                onClick={() => {
-                  setActiveTab('reports');
-                  setMobileMenuOpen(false);
-                }}
-                className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${
-                  activeTab === 'reports' ? 'bg-[#1A237E] text-white' : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
+              <button onClick={() => { setActiveTab('reports'); setMobileMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${activeTab === 'reports' ? 'bg-[#1A237E] text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
                 <span className="mr-2">📋</span> Reports
               </button>
-              <button
-                onClick={() => {
-                  setActiveTab('attendance');
-                  setMobileMenuOpen(false);
-                }}
-                className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${
-                  activeTab === 'attendance' ? 'bg-[#1A237E] text-white' : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
+              <button onClick={() => { setActiveTab('attendance'); setMobileMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${activeTab === 'attendance' ? 'bg-[#1A237E] text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
                 <span className="mr-2">📅</span> Attendance
               </button>
             </div>
@@ -961,7 +1033,7 @@ export default function LearnerDashboard() {
         </div>
       )}
 
-      {/* Desktop Navigation Bar - Simplified (no Quizzes, no Results) */}
+      {/* Desktop Navigation Bar */}
       <div className="hidden lg:block sticky top-[72px] sm:top-[88px] md:top-[96px] z-20 bg-white border-b border-gray-200 shadow-sm overflow-x-auto">
         <div className="container mx-auto px-3 sm:px-4 lg:px-6">
           <div className="flex gap-0.5 sm:gap-1 py-2 sm:py-3 min-w-max">
@@ -974,7 +1046,7 @@ export default function LearnerDashboard() {
       </div>
 
       <main className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 md:py-8 max-w-7xl">
-        {/* Overview Tab (unchanged) */}
+        {/* Overview Tab */}
         {activeTab === 'overview' && (
           <>
             <div className="mb-3 sm:mb-4 md:mb-6 lg:mb-8">
@@ -989,7 +1061,7 @@ export default function LearnerDashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
-              {/* Latest Report Card Section (shortened for brevity, keep as before) */}
+              {/* Latest Report Card Section */}
               <div className="lg:col-span-2">
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden h-full">
                   <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2.5 sm:py-3 md:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
@@ -1094,9 +1166,139 @@ export default function LearnerDashboard() {
                 </div>
               </div>
 
-              {/* Side Panel (quick actions etc.) - simplified, keep as before but without quiz actions */}
+              {/* Side Panel */}
               <div className="space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6">
-                {/* Quick Actions Card */}
+                <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
+                  <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
+                    <div className="flex items-center justify-between">
+                      <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0f1923] flex items-center gap-2">
+                        <span className="text-purple-600">📝</span>
+                        Quiz Performance
+                      </h2>
+                      <button onClick={() => setActiveTab('learning')} className="text-xs text-purple-600 hover:text-purple-700">Take Quiz →</button>
+                    </div>
+                  </div>
+                  <div className="p-3 sm:p-4 md:p-5 lg:p-6">
+                    <div className="text-center mb-3 sm:mb-4">
+                      <div className="relative inline-flex items-center justify-center mb-2 sm:mb-3">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full border-4 border-purple-200 flex items-center justify-center">
+                          <span className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-purple-600">{stats.quizScore}</span>
+                        </div>
+                      </div>
+                      <p className="text-[10px] sm:text-xs text-gray-600">{stats.quizzesCompleted > 0 ? `${stats.quizzesCompleted} quiz(zes) completed` : "No quizzes taken yet"}</p>
+                      {stats.totalPossibleMarks > 0 && (
+                        <p className="text-[9px] sm:text-[10px] text-gray-500 mt-1">Total marks: {stats.totalMarks} / {stats.totalPossibleMarks}</p>
+                      )}
+                    </div>
+                    {stats.quizzesCompleted === 0 && (
+                      <button onClick={() => setActiveTab('learning')} className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-xs sm:text-sm">
+                        <PlayIcon className="w-4 h-4" /> Start a Quiz
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* ✅ Recent Quiz Attempts - Now uses quizAttempts state */}
+                {stats.quizzesCompleted > 0 && quizAttempts.length > 0 && (
+                  <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
+                    <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
+                      <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0f1923] flex items-center gap-2">
+                        <span className="text-purple-600">📊</span>
+                        Recent Quiz Attempts
+                      </h2>
+                    </div>
+                    <div className="divide-y divide-gray-100">
+                      {quizAttempts.slice(0, 3).map((attempt, idx) => (
+                        <div key={attempt.id || idx} className="p-3 sm:p-4">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <p className="text-xs sm:text-sm font-medium text-gray-800">{attempt.quiz?.title || attempt.subject || 'Quiz'}</p>
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                <span className="text-[9px] sm:text-[10px] font-medium text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">
+                                  {attempt.marks_earned !== undefined ? `${attempt.marks_earned}/${attempt.total_marks} marks` : `${Math.round(attempt.percentage || 0)}%`}
+                                </span>
+                                <span className="text-[9px] sm:text-[10px] text-gray-500">{new Date(attempt.completed_at || attempt.created_at).toLocaleDateString()}</span>
+                              </div>
+                              {attempt.feedback && (
+                                <div className="mt-2 flex items-start gap-1 text-[9px] sm:text-[10px] text-amber-600 bg-amber-50 p-1.5 rounded">
+                                  <ChatBubbleLeftRightIcon className="w-3 h-3 mt-0.5" />
+                                  <span>{attempt.feedback}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {quizAttempts.length > 3 && (
+                        <div className="p-2 text-center">
+                          <button onClick={() => setActiveTab('learning')} className="text-[10px] text-purple-600 hover:underline">View all {quizAttempts.length} attempts →</button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
+                  <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
+                    <div className="flex items-center justify-between">
+                      <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0f1923] flex items-center gap-2">
+                        <span className="text-[#c9933a]">📊</span>
+                        <span className="hidden xs:inline">Attendance</span>
+                        <span className="xs:hidden">Attend</span>
+                      </h2>
+                      {attendanceRecords.length > 0 && (
+                        <button onClick={downloadAttendancePDF} className="p-1.5 sm:p-2 text-[#c9933a] hover:bg-[#c9933a]/10 rounded-lg transition-all hover:scale-110 border border-[#d4cfc6] hover:border-[#c9933a]/40" title="Download Attendance PDF">
+                          <ArrowDownTrayIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="p-3 sm:p-4 md:p-5 lg:p-6">
+                    <div className="text-center mb-3 sm:mb-4 md:mb-5 lg:mb-6">
+                      <div className="relative inline-flex items-center justify-center mb-2 sm:mb-3 md:mb-4">
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full border-4 border-[#c9933a]/20 flex items-center justify-center">
+                          <span className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-[#c9933a]">{stats.attendanceRate}</span>
+                        </div>
+                      </div>
+                      <p className="text-[10px] sm:text-xs md:text-sm text-gray-600 bg-[#f7f4ef] py-1 sm:py-1.5 md:py-2 px-2 sm:px-3 md:px-4 rounded-full inline-block border border-[#d4cfc6]">
+                        {getAttendanceMessage()}
+                      </p>
+                    </div>
+                    {stats.totalDays > 0 ? (
+                      <div className="grid grid-cols-3 gap-1.5 sm:gap-2 md:gap-3 mt-2 sm:mt-3 md:mt-4">
+                        <div className="text-center p-1.5 sm:p-2 md:p-3 bg-green-50 rounded-xl border border-green-200">
+                          <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 mx-auto mb-0.5 sm:mb-1 md:mb-2 bg-green-100 rounded-lg flex items-center justify-center">
+                            <CheckCircleIcon className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-green-600" />
+                          </div>
+                          <div className="text-green-600 font-bold text-xs sm:text-sm md:text-base lg:text-xl">{stats.presentCount}</div>
+                          <div className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs text-gray-500">Present</div>
+                        </div>
+                        <div className="text-center p-1.5 sm:p-2 md:p-3 bg-[#c9933a]/5 rounded-xl border border-[#d4cfc6]">
+                          <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 mx-auto mb-0.5 sm:mb-1 md:mb-2 bg-[#c9933a]/10 rounded-lg flex items-center justify-center">
+                            <ClockIcon className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-[#c9933a]" />
+                          </div>
+                          <div className="text-[#c9933a] font-bold text-xs sm:text-sm md:text-base lg:text-xl">{stats.lateCount}</div>
+                          <div className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs text-gray-500">Late</div>
+                        </div>
+                        <div className="text-center p-1.5 sm:p-2 md:p-3 bg-red-50 rounded-xl border border-red-200">
+                          <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 mx-auto mb-0.5 sm:mb-1 md:mb-2 bg-red-100 rounded-lg flex items-center justify-center">
+                            <span className="text-red-600 text-xs sm:text-sm md:text-base lg:text-xl font-bold">✕</span>
+                          </div>
+                          <div className="text-red-600 font-bold text-xs sm:text-sm md:text-base lg:text-xl">{stats.absentCount}</div>
+                          <div className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs text-gray-500">Absent</div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 sm:py-5 md:py-6 lg:py-8">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 mx-auto mb-1.5 sm:mb-2 md:mb-3 bg-[#f7f4ef] rounded-full flex items-center justify-center border-2 border-[#d4cfc6]">
+                          <CalendarIcon className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-gray-400" />
+                        </div>
+                        <p className="text-[10px] sm:text-xs md:text-sm text-gray-500">No attendance records yet</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
                   <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
                     <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0f1923] flex items-center gap-2">
@@ -1145,7 +1347,6 @@ export default function LearnerDashboard() {
                   </div>
                 </div>
 
-                {/* Recent Activity Card (keep as before) */}
                 {recentActivity.length > 0 && (
                   <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
                     <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
@@ -1183,7 +1384,7 @@ export default function LearnerDashboard() {
           <LearningSpace onStartQuiz={(quizId) => setShowQuiz(quizId)} />
         )}
 
-        {/* Reports Tab (unchanged) */}
+        {/* Reports Tab */}
         {activeTab === 'reports' && (
           <>
             <div className="mb-3 sm:mb-4 md:mb-5 lg:mb-6">
@@ -1276,7 +1477,7 @@ export default function LearnerDashboard() {
           </>
         )}
 
-        {/* Attendance Tab (unchanged) */}
+        {/* Attendance Tab */}
         {activeTab === 'attendance' && (
           <>
             <div className="mb-3 sm:mb-4 md:mb-5 lg:mb-6">
@@ -1318,7 +1519,7 @@ export default function LearnerDashboard() {
         )}
       </main>
 
-      {/* View Report Modal (unchanged) */}
+      {/* View Report Modal */}
       {showReportModal && selectedReport && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-2 sm:p-3 md:p-4" onClick={() => setShowReportModal(false)}>
           <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
