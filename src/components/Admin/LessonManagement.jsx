@@ -26,7 +26,7 @@ const LessonManagement = () => {
     target_form: 'All',
     quiz_id: '',
     display_order: 0,
-    resource_type: 'video'      // default to video lesson
+    resource_type: 'video'
   });
 
   const loadDashboardData = useCallback(async () => {
@@ -51,18 +51,16 @@ const LessonManagement = () => {
 
   useEffect(() => { loadDashboardData(); }, [loadDashboardData]);
 
-  // Upload to R2 with folder based on resource type
   const uploadToR2 = async (file, type) => {
     if (!file) return;
     setUploadStatus(prev => ({ ...prev, [type]: true }));
     try {
       const token = localStorage.getItem('token');
-      // Determine folder based on resource_type
       const folder = formData.resource_type === 'video' ? 'videos' : 'pdfs';
       const { data } = await api.post('/api/admin/r2-upload-url', {
         fileName: file.name,
         fileType: file.type,
-        folder: folder,           // send folder to backend
+        folder: folder,
       }, { headers: { Authorization: `Bearer ${token}` } });
 
       const upload = await fetch(data.uploadUrl, {
@@ -73,7 +71,6 @@ const LessonManagement = () => {
 
       if (!upload.ok) throw new Error('Upload failed');
       const fileUrl = data.fileUrl || data.publicUrl || data.url;
-      // Update the correct URL field based on resource type
       const urlField = formData.resource_type === 'video' ? 'video_url' : 'pdf_url';
       setFormData(prev => ({ ...prev, [urlField]: fileUrl }));
       toast.success(`${type.toUpperCase()} uploaded to ${folder}/`);
@@ -92,7 +89,6 @@ const LessonManagement = () => {
       const method = editingLesson ? 'put' : 'post';
       const url = editingLesson ? `/api/admin/lessons/${editingLesson.id}` : '/api/admin/lessons';
       
-      // Build payload: only include the URL for the selected resource type
       const payload = {
         title: formData.title,
         description: formData.description,
@@ -102,7 +98,6 @@ const LessonManagement = () => {
         resource_type: formData.resource_type,
         quiz_id: formData.quiz_id || null,
       };
-      // Add the appropriate URL field
       if (formData.resource_type === 'video') {
         payload.video_url = formData.video_url;
       } else {
@@ -123,7 +118,26 @@ const LessonManagement = () => {
     }
   };
 
-  // Reset form when opening modal
+  // 🗑️ DELETE LESSON FUNCTION
+  const handleDeleteLesson = async (lesson) => {
+    if (!window.confirm(`Delete "${lesson.title}" permanently? This action cannot be undone.`)) return;
+    try {
+      const token = localStorage.getItem('token');
+      const response = await api.delete(`/api/admin/lessons/${lesson.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.success) {
+        toast.success('Lesson deleted successfully');
+        loadDashboardData(); // refresh the list
+      } else {
+        toast.error(response.data.message || 'Failed to delete lesson');
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || 'Failed to delete lesson');
+    }
+  };
+
   const openModal = (lesson = null) => {
     if (lesson) {
       setEditingLesson(lesson);
@@ -217,7 +231,7 @@ const LessonManagement = () => {
                     <button onClick={() => openModal(lesson)} className="p-2 text-slate-400 hover:text-azure transition-colors">
                       <PencilIcon className="w-5 h-5" />
                     </button>
-                    <button className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                    <button onClick={() => handleDeleteLesson(lesson)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
                       <TrashIcon className="w-5 h-5" />
                     </button>
                   </td>
@@ -228,7 +242,7 @@ const LessonManagement = () => {
         </div>
       </div>
 
-      {/* Editor Modal */}
+      {/* Editor Modal (unchanged) */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl border border-[#D4AF37]/20 flex flex-col overflow-hidden animate-in zoom-in-95">
@@ -312,7 +326,7 @@ const LessonManagement = () => {
                 </div>
               </div>
 
-              {/* Dynamic Resource Upload based on Resource Type */}
+              {/* Dynamic Resource Upload */}
               <div className="space-y-4">
                 <p className="text-[11px] font-black text-azure uppercase tracking-widest">Upload Resource</p>
                 <div className="p-4 rounded-xl border-2 border-azure/20 bg-slate-50/50">
