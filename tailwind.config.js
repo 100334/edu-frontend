@@ -12,6 +12,11 @@ module.exports = {
           700: '#1E293B',
           800: '#0F172A',
           900: '#020617',
+          darkblue: '#0A192F',
+          azure: '#007FFF',
+          teal: '#14B8A6',
+        emerald: '#10B981',
+          ice: '#F0F9FF'
         },
         paper: '#F8FAFC',         // Ice White (Main Background)
         cream: '#F1F5F9',         // Subtle Slate (Card Backgrounds)

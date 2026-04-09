@@ -8,7 +8,8 @@ import {
   ArrowRightCircleIcon,
   ChevronLeftIcon,
   HomeIcon,
-  XMarkIcon
+  XMarkIcon,
+  ArchiveBoxIcon          // <-- new icon for past papers
 } from '@heroicons/react/24/solid';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -24,25 +25,65 @@ const LearningSpace = ({ onStartQuiz }) => {
   const folderConfig = [
     { id: 'videos', name: 'Video Lessons', type: 'video', icon: VideoCameraIcon, folderColor: '#0EA5E9' },
     { id: 'pdfs', name: 'Lesson Notes', type: 'pdf', icon: DocumentTextIcon, folderColor: '#10B981' },
-    { id: 'quizzes', name: 'Assessments', type: 'quiz', icon: BookOpenIcon, folderColor: '#FBBF24' }
+    { id: 'quizzes', name: 'Assessments', type: 'quiz', icon: BookOpenIcon, folderColor: '#FBBF24' },
+    { id: 'pastpapers', name: 'Solved Past Papers', type: 'pastpaper', icon: ArchiveBoxIcon, folderColor: '#8B5CF6' }  // new folder
   ];
 
-  useEffect(() => { loadLessons(); }, []);
+  useEffect(() => { loadLessonsAndQuizzes(); }, []);
 
-  const loadLessons = async () => {
+  const loadLessonsAndQuizzes = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await api.get('/api/learner/lessons', { headers: { Authorization: `Bearer ${token}` } });
-      if (res.data.success) {
-        const lessons = res.data.lessons || [];
-        setFolders(folderConfig.map(f => ({
-          ...f,
-          lessons: lessons.filter(l => l.resource_type === f.type),
-        })));
+      const headers = { Authorization: `Bearer ${token}` };
+
+      // Fetch lessons (video, PDF, past papers)
+      const lessonsRes = await api.get('/api/learner/lessons', { headers });
+      // Fetch quizzes (for Assessments folder)
+      const quizzesRes = await api.get('/api/quiz/quizzes', { headers });
+
+      if (!lessonsRes.data.success) {
+        throw new Error('Failed to load lessons');
       }
-    } catch (e) { toast.error('System error.'); } 
-    finally { setLoading(false); }
+
+      const lessons = lessonsRes.data.lessons || [];
+      let quizzes = [];
+      if (quizzesRes.data.success) {
+        quizzes = quizzesRes.data.quizzes || [];
+      } else {
+        console.warn('Quiz API returned error, continuing without quizzes');
+      }
+
+      // Convert quizzes to lesson format
+      const quizItems = quizzes.map(quiz => ({
+        id: quiz.id,
+        title: quiz.title,
+        description: quiz.description,
+        quiz_id: quiz.id,
+        resource_type: 'quiz',
+        video_url: null,
+        pdf_url: null,
+        target_form: quiz.target_form
+      }));
+
+      // Group lessons by resource_type
+      const grouped = {
+        video: lessons.filter(l => l.resource_type === 'video'),
+        pdf: lessons.filter(l => l.resource_type === 'pdf'),
+        quiz: quizItems,
+        pastpaper: lessons.filter(l => l.resource_type === 'pastpaper')
+      };
+
+      setFolders(folderConfig.map(f => ({
+        ...f,
+        lessons: grouped[f.type] || [],
+      })));
+    } catch (error) {
+      console.error('Error loading learning space:', error);
+      toast.error('Could not load learning materials');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const activeFolder = folders.find(f => f.id === activeFolderId);
@@ -85,7 +126,7 @@ const LearningSpace = ({ onStartQuiz }) => {
       <div className="flex-1 p-6 overflow-y-auto">
         {!activeFolderId ? (
           /* ROOT LEVEL */
-          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-8">
             {folders.map(f => (
               <div key={f.id} onClick={() => setActiveFolderId(f.id)} className="group flex flex-col items-center cursor-pointer">
                 <div className="relative w-16 h-12 mb-2 transition-transform group-active:scale-95">
@@ -103,7 +144,15 @@ const LearningSpace = ({ onStartQuiz }) => {
               {activeFolder.lessons.map(lesson => (
                 <div 
                   key={lesson.id}
-                  onClick={() => activeFolder.type === 'quiz' ? onStartQuiz(lesson.quiz_id) : (setSelectedLesson(lesson), setShowLessonModal(true))}
+                  onClick={() => {
+                    if (activeFolder.type === 'quiz') {
+                      if (onStartQuiz) onStartQuiz(lesson.quiz_id);
+                      else console.warn('onStartQuiz not provided');
+                    } else {
+                      setSelectedLesson(lesson);
+                      setShowLessonModal(true);
+                    }
+                  }}
                   className={`group flex items-center p-3 rounded border transition-all cursor-pointer ${
                     viewMode === 'grid' 
                     ? 'flex-col text-center border-slate-100 hover:bg-sky-50' 
@@ -111,14 +160,22 @@ const LearningSpace = ({ onStartQuiz }) => {
                   }`}
                 >
                   <div className={`${viewMode === 'grid' ? 'mb-2' : 'mr-3'}`}>
-                    <activeFolder.icon className={`w-5 h-5 ${activeFolder.id === 'videos' ? 'text-sky-500' : activeFolder.id === 'pdfs' ? 'text-emerald-500' : 'text-amber-500'}`} />
+                    <activeFolder.icon className={`w-5 h-5 ${activeFolder.id === 'videos' ? 'text-sky-500' : activeFolder.id === 'pdfs' ? 'text-emerald-500' : activeFolder.id === 'quizzes' ? 'text-amber-500' : 'text-purple-500'}`} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="text-sm font-medium text-slate-700 truncate">{lesson.title}</h4>
+                    {viewMode === 'grid' && lesson.description && (
+                      <p className="text-[10px] text-slate-400 mt-1 line-clamp-2">{lesson.description}</p>
+                    )}
                   </div>
                   {viewMode === 'list' && <ArrowRightCircleIcon className="w-4 h-4 text-slate-300 group-hover:text-slate-500" />}
                 </div>
               ))}
+              {activeFolder.lessons.length === 0 && (
+                <div className="col-span-full text-center py-12 text-slate-400 text-sm">
+                  This folder is empty.
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -135,10 +192,16 @@ const LearningSpace = ({ onStartQuiz }) => {
               </button>
             </div>
             <div className="flex-1 bg-slate-900">
-               <iframe 
-                  src={selectedLesson.resource_type === 'video' ? selectedLesson.video_url?.replace('watch?v=', 'embed/') : selectedLesson.pdf_url} 
-                  className="w-full h-full border-none" 
-               />
+              <iframe 
+                src={selectedLesson.resource_type === 'video' 
+                  ? (selectedLesson.video_url?.includes('youtube.com') 
+                      ? selectedLesson.video_url.replace('watch?v=', 'embed/') 
+                      : selectedLesson.video_url)
+                  : selectedLesson.pdf_url
+                } 
+                className="w-full h-full border-none" 
+                title={selectedLesson.title}
+              />
             </div>
           </div>
         </div>
