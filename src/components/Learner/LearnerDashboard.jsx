@@ -149,7 +149,6 @@ export default function LearnerDashboard() {
   });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   
   // Quiz states
   const [showQuiz, setShowQuiz] = useState(null);
@@ -158,7 +157,6 @@ export default function LearnerDashboard() {
   // Data states
   const [reports, setReports] = useState([]);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
-  // ✅ FIX: Added quizAttempts state
   const [quizAttempts, setQuizAttempts] = useState([]);
   const [stats, setStats] = useState({
     reportsCount: 0,
@@ -242,17 +240,21 @@ export default function LearnerDashboard() {
     }
   }, [reports, selectedYear, selectedAssessment]);
 
-  // Main dashboard data loader
+  // Main dashboard data loader - no error state, just logs and uses empty defaults
   const loadDashboardData = useCallback(async () => {
     if (!user?.id) {
       setLoading(false);
       return;
     }
     setLoading(true);
-    setError(null);
+    
+    // Initialize with empty defaults
+    let reportsData = [];
+    let attendanceData = { stats: {}, records: [] };
+    let quizHistoryData = [];
+    
     try {
-      // Fetch reports
-      let reportsData = [];
+      // Fetch reports - fail silently
       try {
         const reportsRes = await api.get('/api/learner/reports');
         if (reportsRes.data && Array.isArray(reportsRes.data)) reportsData = reportsRes.data;
@@ -260,11 +262,10 @@ export default function LearnerDashboard() {
         else if (reportsRes.data?.reports && Array.isArray(reportsRes.data.reports)) reportsData = reportsRes.data.reports;
       } catch (reportError) {
         console.error('Error fetching reports:', reportError);
-        toast.error('Could not load reports');
+        // Keep empty array
       }
       
-      // Fetch attendance
-      let attendanceData = { stats: {}, records: [] };
+      // Fetch attendance - fail silently
       try {
         const attendanceRes = await api.get('/api/learner/attendance');
         if (attendanceRes.data) {
@@ -274,31 +275,15 @@ export default function LearnerDashboard() {
         }
       } catch (attendanceError) {
         console.error('Error fetching attendance:', attendanceError);
-        toast.error('Could not load attendance');
+        // Keep default
       }
 
-      // Fetch quiz history (for stats AND for quizAttempts)
-      let quizHistoryData = [];
-      let totalQuizScore = 0;
-      let quizzesCompleted = 0;
-      let totalMarks = 0;
-      let totalPossibleMarks = 0;
+      // Fetch quiz history - fail silently
       try {
         const quizRes = await api.get('/api/quiz/history');
         if (quizRes.data && quizRes.data.attempts) {
           quizHistoryData = quizRes.data.attempts;
-          // ✅ Store in quizAttempts state for the "Recent Quiz Attempts" section
           setQuizAttempts(quizHistoryData);
-          quizzesCompleted = quizHistoryData.length;
-          if (quizzesCompleted > 0) {
-            const validScores = quizHistoryData.filter(q => q.percentage > 0);
-            if (validScores.length > 0) {
-              const avgQuizScore = validScores.reduce((sum, q) => sum + (q.percentage || 0), 0) / validScores.length;
-              totalQuizScore = Math.round(avgQuizScore);
-            }
-            totalMarks = quizHistoryData.reduce((sum, q) => sum + (q.marks_earned || 0), 0);
-            totalPossibleMarks = quizHistoryData.reduce((sum, q) => sum + (q.total_marks || 0), 0);
-          }
         } else {
           setQuizAttempts([]);
         }
@@ -306,7 +291,7 @@ export default function LearnerDashboard() {
         console.error('Error fetching quiz history:', quizError);
         setQuizAttempts([]);
       }
-
+      
       // Process reports
       const processedReports = reportsData.map(report => ({
         ...report,
@@ -347,6 +332,20 @@ export default function LearnerDashboard() {
           const avg = Math.round(totalScore / allValidSubjects.length);
           averageScore = `${avg}%`;
         }
+      }
+
+      let totalQuizScore = 0;
+      let quizzesCompleted = quizHistoryData.length;
+      let totalMarks = 0;
+      let totalPossibleMarks = 0;
+      if (quizzesCompleted > 0) {
+        const validScores = quizHistoryData.filter(q => q.percentage > 0);
+        if (validScores.length > 0) {
+          const avgQuizScore = validScores.reduce((sum, q) => sum + (q.percentage || 0), 0) / validScores.length;
+          totalQuizScore = Math.round(avgQuizScore);
+        }
+        totalMarks = quizHistoryData.reduce((sum, q) => sum + (q.marks_earned || 0), 0);
+        totalPossibleMarks = quizHistoryData.reduce((sum, q) => sum + (q.total_marks || 0), 0);
       }
 
       setStats({
@@ -408,10 +407,10 @@ export default function LearnerDashboard() {
       });
       const sortedActivity = activity.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
       setRecentActivity(sortedActivity);
+      
     } catch (error) {
-      console.error('Dashboard error:', error);
-      setError(error.message);
-      toast.error('Failed to load dashboard data');
+      console.error('Dashboard data loading error:', error);
+      // Do NOT set error state - just keep empty defaults
     } finally {
       setLoading(false);
     }
@@ -870,23 +869,7 @@ export default function LearnerDashboard() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: ICE_WHITE }}>
-        <div className="text-center max-w-md p-4 sm:p-6 md:p-8 bg-white rounded-xl shadow-lg mx-3">
-          <div className="text-4xl sm:text-5xl md:text-6xl mb-3 sm:mb-4">⚠️</div>
-          <h2 className="text-base sm:text-lg md:text-xl font-bold text-[#0f1923] mb-2">Error Loading Dashboard</h2>
-          <p className="text-xs sm:text-sm md:text-base text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={() => loadDashboardData()}
-            className="px-3 sm:px-4 py-1.5 sm:py-2 bg-[#c9933a] text-white rounded-lg hover:bg-[#b5822e] transition text-xs sm:text-sm"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // No error state rendered – always show dashboard with whatever data loaded
 
   if (showQuiz) {
     return (
@@ -1198,7 +1181,7 @@ export default function LearnerDashboard() {
                   </div>
                 </div>
 
-                {/* ✅ Recent Quiz Attempts - Now uses quizAttempts state */}
+                {/* Recent Quiz Attempts */}
                 {stats.quizzesCompleted > 0 && quizAttempts.length > 0 && (
                   <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
                     <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
