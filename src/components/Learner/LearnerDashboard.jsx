@@ -22,13 +22,15 @@ import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-// Theme constants
-const NAVY_DARK = '#0A192F';
-const NAVY_PRIMARY = '#1A237E';
-const AZURE_ACCENT = '#00B0FF';
-const ICE_WHITE = '#F8FAFC';
+// NEW THEME CONSTANTS
+const DARK_BLUE = '#0A2540';       // Dark blue for headers
+const NAVY_PRIMARY = '#1E3A5F';    // Secondary dark blue
+const AZURE_ACCENT = '#00B4D8';    // Bright azure for highlights
+const TEAL_ACCENT = '#2A9D8F';     // Teal for primary actions
+const ICE_WHITE = '#F8FAFC';       // Light background
+const PAPER = '#F5F2EB';           // Paper off-white for cards/containers
 
-// Grade classification function with dual system for Forms 3-4
+// Grade classification function with dual system for Forms 3-4 (unchanged logic, updated colors)
 const getGradeFromScore = (score, form = 'Form 1') => {
   const isUpperForm = form === 'Form 3' || form === 'Form 4';
   
@@ -36,22 +38,22 @@ const getGradeFromScore = (score, form = 'Form 1') => {
     if (score >= 85) return { letter: 'A*', points: 1, description: 'Distinction', color: '#1e7e4a', bgColor: '#e8f5e9' };
     else if (score >= 75) return { letter: 'A', points: 2, description: 'Distinction', color: '#2a6e2a', bgColor: '#e8f5e9' };
     else if (score >= 65) return { letter: 'B', points: 3, description: 'Credit', color: '#2a9090', bgColor: '#e0f2f1' };
-    else if (score >= 56) return { letter: 'C', points: 4, description: 'Credit', color: '#c9933a', bgColor: '#fff3e0' };
-    else if (score >= 50) return { letter: 'D', points: 5, description: 'Credit', color: '#f39c12', bgColor: '#ffe6cc' };
-    else if (score >= 45) return { letter: 'E', points: 6, description: 'Pass', color: '#f39c12', bgColor: '#ffe6cc' };
-    else if (score >= 40) return { letter: 'F', points: 7, description: 'Pass', color: '#f39c12', bgColor: '#ffe6cc' };
-    else if (score >= 35) return { letter: 'G', points: 8, description: 'Pass', color: '#f39c12', bgColor: '#ffe6cc' };
+    else if (score >= 56) return { letter: 'C', points: 4, description: 'Credit', color: '#2A9D8F', bgColor: '#e0f2f1' }; // Teal
+    else if (score >= 50) return { letter: 'D', points: 5, description: 'Credit', color: '#00B4D8', bgColor: '#e0f7fa' };
+    else if (score >= 45) return { letter: 'E', points: 6, description: 'Pass', color: '#00B4D8', bgColor: '#e0f7fa' };
+    else if (score >= 40) return { letter: 'F', points: 7, description: 'Pass', color: '#00B4D8', bgColor: '#e0f7fa' };
+    else if (score >= 35) return { letter: 'G', points: 8, description: 'Pass', color: '#00B4D8', bgColor: '#e0f7fa' };
     else return { letter: 'U', points: 9, description: 'Fail', color: '#c0392b', bgColor: '#ffebee' };
   } else {
     if (score >= 75) return { letter: 'A', description: 'Excellent', points: null, color: '#1e7e4a', bgColor: '#e8f5e9' };
     else if (score >= 65) return { letter: 'B', description: 'Very good', points: null, color: '#2a9090', bgColor: '#e0f2f1' };
-    else if (score >= 55) return { letter: 'C', description: 'Good', points: null, color: '#c9933a', bgColor: '#fff3e0' };
-    else if (score >= 40) return { letter: 'D', description: 'Pass', points: null, color: '#f39c12', bgColor: '#ffe6cc' };
+    else if (score >= 55) return { letter: 'C', description: 'Good', points: null, color: '#2A9D8F', bgColor: '#e0f2f1' };
+    else if (score >= 40) return { letter: 'D', description: 'Pass', points: null, color: '#00B4D8', bgColor: '#e0f7fa' };
     else return { letter: 'F', description: 'Need improvement', points: null, color: '#c0392b', bgColor: '#ffebee' };
   }
 };
 
-// Calculate average
+// Calculate average (unchanged)
 const calculateAverage = (subjects, form = 'Form 1') => {
   if (!subjects || subjects.length === 0) return 0;
   const validSubjects = subjects.filter(s => s && s.score !== undefined && s.score !== null);
@@ -60,7 +62,7 @@ const calculateAverage = (subjects, form = 'Form 1') => {
   return Math.round(sum / validSubjects.length);
 };
 
-// Calculate total points for Form 3/4
+// Calculate total points for Form 3/4 (unchanged)
 const calculateTotalPoints = (subjects, form) => {
   if (!subjects || subjects.length === 0) return 0;
   const isUpperForm = form === 'Form 3' || form === 'Form 4';
@@ -72,7 +74,7 @@ const calculateTotalPoints = (subjects, form) => {
   return totalPoints;
 };
 
-// Calculate best 6 subjects for Form 3/4
+// Calculate best 6 subjects (unchanged)
 const calculateBestSubjects = (subjects, form) => {
   const isUpperForm = form === 'Form 3' || form === 'Form 4';
   if (!isUpperForm) return subjects;
@@ -84,7 +86,7 @@ const calculateBestSubjects = (subjects, form) => {
   return sortedSubjects.slice(0, Math.min(6, sortedSubjects.length));
 };
 
-// Get overall grade based on total points
+// Get overall grade based on total points (unchanged)
 const getOverallGradeFromPoints = (totalPoints) => {
   if (totalPoints <= 2) return { description: 'Distinction' };
   if (totalPoints <= 6) return { description: 'Credit' };
@@ -92,7 +94,7 @@ const getOverallGradeFromPoints = (totalPoints) => {
   return { description: 'Fail' };
 };
 
-// Get final status
+// Get final status (unchanged)
 const getFinalStatus = (englishPassed, totalPoints) => {
   if (!englishPassed) return { status: 'FAIL', message: 'Failed English - Overall Result: FAIL', color: '#c0392b' };
   if (totalPoints <= 2) return { status: 'DISTINCTION', message: 'Distinction - Excellent Performance!', color: '#1e7e4a' };
@@ -101,23 +103,23 @@ const getFinalStatus = (englishPassed, totalPoints) => {
   return { status: 'FAIL', message: 'Fail - Needs Improvement', color: '#c0392b' };
 };
 
-// Stat Card Component
+// Stat Card Component (updated colors)
 const StatCard = ({ emoji, value, label }) => (
   <div className="bg-white rounded-xl border border-[#d4cfc6] p-2.5 sm:p-3 md:p-4 lg:p-6 shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5">
     <div className="text-xl sm:text-2xl md:text-3xl mb-1 sm:mb-2">{emoji}</div>
-    <div className="text-base sm:text-lg md:text-xl lg:text-3xl font-bold text-[#0f1923] mb-0.5 sm:mb-1 truncate">{value}</div>
+    <div className="text-base sm:text-lg md:text-xl lg:text-3xl font-bold text-[#0A2540] mb-0.5 sm:mb-1 truncate">{value}</div>
     <div className="text-[10px] sm:text-xs md:text-sm text-gray-500 font-semibold uppercase tracking-wide">{label}</div>
   </div>
 );
 
-// Navigation Item Component
+// Navigation Item Component (updated active color to teal/dark blue)
 const NavItem = ({ icon, label, isActive, onClick }) => (
   <button
     onClick={onClick}
     className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 md:px-5 py-2 sm:py-2.5 rounded-lg font-medium transition-all duration-200 text-xs sm:text-sm md:text-base whitespace-nowrap touch-manipulation ${
       isActive
-        ? 'bg-[#1A237E] text-white shadow-md'
-        : 'text-gray-600 hover:bg-gray-100 hover:text-[#1A237E]'
+        ? 'bg-[#2A9D8F] text-white shadow-md'
+        : 'text-gray-600 hover:bg-gray-100 hover:text-[#2A9D8F]'
     }`}
   >
     <span className="text-sm sm:text-base md:text-lg">{icon}</span>
@@ -125,7 +127,7 @@ const NavItem = ({ icon, label, isActive, onClick }) => (
   </button>
 );
 
-// Mobile Menu Button
+// Mobile Menu Button (unchanged)
 const MobileMenuButton = ({ isOpen, onClick }) => (
   <button
     onClick={onClick}
@@ -240,7 +242,7 @@ export default function LearnerDashboard() {
     }
   }, [reports, selectedYear, selectedAssessment]);
 
-  // Main dashboard data loader - no error state, just logs and uses empty defaults
+  // Main dashboard data loader (unchanged logic, only color changes later)
   const loadDashboardData = useCallback(async () => {
     if (!user?.id) {
       setLoading(false);
@@ -248,13 +250,11 @@ export default function LearnerDashboard() {
     }
     setLoading(true);
     
-    // Initialize with empty defaults
     let reportsData = [];
     let attendanceData = { stats: {}, records: [] };
     let quizHistoryData = [];
     
     try {
-      // Fetch reports - fail silently
       try {
         const reportsRes = await api.get('/api/learner/reports');
         if (reportsRes.data && Array.isArray(reportsRes.data)) reportsData = reportsRes.data;
@@ -262,10 +262,8 @@ export default function LearnerDashboard() {
         else if (reportsRes.data?.reports && Array.isArray(reportsRes.data.reports)) reportsData = reportsRes.data.reports;
       } catch (reportError) {
         console.error('Error fetching reports:', reportError);
-        // Keep empty array
       }
       
-      // Fetch attendance - fail silently
       try {
         const attendanceRes = await api.get('/api/learner/attendance');
         if (attendanceRes.data) {
@@ -275,10 +273,8 @@ export default function LearnerDashboard() {
         }
       } catch (attendanceError) {
         console.error('Error fetching attendance:', attendanceError);
-        // Keep default
       }
 
-      // Fetch quiz history - fail silently
       try {
         const quizRes = await api.get('/api/quiz/history');
         if (quizRes.data && quizRes.data.attempts) {
@@ -292,7 +288,6 @@ export default function LearnerDashboard() {
         setQuizAttempts([]);
       }
       
-      // Process reports
       const processedReports = reportsData.map(report => ({
         ...report,
         academic_year: report.academic_year || (report.created_at ? new Date(report.created_at).getFullYear() : new Date().getFullYear()),
@@ -302,7 +297,6 @@ export default function LearnerDashboard() {
       setReports(processedReports);
       extractFilters(processedReports);
 
-      // Process attendance
       const processedAttendance = (attendanceData.records || []).map(record => ({
         id: record.id,
         date: record.date,
@@ -313,7 +307,6 @@ export default function LearnerDashboard() {
       }));
       setAttendanceRecords(processedAttendance);
 
-      // Calculate stats
       const reportsCount = processedReports.length;
       const attendanceRate = attendanceData.stats?.rate ? `${attendanceData.stats.rate}%` : 
                             attendanceData.stats?.percentage ? `${attendanceData.stats.percentage}%` : '—';
@@ -362,7 +355,6 @@ export default function LearnerDashboard() {
         totalPossibleMarks
       });
 
-      // Build recent activity
       const activity = [];
       if (processedReports.length > 0) {
         const latest = [...processedReports].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
@@ -373,7 +365,7 @@ export default function LearnerDashboard() {
           description: `Your ${latest.term || 'latest'} report (${latest.academic_year}) is ready`,
           date: latest.created_at || new Date().toISOString(),
           icon: '📋',
-          color: 'text-[#c9933a]'
+          color: 'text-[#2A9D8F]'
         });
       }
       if (quizHistoryData.length > 0) {
@@ -402,7 +394,7 @@ export default function LearnerDashboard() {
           description: `Marked as ${record.status} on ${new Date(record.date).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}`,
           date: record.date,
           icon: record.status === 'present' ? '✅' : record.status === 'late' ? '⏰' : '❌',
-          color: record.status === 'present' ? 'text-green-600' : record.status === 'late' ? 'text-[#c9933a]' : 'text-red-500'
+          color: record.status === 'present' ? 'text-green-600' : record.status === 'late' ? 'text-[#2A9D8F]' : 'text-red-500'
         });
       });
       const sortedActivity = activity.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
@@ -410,13 +402,12 @@ export default function LearnerDashboard() {
       
     } catch (error) {
       console.error('Dashboard data loading error:', error);
-      // Do NOT set error state - just keep empty defaults
     } finally {
       setLoading(false);
     }
   }, [user, extractFilters]);
 
-  // Fetch notifications
+  // Fetch notifications (unchanged)
   const fetchNotifications = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -445,7 +436,6 @@ export default function LearnerDashboard() {
     }
   };
 
-  // Initial data load and notification polling
   useEffect(() => {
     if (user?.id) {
       loadDashboardData();
@@ -463,7 +453,6 @@ export default function LearnerDashboard() {
     }
   }, [user, loadDashboardData]);
 
-  // Close notification dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
@@ -474,7 +463,6 @@ export default function LearnerDashboard() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Helper functions
   const getGreeting = () => {
     const hour = new Date().getHours();
     if (hour < 12) return 'Good morning';
@@ -499,6 +487,7 @@ export default function LearnerDashboard() {
     return 'Please focus on regular attendance ⚠️';
   };
 
+  // PDF Generation - Updated colors to teal/dark blue
   const downloadReportPDF = (report) => {
     if (!report) {
       toast.error('No report data available');
@@ -514,18 +503,21 @@ export default function LearnerDashboard() {
       const bestSubjects = isUpperForm ? calculateBestSubjects(validSubjects, report.form) : validSubjects;
       const avgScore = calculateAverage(validSubjects);
       const avgGrade = getGradeFromScore(avgScore, report.form);
-      const navy = [26, 35, 126];
-      const gold = [201, 147, 58];
-      const lightGray = [248, 250, 252];
+      // New colors
+      const darkBlue = [10, 37, 64];      // #0A2540
+      const teal = [42, 157, 143];        // #2A9D8F
+      const azure = [0, 180, 216];        // #00B4D8
+      const lightGray = [248, 250, 252];  // ICE_WHITE
+      const paper = [245, 242, 235];      // PAPER
       const darkGray = [15, 25, 35];
       let currentY = 10;
-      doc.setFillColor(navy[0], navy[1], navy[2]);
+      doc.setFillColor(darkBlue[0], darkBlue[1], darkBlue[2]);
       doc.rect(0, 0, pageWidth, 50, 'F');
-      doc.setFillColor(gold[0], gold[1], gold[2]);
+      doc.setFillColor(teal[0], teal[1], teal[2]);
       doc.rect(0, 47, pageWidth, 3, 'F');
       doc.setFillColor(255, 255, 255);
       doc.circle(25, 25, 8, 'F');
-      doc.setTextColor(navy[0], navy[1], navy[2]);
+      doc.setTextColor(darkBlue[0], darkBlue[1], darkBlue[2]);
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.text('P', 25, 29, { align: 'center' });
@@ -539,12 +531,12 @@ export default function LearnerDashboard() {
       doc.text('Scholastica, Excellentia et Disciplina', pageWidth / 2, 30, { align: 'center' });
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(gold[0], gold[1], gold[2]);
+      doc.setTextColor(teal[0], teal[1], teal[2]);
       doc.text('ACADEMIC REPORT CARD', pageWidth / 2, 40, { align: 'center' });
       currentY = 58;
       doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
       doc.roundedRect(15, currentY, pageWidth - 30, 32, 3, 3, 'F');
-      doc.setDrawColor(gold[0], gold[1], gold[2]);
+      doc.setDrawColor(teal[0], teal[1], teal[2]);
       doc.setLineWidth(0.3);
       doc.roundedRect(15, currentY, pageWidth - 30, 32, 3, 3, 'S');
       doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
@@ -566,7 +558,7 @@ export default function LearnerDashboard() {
       const cardHeight = 38;
       doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
       doc.roundedRect(15, summaryY, cardWidth, cardHeight, 3, 3, 'F');
-      doc.setDrawColor(gold[0], gold[1], gold[2]);
+      doc.setDrawColor(teal[0], teal[1], teal[2]);
       doc.roundedRect(15, summaryY, cardWidth, cardHeight, 3, 3, 'S');
       doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
       doc.setFontSize(7);
@@ -574,11 +566,11 @@ export default function LearnerDashboard() {
       doc.text('AVERAGE SCORE', 20, summaryY + 10);
       doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(gold[0], gold[1], gold[2]);
+      doc.setTextColor(teal[0], teal[1], teal[2]);
       doc.text(`${avgScore}%`, 20, summaryY + 28);
       doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
       doc.roundedRect(15 + cardWidth + cardSpacing, summaryY, cardWidth, cardHeight, 3, 3, 'F');
-      doc.setDrawColor(gold[0], gold[1], gold[2]);
+      doc.setDrawColor(teal[0], teal[1], teal[2]);
       doc.roundedRect(15 + cardWidth + cardSpacing, summaryY, cardWidth, cardHeight, 3, 3, 'S');
       doc.setFontSize(7);
       doc.setFont('helvetica', 'bold');
@@ -586,11 +578,11 @@ export default function LearnerDashboard() {
       doc.text('GRADE', 20 + cardWidth + cardSpacing, summaryY + 10);
       doc.setFontSize(24);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(gold[0], gold[1], gold[2]);
+      doc.setTextColor(teal[0], teal[1], teal[2]);
       doc.text(avgGrade.letter, 20 + cardWidth + cardSpacing, summaryY + 32);
       doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
       doc.roundedRect(15 + (cardWidth + cardSpacing) * 2, summaryY, cardWidth, cardHeight, 3, 3, 'F');
-      doc.setDrawColor(gold[0], gold[1], gold[2]);
+      doc.setDrawColor(teal[0], teal[1], teal[2]);
       doc.roundedRect(15 + (cardWidth + cardSpacing) * 2, summaryY, cardWidth, cardHeight, 3, 3, 'S');
       doc.setFontSize(7);
       doc.setFont('helvetica', 'bold');
@@ -609,9 +601,9 @@ export default function LearnerDashboard() {
         else return [subject.name, `${subject.score}%`, grade.letter, grade.description];
       });
       if (isUpperForm && totalPoints !== null) {
-        tableRows.push([{ content: 'BEST 6 TOTAL', styles: { fontStyle: 'bold', fillColor: [255, 248, 225] } }, '', { content: totalPoints + ' pts', styles: { fontStyle: 'bold', textColor: gold } }, { content: getOverallGradeFromPoints(totalPoints).description, styles: { fontStyle: 'bold', textColor: gold } }]);
+        tableRows.push([{ content: 'BEST 6 TOTAL', styles: { fontStyle: 'bold', fillColor: [255, 248, 225] } }, '', { content: totalPoints + ' pts', styles: { fontStyle: 'bold', textColor: teal } }, { content: getOverallGradeFromPoints(totalPoints).description, styles: { fontStyle: 'bold', textColor: teal } }]);
       } else {
-        tableRows.push([{ content: 'OVERALL AVERAGE', styles: { fontStyle: 'bold', fillColor: [255, 248, 225] } }, { content: `${avgScore}%`, styles: { fontStyle: 'bold', textColor: gold } }, { content: avgGrade.letter, styles: { fontStyle: 'bold', textColor: gold } }, { content: avgGrade.description, styles: { fontStyle: 'bold' } }]);
+        tableRows.push([{ content: 'OVERALL AVERAGE', styles: { fontStyle: 'bold', fillColor: [255, 248, 225] } }, { content: `${avgScore}%`, styles: { fontStyle: 'bold', textColor: teal } }, { content: avgGrade.letter, styles: { fontStyle: 'bold', textColor: teal } }, { content: avgGrade.description, styles: { fontStyle: 'bold' } }]);
       }
       autoTable(doc, {
         startY: currentY,
@@ -619,7 +611,7 @@ export default function LearnerDashboard() {
         head: [tableColumn],
         body: tableRows,
         theme: 'grid',
-        headStyles: { fillColor: navy, textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 8, cellPadding: 3 },
+        headStyles: { fillColor: darkBlue, textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 8, cellPadding: 3 },
         bodyStyles: { textColor: darkGray, fontSize: 7, cellPadding: 2.5 },
         alternateRowStyles: { fillColor: lightGray },
         columnStyles: { 0: { cellWidth: 70, fontStyle: 'bold' }, 1: { halign: 'center', cellWidth: 30 }, 2: { halign: 'center', cellWidth: 30 }, 3: { halign: 'center' } },
@@ -630,16 +622,16 @@ export default function LearnerDashboard() {
       if (report?.comment) {
         const commentHeight = 35;
         if (currentY + commentHeight + 25 <= pageHeight) {
-          doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+          doc.setFillColor(paper[0], paper[1], paper[2]);
           doc.roundedRect(15, currentY, pageWidth - 30, commentHeight, 3, 3, 'F');
-          doc.setDrawColor(gold[0], gold[1], gold[2]);
+          doc.setDrawColor(teal[0], teal[1], teal[2]);
           doc.setLineWidth(0.3);
           doc.roundedRect(15, currentY, pageWidth - 30, commentHeight, 3, 3, 'S');
-          doc.setFillColor(gold[0], gold[1], gold[2]);
+          doc.setFillColor(teal[0], teal[1], teal[2]);
           doc.rect(15, currentY, 3, commentHeight, 'F');
           doc.setFontSize(7);
           doc.setFont('helvetica', 'bold');
-          doc.setTextColor(gold[0], gold[1], gold[2]);
+          doc.setTextColor(teal[0], teal[1], teal[2]);
           doc.text("Teacher's Remarks", 23, currentY + 8);
           doc.setFontSize(7);
           doc.setFont('helvetica', 'italic');
@@ -651,12 +643,12 @@ export default function LearnerDashboard() {
           currentY += commentHeight + 8;
         } else {
           doc.setFontSize(6);
-          doc.setTextColor(gold[0], gold[1], gold[2]);
+          doc.setTextColor(teal[0], teal[1], teal[2]);
           doc.text('* Teacher\'s comment available in full report', pageWidth / 2, pageHeight - 25, { align: 'center' });
         }
       }
       const footerY = pageHeight - 12;
-      doc.setDrawColor(gold[0], gold[1], gold[2]);
+      doc.setDrawColor(teal[0], teal[1], teal[2]);
       doc.setLineWidth(0.2);
       doc.line(15, footerY - 5, pageWidth - 15, footerY - 5);
       doc.setFontSize(6);
@@ -685,10 +677,10 @@ export default function LearnerDashboard() {
     try {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
-      const navy = [26, 35, 126];
-      const gold = [201, 147, 58];
+      const darkBlue = [10, 37, 64];
+      const teal = [42, 157, 143];
       const lightGray = [248, 250, 252];
-      doc.setFillColor(navy[0], navy[1], navy[2]);
+      doc.setFillColor(darkBlue[0], darkBlue[1], darkBlue[2]);
       doc.rect(0, 0, pageWidth, 50, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(24);
@@ -700,7 +692,7 @@ export default function LearnerDashboard() {
       doc.text('Attendance Record', pageWidth / 2, 38, { align: 'center' });
       doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
       doc.roundedRect(20, 65, pageWidth - 40, 45, 3, 3, 'F');
-      doc.setDrawColor(gold[0], gold[1], gold[2]);
+      doc.setDrawColor(teal[0], teal[1], teal[2]);
       doc.roundedRect(20, 65, pageWidth - 40, 45, 3, 3, 'S');
       doc.setTextColor(15, 25, 35);
       doc.setFontSize(11);
@@ -714,7 +706,7 @@ export default function LearnerDashboard() {
       doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 85, 95);
       let yPos = 125;
       doc.setFontSize(10);
-      doc.setTextColor(gold[0], gold[1], gold[2]);
+      doc.setTextColor(teal[0], teal[1], teal[2]);
       doc.setFont('helvetica', 'bold');
       doc.text(`Total Days: ${stats.totalDays}`, 20, yPos);
       doc.text(`Attendance Rate: ${stats.attendanceRate}`, 20, yPos + 7);
@@ -733,11 +725,11 @@ export default function LearnerDashboard() {
         head: [['Date', 'Day', 'Status']],
         body: tableRows,
         theme: 'grid',
-        headStyles: { fillColor: navy, textColor: 255, fontStyle: 'bold', halign: 'center' },
+        headStyles: { fillColor: darkBlue, textColor: 255, fontStyle: 'bold', halign: 'center' },
         alternateRowStyles: { fillColor: lightGray }
       });
       const footerY = doc.internal.pageSize.getHeight() - 15;
-      doc.setDrawColor(gold[0], gold[1], gold[2]);
+      doc.setDrawColor(teal[0], teal[1], teal[2]);
       doc.setLineWidth(0.3);
       doc.line(20, footerY - 5, pageWidth - 20, footerY - 5);
       doc.setFontSize(8);
@@ -770,6 +762,7 @@ export default function LearnerDashboard() {
     loadDashboardData();
   };
 
+  // Report HTML generator (updated colors)
   const getReportHTML = (report) => {
     if (!report || !report.subjects) return '<div>No report data</div>';
     const validSubjects = (report.subjects || []).filter(s => s && s.score !== undefined && s.score !== null);
@@ -782,9 +775,9 @@ export default function LearnerDashboard() {
     const englishPassed = isUpperForm ? (validSubjects.find(s => s.name.toLowerCase().includes('english'))?.score >= 35) : true;
     const finalStatus = isUpperForm ? getFinalStatus(englishPassed, totalPoints) : null;
     return `
-      <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(15,25,35,0.1);">
-        <div style="background: linear-gradient(135deg, #0f1923, #1a2d3f); color: white; padding: 20px;">
-          <div style="font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: #c9933a; margin-bottom: 4px;">PROGRESS SECONDARY SCHOOL</div>
+      <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(10,37,64,0.1);">
+        <div style="background: linear-gradient(135deg, #0A2540, #1E3A5F); color: white; padding: 20px;">
+          <div style="font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: #2A9D8F; margin-bottom: 4px;">PROGRESS SECONDARY SCHOOL</div>
           <div style="font-size: 11px; opacity: 0.7;">Scholastica, Excellentia et Disciplina</div>
           <div style="font-size: 10px; opacity: 0.6; margin-top: 4px;">${report.term || 'Report'} · ${report.academic_year || new Date().getFullYear()} · ${report.form || user?.form || 'N/A'}</div>
           <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
@@ -794,15 +787,15 @@ export default function LearnerDashboard() {
         </div>
         <div style="padding: 20px;">
           <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px;">
-            <div style="background: #f8fafc; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0;">
+            <div style="background: #F8FAFC; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0;">
               <div style="font-size: 11px; color: #64748b; font-weight: 600;">AVERAGE</div>
-              <div style="font-size: 24px; font-weight: bold; color: #c9933a;">${avg}%</div>
+              <div style="font-size: 24px; font-weight: bold; color: #2A9D8F;">${avg}%</div>
             </div>
-            <div style="background: #f8fafc; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0;">
+            <div style="background: #F8FAFC; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0;">
               <div style="font-size: 11px; color: #64748b; font-weight: 600;">GRADE</div>
-              <div style="font-size: 32px; font-weight: bold; color: #c9933a;">${avgGrade.letter}</div>
+              <div style="font-size: 32px; font-weight: bold; color: #2A9D8F;">${avgGrade.letter}</div>
             </div>
-            <div style="background: #f8fafc; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0;">
+            <div style="background: #F8FAFC; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0;">
               <div style="font-size: 11px; color: #64748b; font-weight: 600;">STATUS</div>
               <div style="font-size: 16px; font-weight: bold; color: ${avg >= 50 ? '#10b981' : '#ef4444'};">${avg >= 50 ? 'PASS' : 'FAIL'}</div>
             </div>
@@ -810,7 +803,7 @@ export default function LearnerDashboard() {
           <div style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse;">
               <thead>
-                <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+                <tr style="background: #F1F5F9; border-bottom: 2px solid #CBD5E1;">
                   <th style="padding: 10px; text-align: left; font-size: 12px; font-weight: 600;">Subject</th>
                   <th style="padding: 10px; text-align: center; font-size: 12px; font-weight: 600;">Score</th>
                   <th style="padding: 10px; text-align: center; font-size: 12px; font-weight: 600;">Grade</th>
@@ -829,19 +822,19 @@ export default function LearnerDashboard() {
                     </tr>
                   `;
                 }).join('')}
-                <tr style="background: #fef9e6; border-top: 2px solid #c9933a;">
+                <tr style="background: #FEF9E6; border-top: 2px solid #2A9D8F;">
                   <td style="padding: 10px; font-weight: 700;">${isUpperForm ? 'BEST 6 TOTAL' : 'OVERALL AVERAGE'}</td>
-                  <td style="padding: 10px; text-align: center; font-weight: 700; color: #c9933a;">${isUpperForm ? `${totalPoints} pts` : `${avg}%`}</td>
+                  <td style="padding: 10px; text-align: center; font-weight: 700; color: #2A9D8F;">${isUpperForm ? `${totalPoints} pts` : `${avg}%`}</td>
                   <td style="padding: 10px; text-align: center;">
-                    <span style="display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: #c9933a15; color: #c9933a;">${isUpperForm ? pointsGrade?.description : avgGrade.description}</span>
+                    <span style="display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: #2A9D8F15; color: #2A9D8F;">${isUpperForm ? pointsGrade?.description : avgGrade.description}</span>
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
           ${report.comment ? `
-            <div style="margin-top: 20px; padding: 16px; background: #fef9e6; border-radius: 12px; border-left: 4px solid #c9933a;">
-              <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: #c9933a; margin-bottom: 6px;">Teacher's Comment</div>
+            <div style="margin-top: 20px; padding: 16px; background: #FEF9E6; border-radius: 12px; border-left: 4px solid #2A9D8F;">
+              <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: #2A9D8F; margin-bottom: 6px;">Teacher's Comment</div>
               <div style="font-size: 12px; color: #334155; line-height: 1.5;">${report.comment}</div>
             </div>
           ` : ''}
@@ -862,18 +855,16 @@ export default function LearnerDashboard() {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: ICE_WHITE }}>
         <div className="text-center">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-[#00B0FF] border-t-transparent rounded-full animate-spin mx-auto mb-3 sm:mb-4"></div>
+          <div className="w-10 h-10 sm:w-12 sm:h-12 border-4 border-[#00B4D8] border-t-transparent rounded-full animate-spin mx-auto mb-3 sm:mb-4"></div>
           <p className="text-xs sm:text-sm text-gray-500">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
-  // No error state rendered – always show dashboard with whatever data loaded
-
   if (showQuiz) {
     return (
-      <div className="min-h-screen bg-[#f7f4ef]">
+      <div className="min-h-screen bg-[#F5F2EB]">
         <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 md:py-8">
           <button
             onClick={() => setShowQuiz(null)}
@@ -888,19 +879,19 @@ export default function LearnerDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef]">
-      {/* Header Section */}
+    <div className="min-h-screen bg-[#F5F2EB]">
+      {/* Header Section with new gradient */}
       <div 
         className="w-full sticky top-0 z-30"
         style={{
-          background: `linear-gradient(135deg, ${NAVY_DARK}, #1E3A8A)`,
+          background: `linear-gradient(135deg, #0A2540, #1E3A5F)`,
         }}
       >
         <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-2.5 sm:py-3 md:py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 bg-[#c9933a] rounded-xl flex items-center justify-center shadow-md">
-                <span className="text-base sm:text-lg md:text-xl font-bold text-[#0f1923]">P</span>
+              <div className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 bg-[#2A9D8F] rounded-xl flex items-center justify-center shadow-md">
+                <span className="text-base sm:text-lg md:text-xl font-bold text-white">P</span>
               </div>
               <div>
                 <h1 className="text-sm sm:text-base md:text-xl font-serif font-bold text-white">PROGRESS</h1>
@@ -909,7 +900,7 @@ export default function LearnerDashboard() {
             </div>
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="hidden sm:flex items-center gap-2 sm:gap-3 bg-white/10 rounded-lg px-2 sm:px-3 py-1 sm:py-1.5">
-                <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 bg-[#c9933a] rounded-full flex items-center justify-center text-xs sm:text-sm">
+                <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 bg-[#2A9D8F] rounded-full flex items-center justify-center text-xs sm:text-sm text-white">
                   🎓
                 </div>
                 <div>
@@ -971,7 +962,7 @@ export default function LearnerDashboard() {
             </div>
           </div>
           <div className="mt-1.5 sm:mt-2 md:mt-3 lg:mt-4">
-            <p className="text-[8px] sm:text-[10px] md:text-xs font-extrabold tracking-wider mb-0.5 sm:mb-1" style={{ color: AZURE_ACCENT }}>
+            <p className="text-[8px] sm:text-[10px] md:text-xs font-extrabold tracking-wider mb-0.5 sm:mb-1" style={{ color: '#00B4D8' }}>
               LEARNER PORTAL
             </p>
             <h1 className="text-sm sm:text-base md:text-xl lg:text-2xl font-bold text-white truncate">
@@ -989,26 +980,26 @@ export default function LearnerDashboard() {
           <div className="fixed top-0 right-0 h-full w-64 bg-white shadow-xl animate-slide-in-right">
             <div className="p-4 border-b border-gray-200">
               <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-[#c9933a] rounded-xl flex items-center justify-center">
-                  <span className="text-lg font-bold text-[#0f1923]">P</span>
+                <div className="w-10 h-10 bg-[#2A9D8F] rounded-xl flex items-center justify-center">
+                  <span className="text-lg font-bold text-white">P</span>
                 </div>
                 <div>
-                  <div className="font-bold text-[#0f1923] text-sm">PROGRESS</div>
+                  <div className="font-bold text-[#0A2540] text-sm">PROGRESS</div>
                   <div className="text-xs text-gray-500">Secondary School</div>
                 </div>
               </div>
             </div>
             <div className="p-2">
-              <button onClick={() => { setActiveTab('overview'); setMobileMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${activeTab === 'overview' ? 'bg-[#1A237E] text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
+              <button onClick={() => { setActiveTab('overview'); setMobileMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${activeTab === 'overview' ? 'bg-[#2A9D8F] text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
                 <span className="mr-2">📊</span> Overview
               </button>
-              <button onClick={() => { setActiveTab('learning'); setMobileMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${activeTab === 'learning' ? 'bg-[#1A237E] text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
+              <button onClick={() => { setActiveTab('learning'); setMobileMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${activeTab === 'learning' ? 'bg-[#2A9D8F] text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
                 <span className="mr-2">🎓</span> Learning Space
               </button>
-              <button onClick={() => { setActiveTab('reports'); setMobileMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${activeTab === 'reports' ? 'bg-[#1A237E] text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
+              <button onClick={() => { setActiveTab('reports'); setMobileMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${activeTab === 'reports' ? 'bg-[#2A9D8F] text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
                 <span className="mr-2">📋</span> Reports
               </button>
-              <button onClick={() => { setActiveTab('attendance'); setMobileMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${activeTab === 'attendance' ? 'bg-[#1A237E] text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
+              <button onClick={() => { setActiveTab('attendance'); setMobileMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${activeTab === 'attendance' ? 'bg-[#2A9D8F] text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
                 <span className="mr-2">📅</span> Attendance
               </button>
             </div>
@@ -1047,20 +1038,20 @@ export default function LearnerDashboard() {
               {/* Latest Report Card Section */}
               <div className="lg:col-span-2">
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden h-full">
-                  <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2.5 sm:py-3 md:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
+                  <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2.5 sm:py-3 md:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#F5F2EB]">
                     <div className="flex items-center justify-between flex-wrap gap-2">
-                      <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0f1923] flex items-center gap-2">
-                        <span className="text-[#c9933a] text-base sm:text-lg md:text-xl">📋</span>
+                      <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0A2540] flex items-center gap-2">
+                        <span className="text-[#2A9D8F] text-base sm:text-lg md:text-xl">📋</span>
                         Current Report
                       </h2>
                       {latestReport && (
                         <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
-                          <span className="px-1.5 sm:px-2 md:px-3 py-0.5 sm:py-1 bg-[#c9933a]/10 text-[#c9933a] rounded-full text-[9px] sm:text-[10px] md:text-xs font-medium border border-[#c9933a]/30 truncate max-w-[120px] sm:max-w-none">
+                          <span className="px-1.5 sm:px-2 md:px-3 py-0.5 sm:py-1 bg-[#2A9D8F]/10 text-[#2A9D8F] rounded-full text-[9px] sm:text-[10px] md:text-xs font-medium border border-[#2A9D8F]/30 truncate max-w-[120px] sm:max-w-none">
                             {latestReport.term || 'Current'} {latestReport.academic_year ? `(${latestReport.academic_year})` : ''}
                           </span>
                           <button
                             onClick={() => downloadReportPDF(latestReport)}
-                            className="p-1.5 sm:p-2 text-[#c9933a] hover:bg-[#c9933a]/10 rounded-lg transition-all hover:scale-110 border border-[#d4cfc6] hover:border-[#c9933a]/40"
+                            className="p-1.5 sm:p-2 text-[#2A9D8F] hover:bg-[#2A9D8F]/10 rounded-lg transition-all hover:scale-110 border border-[#d4cfc6] hover:border-[#2A9D8F]/40"
                             title="Download PDF"
                           >
                             <ArrowDownTrayIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5" />
@@ -1073,27 +1064,27 @@ export default function LearnerDashboard() {
                     {latestReport && latestReport.subjects && latestReport.subjects.length > 0 ? (
                       <div className="space-y-3 sm:space-y-4">
                         <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4 mb-3 sm:mb-4">
-                          <div className="bg-[#f7f4ef] p-2 sm:p-3 md:p-4 rounded-xl border border-[#d4cfc6]">
+                          <div className="bg-[#F5F2EB] p-2 sm:p-3 md:p-4 rounded-xl border border-[#d4cfc6]">
                             <p className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs text-gray-500 mb-0.5">Subjects</p>
-                            <p className="text-xs sm:text-sm md:text-base lg:text-2xl font-bold text-[#0f1923]">{latestReport.subjects.length}</p>
+                            <p className="text-xs sm:text-sm md:text-base lg:text-2xl font-bold text-[#0A2540]">{latestReport.subjects.length}</p>
                           </div>
-                          <div className="bg-[#f7f4ef] p-2 sm:p-3 md:p-4 rounded-xl border border-[#d4cfc6]">
+                          <div className="bg-[#F5F2EB] p-2 sm:p-3 md:p-4 rounded-xl border border-[#d4cfc6]">
                             <p className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs text-gray-500 mb-0.5">Average</p>
-                            <p className="text-xs sm:text-sm md:text-base lg:text-2xl font-bold text-[#c9933a]">
+                            <p className="text-xs sm:text-sm md:text-base lg:text-2xl font-bold text-[#2A9D8F]">
                               {calculateAverage(latestReport.subjects)}%
                             </p>
                             <div className="mt-1 sm:mt-2 w-full h-1 bg-gray-200 rounded-full">
-                              <div className="h-1 bg-[#c9933a] rounded-full" style={{ width: `${calculateAverage(latestReport.subjects)}%` }} />
+                              <div className="h-1 bg-[#2A9D8F] rounded-full" style={{ width: `${calculateAverage(latestReport.subjects)}%` }} />
                             </div>
                           </div>
-                          <div className="bg-[#f7f4ef] p-2 sm:p-3 md:p-4 rounded-xl border border-[#d4cfc6]">
+                          <div className="bg-[#F5F2EB] p-2 sm:p-3 md:p-4 rounded-xl border border-[#d4cfc6]">
                             <p className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs text-gray-500 mb-0.5">Year</p>
-                            <p className="text-[10px] sm:text-xs md:text-sm lg:text-xl font-bold text-[#0f1923]">{latestReport.academic_year || new Date().getFullYear()}</p>
+                            <p className="text-[10px] sm:text-xs md:text-sm lg:text-xl font-bold text-[#0A2540]">{latestReport.academic_year || new Date().getFullYear()}</p>
                           </div>
                         </div>
-                        <div className="bg-[#f7f4ef] rounded-xl p-3 sm:p-4 border border-[#d4cfc6] overflow-x-auto">
-                          <h3 className="text-[10px] sm:text-xs md:text-sm font-medium text-[#0f1923] mb-2 sm:mb-3 flex items-center gap-2">
-                            <span className="w-1 h-3 sm:h-4 bg-[#c9933a] rounded-full" />
+                        <div className="bg-[#F5F2EB] rounded-xl p-3 sm:p-4 border border-[#d4cfc6] overflow-x-auto">
+                          <h3 className="text-[10px] sm:text-xs md:text-sm font-medium text-[#0A2540] mb-2 sm:mb-3 flex items-center gap-2">
+                            <span className="w-1 h-3 sm:h-4 bg-[#2A9D8F] rounded-full" />
                             Subject Performance
                           </h3>
                           <div className="min-w-[280px] space-y-2 sm:space-y-3">
@@ -1101,7 +1092,7 @@ export default function LearnerDashboard() {
                               const grade = getGradeFromScore(subject.score, latestReport.form);
                               return (
                                 <div key={index} className="flex items-center py-1.5 sm:py-2 border-b border-[#ede9e1] last:border-0 group">
-                                  <div className="flex-1 text-[10px] sm:text-xs md:text-sm text-gray-700 group-hover:text-[#0f1923] font-medium truncate">
+                                  <div className="flex-1 text-[10px] sm:text-xs md:text-sm text-gray-700 group-hover:text-[#0A2540] font-medium truncate">
                                     {subject.name}
                                   </div>
                                   <div className="flex-1 max-w-[80px] sm:max-w-[120px] md:max-w-[200px] mx-2 sm:mx-4">
@@ -1121,14 +1112,14 @@ export default function LearnerDashboard() {
                           </div>
                         </div>
                         {latestReport.comment && (
-                          <div className="bg-[#f7f4ef] p-3 sm:p-4 rounded-xl border-l-4 border-[#c9933a]">
-                            <div className="text-[#c9933a] text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1">Teacher's Note</div>
+                          <div className="bg-[#F5F2EB] p-3 sm:p-4 rounded-xl border-l-4 border-[#2A9D8F]">
+                            <div className="text-[#2A9D8F] text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-wider mb-1">Teacher's Note</div>
                             <p className="text-[10px] sm:text-xs md:text-sm text-gray-700 italic">"{latestReport.comment}"</p>
                           </div>
                         )}
                         <button
                           onClick={() => setActiveTab('reports')}
-                          className="w-full mt-3 sm:mt-4 py-2 sm:py-3 text-[10px] sm:text-xs md:text-sm text-[#c9933a] font-medium transition-all bg-[#c9933a]/5 hover:bg-[#c9933a]/10 rounded-lg border border-[#d4cfc6] hover:border-[#c9933a]/60 flex items-center justify-center gap-2 group"
+                          className="w-full mt-3 sm:mt-4 py-2 sm:py-3 text-[10px] sm:text-xs md:text-sm text-[#2A9D8F] font-medium transition-all bg-[#2A9D8F]/5 hover:bg-[#2A9D8F]/10 rounded-lg border border-[#d4cfc6] hover:border-[#2A9D8F]/60 flex items-center justify-center gap-2 group"
                         >
                           <DocumentTextIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:animate-pulse" />
                           <span className="hidden xs:inline">View All Reports</span>
@@ -1138,10 +1129,10 @@ export default function LearnerDashboard() {
                       </div>
                     ) : (
                       <div className="text-center py-6 sm:py-8 md:py-12 lg:py-16">
-                        <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 mx-auto mb-2 sm:mb-3 md:mb-4 bg-[#c9933a]/5 rounded-full flex items-center justify-center border-2 border-[#d4cfc6]">
-                          <DocumentTextIcon className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-[#c9933a]" />
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 mx-auto mb-2 sm:mb-3 md:mb-4 bg-[#2A9D8F]/5 rounded-full flex items-center justify-center border-2 border-[#d4cfc6]">
+                          <DocumentTextIcon className="w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 text-[#2A9D8F]" />
                         </div>
-                        <div className="font-medium text-[#0f1923] mb-2 text-xs sm:text-sm md:text-base">No Report Card Available</div>
+                        <div className="font-medium text-[#0A2540] mb-2 text-xs sm:text-sm md:text-base">No Report Card Available</div>
                         <p className="text-[10px] sm:text-xs md:text-sm text-gray-500 max-w-xs mx-auto">Your teacher hasn't generated any reports yet. Check back after your next assessment.</p>
                       </div>
                     )}
@@ -1152,9 +1143,9 @@ export default function LearnerDashboard() {
               {/* Side Panel */}
               <div className="space-y-3 sm:space-y-4 md:space-y-5 lg:space-y-6">
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
-                  <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
+                  <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#F5F2EB]">
                     <div className="flex items-center justify-between">
-                      <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0f1923] flex items-center gap-2">
+                      <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0A2540] flex items-center gap-2">
                         <span className="text-purple-600">📝</span>
                         Quiz Performance
                       </h2>
@@ -1184,8 +1175,8 @@ export default function LearnerDashboard() {
                 {/* Recent Quiz Attempts */}
                 {stats.quizzesCompleted > 0 && quizAttempts.length > 0 && (
                   <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
-                    <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
-                      <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0f1923] flex items-center gap-2">
+                    <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#F5F2EB]">
+                      <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0A2540] flex items-center gap-2">
                         <span className="text-purple-600">📊</span>
                         Recent Quiz Attempts
                       </h2>
@@ -1222,15 +1213,15 @@ export default function LearnerDashboard() {
                 )}
 
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
-                  <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
+                  <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#F5F2EB]">
                     <div className="flex items-center justify-between">
-                      <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0f1923] flex items-center gap-2">
-                        <span className="text-[#c9933a]">📊</span>
+                      <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0A2540] flex items-center gap-2">
+                        <span className="text-[#2A9D8F]">📊</span>
                         <span className="hidden xs:inline">Attendance</span>
                         <span className="xs:hidden">Attend</span>
                       </h2>
                       {attendanceRecords.length > 0 && (
-                        <button onClick={downloadAttendancePDF} className="p-1.5 sm:p-2 text-[#c9933a] hover:bg-[#c9933a]/10 rounded-lg transition-all hover:scale-110 border border-[#d4cfc6] hover:border-[#c9933a]/40" title="Download Attendance PDF">
+                        <button onClick={downloadAttendancePDF} className="p-1.5 sm:p-2 text-[#2A9D8F] hover:bg-[#2A9D8F]/10 rounded-lg transition-all hover:scale-110 border border-[#d4cfc6] hover:border-[#2A9D8F]/40" title="Download Attendance PDF">
                           <ArrowDownTrayIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4" />
                         </button>
                       )}
@@ -1239,11 +1230,11 @@ export default function LearnerDashboard() {
                   <div className="p-3 sm:p-4 md:p-5 lg:p-6">
                     <div className="text-center mb-3 sm:mb-4 md:mb-5 lg:mb-6">
                       <div className="relative inline-flex items-center justify-center mb-2 sm:mb-3 md:mb-4">
-                        <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full border-4 border-[#c9933a]/20 flex items-center justify-center">
-                          <span className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-[#c9933a]">{stats.attendanceRate}</span>
+                        <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full border-4 border-[#2A9D8F]/20 flex items-center justify-center">
+                          <span className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-[#2A9D8F]">{stats.attendanceRate}</span>
                         </div>
                       </div>
-                      <p className="text-[10px] sm:text-xs md:text-sm text-gray-600 bg-[#f7f4ef] py-1 sm:py-1.5 md:py-2 px-2 sm:px-3 md:px-4 rounded-full inline-block border border-[#d4cfc6]">
+                      <p className="text-[10px] sm:text-xs md:text-sm text-gray-600 bg-[#F5F2EB] py-1 sm:py-1.5 md:py-2 px-2 sm:px-3 md:px-4 rounded-full inline-block border border-[#d4cfc6]">
                         {getAttendanceMessage()}
                       </p>
                     </div>
@@ -1256,11 +1247,11 @@ export default function LearnerDashboard() {
                           <div className="text-green-600 font-bold text-xs sm:text-sm md:text-base lg:text-xl">{stats.presentCount}</div>
                           <div className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs text-gray-500">Present</div>
                         </div>
-                        <div className="text-center p-1.5 sm:p-2 md:p-3 bg-[#c9933a]/5 rounded-xl border border-[#d4cfc6]">
-                          <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 mx-auto mb-0.5 sm:mb-1 md:mb-2 bg-[#c9933a]/10 rounded-lg flex items-center justify-center">
-                            <ClockIcon className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-[#c9933a]" />
+                        <div className="text-center p-1.5 sm:p-2 md:p-3 bg-[#2A9D8F]/5 rounded-xl border border-[#d4cfc6]">
+                          <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 mx-auto mb-0.5 sm:mb-1 md:mb-2 bg-[#2A9D8F]/10 rounded-lg flex items-center justify-center">
+                            <ClockIcon className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-[#2A9D8F]" />
                           </div>
-                          <div className="text-[#c9933a] font-bold text-xs sm:text-sm md:text-base lg:text-xl">{stats.lateCount}</div>
+                          <div className="text-[#2A9D8F] font-bold text-xs sm:text-sm md:text-base lg:text-xl">{stats.lateCount}</div>
                           <div className="text-[8px] sm:text-[9px] md:text-[10px] lg:text-xs text-gray-500">Late</div>
                         </div>
                         <div className="text-center p-1.5 sm:p-2 md:p-3 bg-red-50 rounded-xl border border-red-200">
@@ -1273,7 +1264,7 @@ export default function LearnerDashboard() {
                       </div>
                     ) : (
                       <div className="text-center py-4 sm:py-5 md:py-6 lg:py-8">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 mx-auto mb-1.5 sm:mb-2 md:mb-3 bg-[#f7f4ef] rounded-full flex items-center justify-center border-2 border-[#d4cfc6]">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 mx-auto mb-1.5 sm:mb-2 md:mb-3 bg-[#F5F2EB] rounded-full flex items-center justify-center border-2 border-[#d4cfc6]">
                           <CalendarIcon className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-gray-400" />
                         </div>
                         <p className="text-[10px] sm:text-xs md:text-sm text-gray-500">No attendance records yet</p>
@@ -1283,9 +1274,9 @@ export default function LearnerDashboard() {
                 </div>
 
                 <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
-                  <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
-                    <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0f1923] flex items-center gap-2">
-                      <span className="text-[#c9933a]">⚡</span>
+                  <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#F5F2EB]">
+                    <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0A2540] flex items-center gap-2">
+                      <span className="text-[#2A9D8F]">⚡</span>
                       Quick Actions
                     </h2>
                   </div>
@@ -1302,26 +1293,26 @@ export default function LearnerDashboard() {
                         <span className="text-xs text-gray-400 group-hover:translate-x-1 transition-transform">→</span>
                       </div>
                     </button>
-                    <button onClick={() => setActiveTab('reports')} className="w-full text-left p-2.5 sm:p-3 md:p-4 bg-[#f7f4ef] rounded-xl hover:bg-[#ede9e1] transition-all group border border-[#d4cfc6] hover:border-[#c9933a]/30">
+                    <button onClick={() => setActiveTab('reports')} className="w-full text-left p-2.5 sm:p-3 md:p-4 bg-[#F5F2EB] rounded-xl hover:bg-[#e8e2d7] transition-all group border border-[#d4cfc6] hover:border-[#2A9D8F]/30">
                       <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3">
-                        <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-[#c9933a]/5 rounded-lg flex items-center justify-center group-hover:bg-[#c9933a]/10 border border-[#d4cfc6]">
-                          <DocumentTextIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-[#c9933a]" />
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-[#2A9D8F]/5 rounded-lg flex items-center justify-center group-hover:bg-[#2A9D8F]/10 border border-[#d4cfc6]">
+                          <DocumentTextIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-[#2A9D8F]" />
                         </div>
                         <div className="flex-1">
-                          <span className="text-[11px] sm:text-xs md:text-sm font-medium text-[#0f1923] group-hover:text-[#c9933a] transition-colors">View All Reports</span>
+                          <span className="text-[11px] sm:text-xs md:text-sm font-medium text-[#0A2540] group-hover:text-[#2A9D8F] transition-colors">View All Reports</span>
                           <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5 hidden sm:block">Access your complete academic history</p>
                         </div>
                         <span className="text-xs text-gray-400 group-hover:translate-x-1 transition-transform">→</span>
                       </div>
                     </button>
                     {stats.reportsCount > 0 && latestReport && (
-                      <button onClick={() => downloadReportPDF(latestReport)} className="w-full text-left p-2.5 sm:p-3 md:p-4 bg-[#c9933a]/5 rounded-xl hover:bg-[#c9933a]/10 transition-all group border border-[#c9933a]/30">
+                      <button onClick={() => downloadReportPDF(latestReport)} className="w-full text-left p-2.5 sm:p-3 md:p-4 bg-[#2A9D8F]/5 rounded-xl hover:bg-[#2A9D8F]/10 transition-all group border border-[#2A9D8F]/30">
                         <div className="flex items-center gap-2 sm:gap-2.5 md:gap-3">
-                          <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-[#c9933a] rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
+                          <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-[#2A9D8F] rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                             <ArrowDownTrayIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-white" />
                           </div>
                           <div className="flex-1">
-                            <span className="text-[11px] sm:text-xs md:text-sm font-medium text-[#c9933a]">Download Latest Report</span>
+                            <span className="text-[11px] sm:text-xs md:text-sm font-medium text-[#2A9D8F]">Download Latest Report</span>
                             <p className="text-[9px] sm:text-[10px] md:text-xs text-gray-500 mt-0.5 hidden sm:block">Save as PDF</p>
                           </div>
                         </div>
@@ -1332,20 +1323,20 @@ export default function LearnerDashboard() {
 
                 {recentActivity.length > 0 && (
                   <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
-                    <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#f7f4ef]">
-                      <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0f1923] flex items-center gap-2">
-                        <span className="text-[#c9933a]">🕒</span>
+                    <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] bg-gradient-to-r from-white to-[#F5F2EB]">
+                      <h2 className="font-serif text-sm sm:text-base md:text-lg font-bold text-[#0A2540] flex items-center gap-2">
+                        <span className="text-[#2A9D8F]">🕒</span>
                         Recent Activity
                       </h2>
                     </div>
                     <div className="p-0">
                       <div className="divide-y divide-[#ede9e1]">
                         {recentActivity.slice(0, 4).map((activity) => (
-                          <div key={activity.id} className="p-2.5 sm:p-3 md:p-4 hover:bg-[#f7f4ef] transition-colors">
+                          <div key={activity.id} className="p-2.5 sm:p-3 md:p-4 hover:bg-[#F5F2EB] transition-colors">
                             <div className="flex items-start gap-2 sm:gap-2.5 md:gap-3">
-                              <span className={`text-base sm:text-lg md:text-xl ${activity.color || 'text-[#c9933a]'}`}>{activity.icon}</span>
+                              <span className={`text-base sm:text-lg md:text-xl ${activity.color || 'text-[#2A9D8F]'}`}>{activity.icon}</span>
                               <div className="flex-1 min-w-0">
-                                <p className="text-[10px] sm:text-xs md:text-sm font-medium text-[#0f1923] truncate">{activity.title}</p>
+                                <p className="text-[10px] sm:text-xs md:text-sm font-medium text-[#0A2540] truncate">{activity.title}</p>
                                 <p className="text-[8px] sm:text-[9px] md:text-[10px] text-gray-500 mt-0.5">{activity.description}</p>
                                 {activity.feedback && <p className="text-[8px] sm:text-[9px] text-amber-600 mt-1 flex items-center gap-1"><ChatBubbleLeftRightIcon className="w-3 h-3" />{activity.feedback}</p>}
                               </div>
@@ -1367,20 +1358,20 @@ export default function LearnerDashboard() {
           <LearningSpace onStartQuiz={(quizId) => setShowQuiz(quizId)} />
         )}
 
-        {/* Reports Tab */}
+        {/* Reports Tab (updated filter dropdown and card colors) */}
         {activeTab === 'reports' && (
           <>
             <div className="mb-3 sm:mb-4 md:mb-5 lg:mb-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-2">
                 <div>
-                  <h1 className="font-serif text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-[#0f1923] mb-1">Report Cards</h1>
+                  <h1 className="font-serif text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-[#0A2540] mb-1">Report Cards</h1>
                   <p className="text-[10px] sm:text-xs md:text-sm text-gray-500">Your academic performance overview</p>
                 </div>
                 <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                   {availableYears.length > 0 && (
                     <div className="flex items-center gap-1.5 sm:gap-2">
                       <label className="text-[9px] sm:text-[10px] md:text-xs font-semibold text-gray-500 uppercase">Year:</label>
-                      <select value={selectedYear || ''} onChange={(e) => setSelectedYear(e.target.value ? parseInt(e.target.value) : null)} className="px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-300 rounded-lg text-[10px] sm:text-xs bg-white focus:ring-2 focus:ring-[#c9933a] focus:border-transparent">
+                      <select value={selectedYear || ''} onChange={(e) => setSelectedYear(e.target.value ? parseInt(e.target.value) : null)} className="px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-300 rounded-lg text-[10px] sm:text-xs bg-white focus:ring-2 focus:ring-[#2A9D8F] focus:border-transparent">
                         <option value="">All</option>
                         {availableYears.map(year => <option key={year} value={year}>{year}</option>)}
                       </select>
@@ -1389,7 +1380,7 @@ export default function LearnerDashboard() {
                   {availableAssessments.length > 0 && (
                     <div className="flex items-center gap-1.5 sm:gap-2">
                       <label className="text-[9px] sm:text-[10px] md:text-xs font-semibold text-gray-500 uppercase">Assessment:</label>
-                      <select value={selectedAssessment || ''} onChange={(e) => setSelectedAssessment(e.target.value || null)} className="px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-300 rounded-lg text-[10px] sm:text-xs bg-white focus:ring-2 focus:ring-[#c9933a] focus:border-transparent">
+                      <select value={selectedAssessment || ''} onChange={(e) => setSelectedAssessment(e.target.value || null)} className="px-2 sm:px-3 py-1 sm:py-1.5 border border-gray-300 rounded-lg text-[10px] sm:text-xs bg-white focus:ring-2 focus:ring-[#2A9D8F] focus:border-transparent">
                         <option value="">All</option>
                         {availableAssessments.map(assessment => <option key={assessment} value={assessment}>{assessment.length > 15 ? assessment.substring(0, 12) + '...' : assessment}</option>)}
                       </select>
@@ -1400,8 +1391,8 @@ export default function LearnerDashboard() {
               {(selectedYear || selectedAssessment) && (
                 <div className="mt-2 flex flex-wrap gap-1.5 sm:gap-2">
                   <span className="text-[9px] sm:text-[10px] text-gray-500">Active filters:</span>
-                  {selectedYear && <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] bg-[#c9933a]/10 text-[#c9933a]">Year: {selectedYear}<button onClick={() => setSelectedYear(null)} className="ml-1 hover:text-[#b5822e]">✕</button></span>}
-                  {selectedAssessment && <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] bg-[#c9933a]/10 text-[#c9933a]">{selectedAssessment.length > 20 ? selectedAssessment.substring(0, 18) + '...' : selectedAssessment}<button onClick={() => setSelectedAssessment(null)} className="ml-1 hover:text-[#b5822e]">✕</button></span>}
+                  {selectedYear && <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] bg-[#2A9D8F]/10 text-[#2A9D8F]">Year: {selectedYear}<button onClick={() => setSelectedYear(null)} className="ml-1 hover:text-[#1e6b60]">✕</button></span>}
+                  {selectedAssessment && <span className="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[9px] sm:text-[10px] bg-[#2A9D8F]/10 text-[#2A9D8F]">{selectedAssessment.length > 20 ? selectedAssessment.substring(0, 18) + '...' : selectedAssessment}<button onClick={() => setSelectedAssessment(null)} className="ml-1 hover:text-[#1e6b60]">✕</button></span>}
                   {(selectedYear || selectedAssessment) && <button onClick={() => { setSelectedYear(null); setSelectedAssessment(null); }} className="text-[9px] sm:text-[10px] text-blue-600 hover:text-blue-800">Clear all</button>}
                 </div>
               )}
@@ -1419,8 +1410,8 @@ export default function LearnerDashboard() {
                     <div key={report.id} className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden hover:shadow-md transition">
                       <div className="p-2.5 sm:p-3 md:p-4 border-b flex justify-between items-center flex-wrap gap-2">
                         <div>
-                          <span className="font-bold text-[#0f1923] text-xs sm:text-sm md:text-base">{report.term || 'Report'}</span>
-                          <span className="ml-1.5 sm:ml-2 px-1.5 sm:px-2 py-0.5 bg-[#c9933a]/10 text-[#c9933a] text-[9px] sm:text-[10px] rounded-full">{report.form || user?.form || 'N/A'}</span>
+                          <span className="font-bold text-[#0A2540] text-xs sm:text-sm md:text-base">{report.term || 'Report'}</span>
+                          <span className="ml-1.5 sm:ml-2 px-1.5 sm:px-2 py-0.5 bg-[#2A9D8F]/10 text-[#2A9D8F] text-[9px] sm:text-[10px] rounded-full">{report.form || user?.form || 'N/A'}</span>
                           <span className="ml-1.5 sm:ml-2 px-1.5 sm:px-2 py-0.5 bg-gray-100 text-gray-600 text-[9px] sm:text-[10px] rounded-full">{report.academic_year || new Date().getFullYear()}</span>
                         </div>
                         <div className="text-right"><span className="text-[10px] sm:text-xs md:text-sm font-bold" style={{ color: grade.color }}>{isUpperForm ? `${totalPoints} pts` : `${avg}% (${grade.letter})`}</span></div>
@@ -1439,10 +1430,10 @@ export default function LearnerDashboard() {
                           {bestSubjects.length > 5 && <div className="text-[9px] sm:text-[10px] text-gray-400 text-center pt-1">+{bestSubjects.length - 5} more subjects</div>}
                           {isUpperForm && bestSubjects.length < validSubjects.length && <div className="text-[8px] sm:text-[9px] text-gray-400 text-center">* Best {bestSubjects.length} subjects shown</div>}
                         </div>
-                        {report.comment && <div className="mt-2 sm:mt-3 p-1.5 sm:p-2 bg-[#f7f4ef] rounded text-[9px] sm:text-[10px] italic">💬 {report.comment.substring(0, 50)}{report.comment.length > 50 ? '…' : ''}</div>}
+                        {report.comment && <div className="mt-2 sm:mt-3 p-1.5 sm:p-2 bg-[#F5F2EB] rounded text-[9px] sm:text-[10px] italic">💬 {report.comment.substring(0, 50)}{report.comment.length > 50 ? '…' : ''}</div>}
                         <div className="mt-2.5 sm:mt-3 md:mt-4 flex gap-2">
-                          <button onClick={() => handleViewReport(report)} className="flex-1 px-2 sm:px-3 py-1 sm:py-1.5 border border-[#c9933a] text-[#c9933a] rounded-lg text-[10px] sm:text-xs hover:bg-[#c9933a]/10 transition">Preview</button>
-                          <button onClick={() => downloadReportPDF(report)} className="flex-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-[#0f1923] text-white rounded-lg text-[10px] sm:text-xs hover:bg-[#1a2d3f] transition"><ArrowDownTrayIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" />PDF</button>
+                          <button onClick={() => handleViewReport(report)} className="flex-1 px-2 sm:px-3 py-1 sm:py-1.5 border border-[#2A9D8F] text-[#2A9D8F] rounded-lg text-[10px] sm:text-xs hover:bg-[#2A9D8F]/10 transition">Preview</button>
+                          <button onClick={() => downloadReportPDF(report)} className="flex-1 px-2 sm:px-3 py-1 sm:py-1.5 bg-[#0A2540] text-white rounded-lg text-[10px] sm:text-xs hover:bg-[#1E3A5F] transition"><ArrowDownTrayIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" />PDF</button>
                         </div>
                       </div>
                     </div>
@@ -1452,7 +1443,7 @@ export default function LearnerDashboard() {
                 <div className="col-span-2 text-center py-6 sm:py-8 md:py-10 lg:py-12 bg-white rounded-xl border border-[#d4cfc6]">
                   <DocumentTextIcon className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-gray-300 mx-auto mb-2" />
                   <p className="text-xs sm:text-sm md:text-base text-gray-500">{selectedYear || selectedAssessment ? 'No reports match your filters' : 'No reports available yet'}</p>
-                  {(selectedYear || selectedAssessment) && <button onClick={() => { setSelectedYear(null); setSelectedAssessment(null); }} className="mt-2 text-xs sm:text-sm text-[#c9933a] hover:underline">Clear filters</button>}
+                  {(selectedYear || selectedAssessment) && <button onClick={() => { setSelectedYear(null); setSelectedAssessment(null); }} className="mt-2 text-xs sm:text-sm text-[#2A9D8F] hover:underline">Clear filters</button>}
                   <p className="text-[9px] sm:text-[10px] text-gray-400 mt-1">Reports will appear here once your teacher generates them</p>
                 </div>
               )}
@@ -1460,17 +1451,17 @@ export default function LearnerDashboard() {
           </>
         )}
 
-        {/* Attendance Tab */}
+        {/* Attendance Tab (updated colors) */}
         {activeTab === 'attendance' && (
           <>
             <div className="mb-3 sm:mb-4 md:mb-5 lg:mb-6">
-              <h1 className="font-serif text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-[#0f1923] mb-1">Attendance Records</h1>
+              <h1 className="font-serif text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-[#0A2540] mb-1">Attendance Records</h1>
               <p className="text-[10px] sm:text-xs md:text-sm text-gray-500">Your daily attendance history</p>
             </div>
             <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
               <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6] flex justify-between items-center flex-wrap gap-2">
-                <h2 className="font-semibold text-[#0f1923] text-xs sm:text-sm md:text-base">📅 Attendance Log</h2>
-                {attendanceRecords.length > 0 && <button onClick={downloadAttendancePDF} className="px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs bg-[#c9933a] text-white rounded-lg hover:bg-[#b5822e] transition"><ArrowDownTrayIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" /><span className="hidden xs:inline">PDF</span></button>}
+                <h2 className="font-semibold text-[#0A2540] text-xs sm:text-sm md:text-base">📅 Attendance Log</h2>
+                {attendanceRecords.length > 0 && <button onClick={downloadAttendancePDF} className="px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs bg-[#2A9D8F] text-white rounded-lg hover:bg-[#1e6b60] transition"><ArrowDownTrayIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3 inline mr-1" /><span className="hidden xs:inline">PDF</span></button>}
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[350px] sm:min-w-[400px] md:min-w-[500px]">
