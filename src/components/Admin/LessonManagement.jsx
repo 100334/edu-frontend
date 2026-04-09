@@ -26,7 +26,7 @@ const LessonManagement = () => {
     target_form: 'All',
     quiz_id: '',
     display_order: 0,
-    resource_type: ''
+    resource_type: 'video'      // default to video lesson
   });
 
   const loadDashboardData = useCallback(async () => {
@@ -51,14 +51,18 @@ const LessonManagement = () => {
 
   useEffect(() => { loadDashboardData(); }, [loadDashboardData]);
 
+  // Upload to R2 with folder based on resource type
   const uploadToR2 = async (file, type) => {
     if (!file) return;
     setUploadStatus(prev => ({ ...prev, [type]: true }));
     try {
       const token = localStorage.getItem('token');
+      // Determine folder based on resource_type
+      const folder = formData.resource_type === 'video' ? 'videos' : 'pdfs';
       const { data } = await api.post('/api/admin/r2-upload-url', {
         fileName: file.name,
         fileType: file.type,
+        folder: folder,           // send folder to backend
       }, { headers: { Authorization: `Bearer ${token}` } });
 
       const upload = await fetch(data.uploadUrl, {
@@ -69,8 +73,10 @@ const LessonManagement = () => {
 
       if (!upload.ok) throw new Error('Upload failed');
       const fileUrl = data.fileUrl || data.publicUrl || data.url;
-      setFormData(prev => ({ ...prev, [`${type}_url`]: fileUrl }));
-      toast.success(`${type.toUpperCase()} Synchronized`);
+      // Update the correct URL field based on resource type
+      const urlField = formData.resource_type === 'video' ? 'video_url' : 'pdf_url';
+      setFormData(prev => ({ ...prev, [urlField]: fileUrl }));
+      toast.success(`${type.toUpperCase()} uploaded to ${folder}/`);
     } catch (err) {
       toast.error(`Upload error: ${err.message}`);
     } finally {
@@ -86,10 +92,24 @@ const LessonManagement = () => {
       const method = editingLesson ? 'put' : 'post';
       const url = editingLesson ? `/api/admin/lessons/${editingLesson.id}` : '/api/admin/lessons';
       
-      const res = await api[method](url, {
-        ...formData,
+      // Build payload: only include the URL for the selected resource type
+      const payload = {
+        title: formData.title,
+        description: formData.description,
         subject_id: formData.subject_id ? parseInt(formData.subject_id) : null,
-      }, { headers: { Authorization: `Bearer ${token}` } });
+        target_form: formData.target_form,
+        display_order: parseInt(formData.display_order) || 0,
+        resource_type: formData.resource_type,
+        quiz_id: formData.quiz_id || null,
+      };
+      // Add the appropriate URL field
+      if (formData.resource_type === 'video') {
+        payload.video_url = formData.video_url;
+      } else {
+        payload.pdf_url = formData.pdf_url;
+      }
+
+      const res = await api[method](url, payload, { headers: { Authorization: `Bearer ${token}` } });
 
       if (res.data.success) {
         toast.success(editingLesson ? 'Lesson Refined' : 'Lesson Published');
@@ -101,6 +121,38 @@ const LessonManagement = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  // Reset form when opening modal
+  const openModal = (lesson = null) => {
+    if (lesson) {
+      setEditingLesson(lesson);
+      setFormData({
+        title: lesson.title || '',
+        description: lesson.description || '',
+        video_url: lesson.video_url || '',
+        pdf_url: lesson.pdf_url || '',
+        subject_id: lesson.subject_id || '',
+        target_form: lesson.target_form || 'All',
+        quiz_id: lesson.quiz_id || '',
+        display_order: lesson.display_order || 0,
+        resource_type: lesson.resource_type || 'video'
+      });
+    } else {
+      setEditingLesson(null);
+      setFormData({
+        title: '',
+        description: '',
+        video_url: '',
+        pdf_url: '',
+        subject_id: '',
+        target_form: 'All',
+        quiz_id: '',
+        display_order: 0,
+        resource_type: 'video'
+      });
+    }
+    setShowModal(true);
   };
 
   if (loading) return (
@@ -120,7 +172,7 @@ const LessonManagement = () => {
             <p className="text-white/70 text-sm mt-1 font-medium">Configure your digital curriculum and assets</p>
           </div>
           <button 
-            onClick={() => { setEditingLesson(null); setShowModal(true); }}
+            onClick={() => openModal()}
             className="bg-white text-[#007FFF] hover:bg-slate-50 px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-md active:scale-95"
           >
             <PlusIcon className="w-5 h-5" /> Add New Module
@@ -129,7 +181,6 @@ const LessonManagement = () => {
       </div>
 
       <div className="max-w-7xl mx-auto p-8">
-        {/* Main Content Table */}
         <div className="bg-white rounded-2xl border border-[#D4AF37]/30 shadow-sm overflow-hidden">
           <table className="w-full text-left">
             <thead className="bg-slate-50 border-b border-slate-100">
@@ -149,7 +200,7 @@ const LessonManagement = () => {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-lg bg-azure/10 flex items-center justify-center text-azure">
-                         {lesson.resource_type === 'video' ? <VideoCameraIcon className="w-5 h-5" /> : <DocumentIcon className="w-5 h-5" />}
+                        {lesson.resource_type === 'video' ? <VideoCameraIcon className="w-5 h-5" /> : <DocumentIcon className="w-5 h-5" />}
                       </div>
                       <div>
                         <p className="font-bold text-slate-800">{lesson.title}</p>
@@ -163,7 +214,7 @@ const LessonManagement = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button onClick={() => { setEditingLesson(lesson); setFormData(lesson); setShowModal(true); }} className="p-2 text-slate-400 hover:text-azure transition-colors">
+                    <button onClick={() => openModal(lesson)} className="p-2 text-slate-400 hover:text-azure transition-colors">
                       <PencilIcon className="w-5 h-5" />
                     </button>
                     <button className="p-2 text-slate-400 hover:text-red-500 transition-colors">
@@ -230,30 +281,70 @@ const LessonManagement = () => {
                 </div>
               </div>
 
+              {/* Resource Type Selector */}
               <div className="space-y-4 border-t border-slate-100 pt-6">
-                <p className="text-[11px] font-black text-azure uppercase tracking-widest">Resources & Assets</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-xl border-2 border-azure/20 bg-slate-50/50">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1"><VideoCameraIcon className="w-4 h-4" /> Video Link</span>
-                      <label className="text-[10px] font-black text-azure cursor-pointer hover:underline uppercase">
-                        {uploadStatus.video ? 'Uploading...' : 'Upload to R2'}
-                        <input type="file" className="hidden" accept="video/*" onChange={(e) => uploadToR2(e.target.files[0], 'video')} />
-                      </label>
-                    </div>
-                    <input type="text" value={formData.video_url} onChange={(e) => setFormData({...formData, video_url: e.target.value})} className="w-full text-xs bg-white border border-azure/20 rounded p-2 focus:border-azure outline-none" placeholder="URL Path" />
-                  </div>
+                <p className="text-[11px] font-black text-azure uppercase tracking-widest">Resource Type</p>
+                <div className="flex gap-6">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="resource_type" 
+                      value="video"
+                      checked={formData.resource_type === 'video'}
+                      onChange={(e) => setFormData({...formData, resource_type: e.target.value, video_url: '', pdf_url: ''})}
+                      className="w-4 h-4 text-azure focus:ring-azure"
+                    />
+                    <VideoCameraIcon className="w-5 h-5 text-azure" />
+                    <span className="text-sm font-medium">Video Lesson</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input 
+                      type="radio" 
+                      name="resource_type" 
+                      value="pdf"
+                      checked={formData.resource_type === 'pdf'}
+                      onChange={(e) => setFormData({...formData, resource_type: e.target.value, video_url: '', pdf_url: ''})}
+                      className="w-4 h-4 text-azure focus:ring-azure"
+                    />
+                    <DocumentIcon className="w-5 h-5 text-azure" />
+                    <span className="text-sm font-medium">PDF Document</span>
+                  </label>
+                </div>
+              </div>
 
-                  <div className="p-4 rounded-xl border-2 border-azure/20 bg-slate-50/50">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1"><DocumentIcon className="w-4 h-4" /> PDF Link</span>
-                      <label className="text-[10px] font-black text-azure cursor-pointer hover:underline uppercase">
-                        {uploadStatus.pdf ? 'Uploading...' : 'Upload to R2'}
-                        <input type="file" className="hidden" accept="application/pdf" onChange={(e) => uploadToR2(e.target.files[0], 'pdf')} />
-                      </label>
-                    </div>
-                    <input type="text" value={formData.pdf_url} onChange={(e) => setFormData({...formData, pdf_url: e.target.value})} className="w-full text-xs bg-white border border-azure/20 rounded p-2 focus:border-azure outline-none" placeholder="URL Path" />
+              {/* Dynamic Resource Upload based on Resource Type */}
+              <div className="space-y-4">
+                <p className="text-[11px] font-black text-azure uppercase tracking-widest">Upload Resource</p>
+                <div className="p-4 rounded-xl border-2 border-azure/20 bg-slate-50/50">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
+                      {formData.resource_type === 'video' ? <VideoCameraIcon className="w-4 h-4" /> : <DocumentIcon className="w-4 h-4" />}
+                      {formData.resource_type === 'video' ? 'Video File' : 'PDF File'}
+                    </span>
+                    <label className="text-[10px] font-black text-azure cursor-pointer hover:underline uppercase">
+                      {uploadStatus[formData.resource_type] ? 'Uploading...' : 'Upload to R2'}
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        accept={formData.resource_type === 'video' ? 'video/*' : 'application/pdf'} 
+                        onChange={(e) => uploadToR2(e.target.files[0], formData.resource_type)} 
+                      />
+                    </label>
                   </div>
+                  <input 
+                    type="text" 
+                    value={formData.resource_type === 'video' ? formData.video_url : formData.pdf_url} 
+                    onChange={(e) => {
+                      if (formData.resource_type === 'video') {
+                        setFormData({...formData, video_url: e.target.value});
+                      } else {
+                        setFormData({...formData, pdf_url: e.target.value});
+                      }
+                    }}
+                    className="w-full text-xs bg-white border border-azure/20 rounded p-2 focus:border-azure outline-none" 
+                    placeholder="File URL (auto-filled after upload)" 
+                  />
+                  <p className="text-[9px] text-slate-400 mt-1">Upload directly to designated folder: /{formData.resource_type === 'video' ? 'videos' : 'pdfs'}/</p>
                 </div>
               </div>
 
