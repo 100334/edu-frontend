@@ -31,6 +31,12 @@ const QuizManagement = () => {
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [gradingQuizId, setGradingQuizId] = useState(null);
   
+  // New state for All Submissions tab
+  const [allSubmissions, setAllSubmissions] = useState([]);
+  const [loadingAllSubmissions, setLoadingAllSubmissions] = useState(false);
+  const [submissionFilters, setSubmissionFilters] = useState({ quiz_id: '', learner_id: '', status: '' });
+  const [availableQuizzesForFilter, setAvailableQuizzesForFilter] = useState([]);
+  
   const [quizForm, setQuizForm] = useState({
     subject_id: '',
     title: '',
@@ -63,6 +69,14 @@ const QuizManagement = () => {
     loadQuizzes();
     loadSubjects();
   }, []);
+
+  // Load all submissions when All Submissions tab becomes active
+  useEffect(() => {
+    if (activeTab === 'allSubmissions') {
+      loadAllSubmissions();
+      loadQuizzesForFilter();
+    }
+  }, [activeTab, submissionFilters]);
 
   const loadSubjects = async () => {
     try {
@@ -138,6 +152,37 @@ const QuizManagement = () => {
     } finally {
       setLoadingSubmissions(false);
     }
+  };
+
+  const loadAllSubmissions = async () => {
+    setLoadingAllSubmissions(true);
+    try {
+      const token = localStorage.getItem('token');
+      const params = new URLSearchParams();
+      if (submissionFilters.quiz_id) params.append('quiz_id', submissionFilters.quiz_id);
+      if (submissionFilters.learner_id) params.append('learner_id', submissionFilters.learner_id);
+      if (submissionFilters.status) params.append('status', submissionFilters.status);
+      const url = `/api/admin/all-submissions${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await api.get(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (response.data.success) {
+        setAllSubmissions(response.data.submissions || []);
+      } else {
+        toast.error(response.data.message);
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to load submissions');
+    } finally {
+      setLoadingAllSubmissions(false);
+    }
+  };
+
+  const loadQuizzesForFilter = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await api.get('/api/admin/quizzes', { headers: { Authorization: `Bearer ${token}` } });
+      if (response.data.success) setAvailableQuizzesForFilter(response.data.quizzes || []);
+    } catch (err) { console.error(err); }
   };
 
   const handleCreateQuiz = async () => {
@@ -467,6 +512,33 @@ const QuizManagement = () => {
     }
   };
 
+  const handleResetAttempt = async () => {
+    if (!selectedSubmission) return;
+    const confirmReset = window.confirm(
+      `⚠️ WARNING: This will delete ${selectedSubmission.student_name}'s attempt permanently.\n\n` +
+      `All answers and grades will be removed. The learner can then retake the quiz from scratch.\n\n` +
+      `Are you absolutely sure?`
+    );
+    if (!confirmReset) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await api.delete(`/api/admin/attempts/${selectedSubmission.id}/reset`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.success) {
+        toast.success('Attempt reset. Learner can now retake the quiz.');
+        setGradingModal(false);
+        refreshSubmissions();
+      } else {
+        toast.error(response.data.message || 'Failed to reset attempt');
+      }
+    } catch (error) {
+      console.error('Reset error:', error);
+      toast.error(error.response?.data?.message || 'Failed to reset attempt');
+    }
+  };
+
   const getSubjectColor = (subjectName) => {
     const colors = {
       'Geography': 'bg-sky-100 text-sky-800',
@@ -610,7 +682,8 @@ const QuizManagement = () => {
           { id: 'all', label: 'All Papers', icon: DocumentTextIcon },
           { id: 'active', label: 'Active', icon: CheckCircleIcon },
           { id: 'draft', label: 'Draft', icon: ArchiveBoxIcon },
-          { id: 'grading', label: 'Marking', icon: UserGroupIcon }
+          { id: 'grading', label: 'Marking', icon: UserGroupIcon },
+          { id: 'allSubmissions', label: 'All Submissions', icon: ClipboardDocumentListIcon }
         ].map((tab) => (
           <button
             key={tab.id}
@@ -684,19 +757,149 @@ const QuizManagement = () => {
                           Marks: <span className="font-semibold text-teal-600">{sub.earned_marks ?? 'Not graded'}</span> / {sub.total_marks}
                         </p>
                       </div>
-                      <button
-                        onClick={() => {
-                          setSelectedSubmission(sub);
-                          setGradingModal(true);
-                        }}
-                        className="px-4 py-2 bg-darkblue text-white rounded-lg text-sm hover:bg-darkblue/90 transition"
-                      >
-                        Mark Script
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedSubmission(sub);
+                            setGradingModal(true);
+                          }}
+                          className="px-4 py-2 bg-darkblue text-white rounded-lg text-sm hover:bg-darkblue/90 transition"
+                        >
+                          Mark Script
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (window.confirm(`⚠️ Reset attempt for ${sub.student_name}? All grades and answers will be lost. They can retake the quiz.`)) {
+                              try {
+                                const token = localStorage.getItem('token');
+                                await api.delete(`/api/admin/attempts/${sub.id}/reset`, {
+                                  headers: { Authorization: `Bearer ${token}` }
+                                });
+                                toast.success('Attempt reset');
+                                refreshSubmissions();
+                              } catch (err) {
+                                toast.error('Reset failed');
+                              }
+                            }
+                          }}
+                          className="px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition"
+                          title="Reset attempt (allow retake)"
+                        >
+                          Reset
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+        </div>
+      ) : activeTab === 'allSubmissions' ? (
+        /* All Submissions Tab */
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex flex-wrap gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Quiz</label>
+              <select
+                value={submissionFilters.quiz_id}
+                onChange={(e) => setSubmissionFilters({ ...submissionFilters, quiz_id: e.target.value })}
+                className="px-3 py-2 border rounded-lg w-64"
+              >
+                <option value="">All Quizzes</option>
+                {availableQuizzesForFilter.map(q => (
+                  <option key={q.int_id} value={q.int_id}>{q.title} ({q.subject_name})</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select
+                value={submissionFilters.status}
+                onChange={(e) => setSubmissionFilters({ ...submissionFilters, status: e.target.value })}
+                className="px-3 py-2 border rounded-lg w-40"
+              >
+                <option value="">All</option>
+                <option value="in-progress">In Progress</option>
+                <option value="submitted">Submitted (Pending)</option>
+                <option value="completed">Graded</option>
+              </select>
+            </div>
+            <div className="flex items-end">
+              <button
+                onClick={() => setSubmissionFilters({ quiz_id: '', learner_id: '', status: '' })}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                Clear Filters
+              </button>
+            </div>
+          </div>
+
+          {loadingAllSubmissions ? (
+            <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-2 border-azure border-t-transparent"></div></div>
+          ) : allSubmissions.length === 0 ? (
+            <div className="text-center py-12 text-gray-500">No submissions found.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quiz</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Score</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Submitted</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {allSubmissions.map(sub => (
+                    <tr key={sub.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm">
+                        {sub.learner_name}<br />
+                        <span className="text-xs text-gray-500">{sub.learner_reg}</span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">{sub.quiz_title}</td>
+                      <td className="px-4 py-3 text-sm">{sub.subject}</td>
+                      <td className="px-4 py-3 text-center text-sm">
+                        {sub.status === 'completed' ? `${sub.earned_marks}/${sub.total_marks}` : '—'}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                          sub.status === 'completed' ? 'bg-green-100 text-green-800' :
+                          sub.status === 'submitted' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-blue-100 text-blue-800'
+                        }`}>
+                          {sub.status === 'completed' ? 'Graded' : sub.status === 'submitted' ? 'Pending' : 'In Progress'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">{sub.submitted_at ? new Date(sub.submitted_at).toLocaleString() : '—'}</td>
+                      <td className="px-4 py-3 text-center">
+                        <button
+                          onClick={async () => {
+                            if (window.confirm(`Reset attempt for ${sub.learner_name}? All answers and grades will be lost. They can retake the quiz.`)) {
+                              try {
+                                const token = localStorage.getItem('token');
+                                await api.delete(`/api/admin/attempts/${sub.id}/reset`, {
+                                  headers: { Authorization: `Bearer ${token}` }
+                                });
+                                toast.success('Attempt reset');
+                                loadAllSubmissions(); // refresh
+                              } catch (err) {
+                                toast.error('Reset failed');
+                              }
+                            }
+                          }}
+                          className="px-3 py-1 bg-red-600 text-white rounded-md text-sm hover:bg-red-700"
+                        >
+                          Reset
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -746,7 +949,7 @@ const QuizManagement = () => {
       )}
 
       {/* Paper Preview Side Panel */}
-      {selectedQuiz && activeTab !== 'grading' && (
+      {selectedQuiz && activeTab !== 'grading' && activeTab !== 'allSubmissions' && (
         <div className="fixed inset-y-0 right-0 w-full max-w-3xl bg-white shadow-2xl z-50 transform transition-transform duration-300 border-l border-gray-200 overflow-y-auto" style={{ fontFamily: "'Times New Roman', 'Georgia', serif" }}>
           <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center z-10 shadow-sm">
             <div>
@@ -845,11 +1048,10 @@ const QuizManagement = () => {
         </div>
       )}
 
-      {/* ========== REDESIGNED CREATE/EDIT PAPER MODAL ========== */}
+      {/* Create/Edit Quiz Modal */}
       {showQuizModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => e.target === e.currentTarget && setShowQuizModal(false)}>
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-            {/* Modal Header with gradient */}
             <div className="sticky top-0 z-10 bg-gradient-to-r from-darkblue to-azure px-6 py-4 flex justify-between items-center rounded-t-2xl">
               <div className="flex items-center gap-3">
                 <div className="bg-white/20 p-2 rounded-xl">
@@ -864,7 +1066,6 @@ const QuizManagement = () => {
               </button>
             </div>
 
-            {/* Modal Body */}
             <div className="p-6 space-y-6">
               {/* Basic Information Section */}
               <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
@@ -1031,7 +1232,6 @@ const QuizManagement = () => {
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="flex gap-3 pt-4">
                 <button 
                   onClick={() => setShowQuizModal(false)}
@@ -1059,7 +1259,7 @@ const QuizManagement = () => {
         </div>
       )}
 
-      {/* Add/Edit Question Modal (unchanged from previous redesign) */}
+      {/* Add/Edit Question Modal */}
       {showQuestionModal && selectedQuiz && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => e.target === e.currentTarget && setShowQuestionModal(false)}>
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
@@ -1139,7 +1339,7 @@ const QuizManagement = () => {
         </div>
       )}
 
-      {/* Grading Modal */}
+      {/* Grading Modal with Reset Button */}
       {gradingModal && selectedSubmission && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => e.target === e.currentTarget && setGradingModal(false)}>
           <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-xl" style={{ fontFamily: "'Times New Roman', serif" }}>
@@ -1192,9 +1392,17 @@ const QuizManagement = () => {
                   </div>
                 </div>
               ))}
-              <div className="flex justify-end gap-3 pt-4">
-                <button onClick={() => setGradingModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">Cancel</button>
-                <button onClick={saveGrades} className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition">Submit Marks</button>
+              <div className="flex justify-between items-center gap-3 pt-4">
+                <button
+                  onClick={handleResetAttempt}
+                  className="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
+                >
+                  Reset Attempt (Allow Retake)
+                </button>
+                <div className="flex gap-3">
+                  <button onClick={() => setGradingModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">Cancel</button>
+                  <button onClick={saveGrades} className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition">Submit Marks</button>
+                </div>
               </div>
             </div>
           </div>

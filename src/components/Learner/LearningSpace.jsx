@@ -9,10 +9,12 @@ import {
   ChevronLeftIcon,
   HomeIcon,
   XMarkIcon,
-  ArchiveBoxIcon          // <-- new icon for past papers
+  ArchiveBoxIcon,
+  TrophyIcon
 } from '@heroicons/react/24/solid';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import QuizResults from './QuizResults';
 
 const LearningSpace = ({ onStartQuiz }) => {
   const [loading, setLoading] = useState(true);
@@ -26,7 +28,8 @@ const LearningSpace = ({ onStartQuiz }) => {
     { id: 'videos', name: 'Video Lessons', type: 'video', icon: VideoCameraIcon, folderColor: '#0EA5E9' },
     { id: 'pdfs', name: 'Lesson Notes', type: 'pdf', icon: DocumentTextIcon, folderColor: '#10B981' },
     { id: 'quizzes', name: 'Assessments', type: 'quiz', icon: BookOpenIcon, folderColor: '#FBBF24' },
-    { id: 'pastpapers', name: 'Solved Past Papers', type: 'pastpaper', icon: ArchiveBoxIcon, folderColor: '#8B5CF6' }  // new folder
+    { id: 'pastpapers', name: 'Solved Past Papers', type: 'pastpaper', icon: ArchiveBoxIcon, folderColor: '#8B5CF6' },
+    { id: 'results', name: 'My Results', type: 'results', icon: TrophyIcon, folderColor: '#F97316' }
   ];
 
   useEffect(() => { loadLessonsAndQuizzes(); }, []);
@@ -37,9 +40,7 @@ const LearningSpace = ({ onStartQuiz }) => {
       const token = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
 
-      // Fetch lessons (video, PDF, past papers)
       const lessonsRes = await api.get('/api/learner/lessons', { headers });
-      // Fetch quizzes (for Assessments folder)
       const quizzesRes = await api.get('/api/quiz/quizzes', { headers });
 
       if (!lessonsRes.data.success) {
@@ -54,7 +55,7 @@ const LearningSpace = ({ onStartQuiz }) => {
         console.warn('Quiz API returned error, continuing without quizzes');
       }
 
-      // Convert quizzes to lesson format
+      // Preserve all fields from the quiz, including already_taken, attempt_status, disabled
       const quizItems = quizzes.map(quiz => ({
         id: quiz.id,
         title: quiz.title,
@@ -63,15 +64,18 @@ const LearningSpace = ({ onStartQuiz }) => {
         resource_type: 'quiz',
         video_url: null,
         pdf_url: null,
-        target_form: quiz.target_form
+        target_form: quiz.target_form,
+        already_taken: quiz.already_taken || false,
+        attempt_status: quiz.attempt_status || null,
+        disabled: quiz.disabled || false
       }));
 
-      // Group lessons by resource_type
       const grouped = {
         video: lessons.filter(l => l.resource_type === 'video'),
         pdf: lessons.filter(l => l.resource_type === 'pdf'),
         quiz: quizItems,
-        pastpaper: lessons.filter(l => l.resource_type === 'pastpaper')
+        pastpaper: lessons.filter(l => l.resource_type === 'pastpaper'),
+        results: []
       };
 
       setFolders(folderConfig.map(f => ({
@@ -93,7 +97,7 @@ const LearningSpace = ({ onStartQuiz }) => {
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
       
-      {/* SYSTEM NAVIGATION BAR (Breadcrumbs & Controls) */}
+      {/* SYSTEM NAVIGATION BAR */}
       <div className="bg-slate-50 border-b border-slate-200 px-4 py-2 flex items-center gap-3">
         <button 
           onClick={() => setActiveFolderId(null)}
@@ -114,7 +118,7 @@ const LearningSpace = ({ onStartQuiz }) => {
           )}
         </div>
 
-        {activeFolderId && (
+        {activeFolderId && activeFolderId !== 'results' && (
           <div className="flex bg-slate-200 p-0.5 rounded">
             <button onClick={() => setViewMode('list')} className={`p-1 rounded ${viewMode === 'list' ? 'bg-white shadow-sm' : 'text-slate-500'}`}><ListBulletIcon className="w-4 h-4" /></button>
             <button onClick={() => setViewMode('grid')} className={`p-1 rounded ${viewMode === 'grid' ? 'bg-white shadow-sm' : 'text-slate-500'}`}><Squares2X2Icon className="w-4 h-4" /></button>
@@ -125,7 +129,7 @@ const LearningSpace = ({ onStartQuiz }) => {
       {/* DIRECTORY VIEWPORT */}
       <div className="flex-1 p-6 overflow-y-auto">
         {!activeFolderId ? (
-          /* ROOT LEVEL */
+          /* ROOT LEVEL – show all folders */
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-8">
             {folders.map(f => (
               <div key={f.id} onClick={() => setActiveFolderId(f.id)} className="group flex flex-col items-center cursor-pointer">
@@ -138,50 +142,80 @@ const LearningSpace = ({ onStartQuiz }) => {
             ))}
           </div>
         ) : (
-          /* SUB-DIRECTORY LEVEL */
           <div className="animate-in fade-in duration-200">
-            <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3" : "space-y-1"}>
-              {activeFolder.lessons.map(lesson => (
-                <div 
-                  key={lesson.id}
-                  onClick={() => {
-                    if (activeFolder.type === 'quiz') {
-                      if (onStartQuiz) onStartQuiz(lesson.quiz_id);
-                      else console.warn('onStartQuiz not provided');
-                    } else {
-                      setSelectedLesson(lesson);
-                      setShowLessonModal(true);
-                    }
-                  }}
-                  className={`group flex items-center p-3 rounded border transition-all cursor-pointer ${
-                    viewMode === 'grid' 
-                    ? 'flex-col text-center border-slate-100 hover:bg-sky-50' 
-                    : 'border-transparent hover:bg-slate-100 hover:border-slate-200'
-                  }`}
-                >
-                  <div className={`${viewMode === 'grid' ? 'mb-2' : 'mr-3'}`}>
-                    <activeFolder.icon className={`w-5 h-5 ${activeFolder.id === 'videos' ? 'text-sky-500' : activeFolder.id === 'pdfs' ? 'text-emerald-500' : activeFolder.id === 'quizzes' ? 'text-amber-500' : 'text-purple-500'}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-medium text-slate-700 truncate">{lesson.title}</h4>
-                    {viewMode === 'grid' && lesson.description && (
-                      <p className="text-[10px] text-slate-400 mt-1 line-clamp-2">{lesson.description}</p>
-                    )}
-                  </div>
-                  {viewMode === 'list' && <ArrowRightCircleIcon className="w-4 h-4 text-slate-300 group-hover:text-slate-500" />}
+            {activeFolderId === 'results' ? (
+              <QuizResults />
+            ) : (
+              <>
+                <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3" : "space-y-1"}>
+                  {activeFolder.lessons.map(lesson => {
+                    const isDisabled = lesson.disabled === true;
+                    const isResumable = lesson.attempt_status === 'in-progress';
+                    
+                    return (
+                      <div 
+                        key={lesson.id}
+                        onClick={() => {
+                          if (activeFolder.type === 'quiz') {
+                            if (isDisabled) {
+                              if (isResumable) {
+                                toast('You have an in‑progress attempt. Resume it?', { duration: 3000 });
+                                if (onStartQuiz) onStartQuiz(lesson.quiz_id);
+                              } else {
+                                // ✅ GREEN toast for completed quiz
+                                toast.success('You have already completed this quiz. Multiple attempts are not allowed.');
+                              }
+                              return;
+                            }
+                            if (onStartQuiz) onStartQuiz(lesson.quiz_id);
+                          } else {
+                            setSelectedLesson(lesson);
+                            setShowLessonModal(true);
+                          }
+                        }}
+                        className={`group flex items-center p-3 rounded border transition-all ${
+                          isDisabled ? 'opacity-60 bg-gray-100 cursor-not-allowed' : 'cursor-pointer'
+                        } ${
+                          viewMode === 'grid' 
+                            ? 'flex-col text-center border-slate-100 hover:bg-sky-50' 
+                            : 'border-transparent hover:bg-slate-100 hover:border-slate-200'
+                        }`}
+                      >
+                        <div className={`${viewMode === 'grid' ? 'mb-2' : 'mr-3'}`}>
+                          <activeFolder.icon className={`w-5 h-5 ${activeFolder.id === 'videos' ? 'text-sky-500' : activeFolder.id === 'pdfs' ? 'text-emerald-500' : activeFolder.id === 'quizzes' ? 'text-amber-500' : 'text-purple-500'}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-sm font-medium text-slate-700 truncate">{lesson.title}</h4>
+                          {viewMode === 'grid' && lesson.description && (
+                            <p className="text-[10px] text-slate-400 mt-1 line-clamp-2">{lesson.description}</p>
+                          )}
+                        </div>
+                        {viewMode === 'list' && (
+                          <div className="flex items-center gap-2">
+                            {isDisabled && (
+                              <span className="text-xs text-amber-600 font-medium">
+                                {isResumable ? 'Resume' : 'Taken'}
+                              </span>
+                            )}
+                            <ArrowRightCircleIcon className="w-4 h-4 text-slate-300 group-hover:text-slate-500" />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {activeFolder.lessons.length === 0 && (
+                    <div className="col-span-full text-center py-12 text-slate-400 text-sm">
+                      This folder is empty.
+                    </div>
+                  )}
                 </div>
-              ))}
-              {activeFolder.lessons.length === 0 && (
-                <div className="col-span-full text-center py-12 text-slate-400 text-sm">
-                  This folder is empty.
-                </div>
-              )}
-            </div>
+              </>
+            )}
           </div>
         )}
       </div>
 
-      {/* SYSTEM VIEWER (Modal) */}
+      {/* SYSTEM VIEWER (Modal for video/pdf) */}
       {showLessonModal && selectedLesson && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col border border-slate-300">
