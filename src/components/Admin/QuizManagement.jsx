@@ -31,7 +31,7 @@ const QuizManagement = () => {
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
   const [gradingQuizId, setGradingQuizId] = useState(null);
   
-  // New state for All Submissions tab
+  // State for All Submissions tab
   const [allSubmissions, setAllSubmissions] = useState([]);
   const [loadingAllSubmissions, setLoadingAllSubmissions] = useState(false);
   const [submissionFilters, setSubmissionFilters] = useState({ quiz_id: '', learner_id: '', status: '' });
@@ -70,7 +70,6 @@ const QuizManagement = () => {
     loadSubjects();
   }, []);
 
-  // Load all submissions when All Submissions tab becomes active
   useEffect(() => {
     if (activeTab === 'allSubmissions') {
       loadAllSubmissions();
@@ -264,7 +263,7 @@ const QuizManagement = () => {
         toast.success('Quiz deleted');
         loadQuizzes();
         if (selectedQuiz?.id === quiz.id) setSelectedQuiz(null);
-        if (gradingQuizId === quiz.int_id) {
+        if (gradingQuizId === quiz.id) {
           setGradingQuizId(null);
           setSubmissions([]);
         }
@@ -274,6 +273,28 @@ const QuizManagement = () => {
     } catch (error) {
       console.error(error);
       toast.error(error.response?.data?.message);
+    }
+  };
+
+  // NEW: Delete a submission permanently (allows retake)
+  const handleDeleteSubmission = async (submissionId, studentName) => {
+    if (!window.confirm(`⚠️ Permanently delete ${studentName}'s submission?\n\nAll answers and grades will be lost. The learner can retake the quiz.`)) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      await api.delete(`/api/admin/attempts/${submissionId}/reset`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success('Submission deleted successfully');
+      // Refresh the current view
+      if (activeTab === 'grading') {
+        refreshSubmissions();
+      } else if (activeTab === 'allSubmissions') {
+        loadAllSubmissions();
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error(error.response?.data?.message || 'Failed to delete submission');
     }
   };
 
@@ -469,9 +490,9 @@ const QuizManagement = () => {
     setActiveTab('grading');
     if (gradingQuizId) {
       loadSubmissions(gradingQuizId);
-    } else if (selectedQuiz && selectedQuiz.int_id) {
-      setGradingQuizId(selectedQuiz.int_id);
-      loadSubmissions(selectedQuiz.int_id);
+    } else if (selectedQuiz && selectedQuiz.id) {
+      setGradingQuizId(selectedQuiz.id);
+      loadSubmissions(selectedQuiz.id);
     }
   };
 
@@ -677,30 +698,38 @@ const QuizManagement = () => {
       </div>
 
       {/* Tabs */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-1 flex flex-wrap gap-1">
-        {[
-          { id: 'all', label: 'All Papers', icon: DocumentTextIcon },
-          { id: 'active', label: 'Active', icon: CheckCircleIcon },
-          { id: 'draft', label: 'Draft', icon: ArchiveBoxIcon },
-          { id: 'grading', label: 'Marking', icon: UserGroupIcon },
-          { id: 'allSubmissions', label: 'All Submissions', icon: ClipboardDocumentListIcon }
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => {
-              if (tab.id === 'grading') handleGradingTab();
-              else setActiveTab(tab.id);
-            }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              activeTab === tab.id 
-                ? 'bg-darkblue text-white shadow-sm' 
-                : 'text-gray-600 hover:bg-gray-100'
-            }`}
-          >
-            <tab.icon className="w-4 h-4" />
-            {tab.label}
-          </button>
-        ))}
+      <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-1.5 shadow-lg border border-white/20">
+        <div className="flex flex-wrap gap-1.5">
+          {[
+            { id: 'all', label: 'All Papers', icon: DocumentTextIcon },
+            { id: 'active', label: 'Active', icon: CheckCircleIcon },
+            { id: 'draft', label: 'Draft', icon: ArchiveBoxIcon },
+            { id: 'grading', label: 'Marking', icon: UserGroupIcon },
+            { id: 'allSubmissions', label: 'All Submissions', icon: ClipboardDocumentListIcon }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => {
+                if (tab.id === 'grading') handleGradingTab();
+                else setActiveTab(tab.id);
+              }}
+              className={`
+                relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
+                transition-all duration-200 ease-out
+                ${activeTab === tab.id 
+                  ? 'bg-gradient-to-r from-[#007FFF] via-[#00008B] to-[#007FFF] text-white shadow-md scale-105' 
+                  : 'text-gray-700 hover:bg-white/30 hover:text-gray-900'
+                }
+              `}
+            >
+              <tab.icon className={`w-4 h-4 transition-transform duration-200 ${activeTab === tab.id ? 'scale-110' : ''}`} />
+              <span>{tab.label}</span>
+              {activeTab === tab.id && (
+                <span className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-white rounded-full shadow-sm" />
+              )}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Grading View */}
@@ -716,7 +745,7 @@ const QuizManagement = () => {
               >
                 <option value="">-- Choose a paper --</option>
                 {quizzes.map(quiz => (
-                  <option key={quiz.int_id} value={quiz.int_id}>
+                  <option key={quiz.id} value={quiz.id}>
                     {quiz.title} ({quiz.subject_name || 'No subject'}) - {quiz.question_count || 0} questions
                   </option>
                 ))}
@@ -767,25 +796,13 @@ const QuizManagement = () => {
                         >
                           Mark Script
                         </button>
+                        {/* Delete button in Grading tab */}
                         <button
-                          onClick={async () => {
-                            if (window.confirm(`⚠️ Reset attempt for ${sub.student_name}? All grades and answers will be lost. They can retake the quiz.`)) {
-                              try {
-                                const token = localStorage.getItem('token');
-                                await api.delete(`/api/admin/attempts/${sub.id}/reset`, {
-                                  headers: { Authorization: `Bearer ${token}` }
-                                });
-                                toast.success('Attempt reset');
-                                refreshSubmissions();
-                              } catch (err) {
-                                toast.error('Reset failed');
-                              }
-                            }
-                          }}
+                          onClick={() => handleDeleteSubmission(sub.id, sub.student_name)}
                           className="px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition"
-                          title="Reset attempt (allow retake)"
+                          title="Delete submission permanently"
                         >
-                          Reset
+                          Delete
                         </button>
                       </div>
                     </div>
@@ -808,7 +825,7 @@ const QuizManagement = () => {
               >
                 <option value="">All Quizzes</option>
                 {availableQuizzesForFilter.map(q => (
-                  <option key={q.int_id} value={q.int_id}>{q.title} ({q.subject_name})</option>
+                  <option key={q.id} value={q.id}>{q.title} ({q.subject_name})</option>
                 ))}
               </select>
             </div>
@@ -876,24 +893,12 @@ const QuizManagement = () => {
                       </td>
                       <td className="px-4 py-3 text-sm">{sub.submitted_at ? new Date(sub.submitted_at).toLocaleString() : '—'}</td>
                       <td className="px-4 py-3 text-center">
+                        {/* Delete button in All Submissions table */}
                         <button
-                          onClick={async () => {
-                            if (window.confirm(`Reset attempt for ${sub.learner_name}? All answers and grades will be lost. They can retake the quiz.`)) {
-                              try {
-                                const token = localStorage.getItem('token');
-                                await api.delete(`/api/admin/attempts/${sub.id}/reset`, {
-                                  headers: { Authorization: `Bearer ${token}` }
-                                });
-                                toast.success('Attempt reset');
-                                loadAllSubmissions(); // refresh
-                              } catch (err) {
-                                toast.error('Reset failed');
-                              }
-                            }
-                          }}
-                          className="px-3 py-1 bg-red-600 text-white rounded-md text-sm hover:bg-red-700"
-                        >
-                          Reset
+                          onClick={() => handleDeleteSubmission(sub.id, sub.learner_name)}
+                           className="px-3 py-1 bg-azure text-white rounded-md text-sm hover:bg-azure/80"
+>
+                            Delete
                         </button>
                       </td>
                     </tr>
