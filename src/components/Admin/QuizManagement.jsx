@@ -129,6 +129,7 @@ const QuizManagement = () => {
           submitted_at: sub.submitted_at,
           total_marks: sub.total_marks,
           earned_marks: sub.earned_marks,
+          quiz_id: sub.quiz_id,  // ✅ FIX: store quiz_id in each submission
           answers: (sub.answers || []).map(ans => ({
             question_id: ans.question_id,
             question_text: ans.question_text,
@@ -276,7 +277,7 @@ const QuizManagement = () => {
     }
   };
 
-  // NEW: Delete a submission permanently (allows retake)
+  // Delete a submission permanently (allows retake)
   const handleDeleteSubmission = async (submissionId, studentName) => {
     if (!window.confirm(`⚠️ Permanently delete ${studentName}'s submission?\n\nAll answers and grades will be lost. The learner can retake the quiz.`)) return;
 
@@ -286,7 +287,6 @@ const QuizManagement = () => {
         headers: { Authorization: `Bearer ${token}` }
       });
       toast.success('Submission deleted successfully');
-      // Refresh the current view
       if (activeTab === 'grading') {
         refreshSubmissions();
       } else if (activeTab === 'allSubmissions') {
@@ -505,12 +505,24 @@ const QuizManagement = () => {
     if (gradingQuizId) loadSubmissions(gradingQuizId);
   };
 
+  // ✅ FIXED: saveGrades with proper quiz_id
   const saveGrades = async () => {
     if (!selectedSubmission) return;
+
+    // Use quiz_id from the submission (added in loadSubmissions) or fallback to gradingQuizId
+    const quizId = selectedSubmission.quiz_id || gradingQuizId;
+    
+    if (!quizId) {
+      toast.error('Missing quiz ID. Cannot save grades.');
+      console.error('No quiz_id found in submission or state');
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
       const payload = {
         attempt_id: selectedSubmission.id,
+        quiz_id: quizId,   // ✅ now always present
         answers: selectedSubmission.answers.map(a => ({
           question_id: a.question_id,
           marks_awarded: a.given_marks,
@@ -529,7 +541,7 @@ const QuizManagement = () => {
       }
     } catch (err) {
       console.error(err);
-      toast.error(err.response?.data?.message);
+      toast.error(err.response?.data?.message || 'Failed to save grades');
     }
   };
 
@@ -796,7 +808,6 @@ const QuizManagement = () => {
                         >
                           Mark Script
                         </button>
-                        {/* Delete button in Grading tab */}
                         <button
                           onClick={() => handleDeleteSubmission(sub.id, sub.student_name)}
                           className="px-3 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 transition"
@@ -876,7 +887,7 @@ const QuizManagement = () => {
                       <td className="px-4 py-3 text-sm">
                         {sub.learner_name}<br />
                         <span className="text-xs text-gray-500">{sub.learner_reg}</span>
-                      </td>
+                       </td>
                       <td className="px-4 py-3 text-sm">{sub.quiz_title}</td>
                       <td className="px-4 py-3 text-sm">{sub.subject}</td>
                       <td className="px-4 py-3 text-center text-sm">
@@ -893,18 +904,17 @@ const QuizManagement = () => {
                       </td>
                       <td className="px-4 py-3 text-sm">{sub.submitted_at ? new Date(sub.submitted_at).toLocaleString() : '—'}</td>
                       <td className="px-4 py-3 text-center">
-                        {/* Delete button in All Submissions table */}
                         <button
                           onClick={() => handleDeleteSubmission(sub.id, sub.learner_name)}
-                           className="px-3 py-1 bg-azure text-white rounded-md text-sm hover:bg-azure/80"
->
-                            Delete
+                          className="px-3 py-1 bg-azure text-white rounded-md text-sm hover:bg-azure/80"
+                        >
+                          Delete
                         </button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
-              </table>
+               </table>
             </div>
           )}
         </div>
