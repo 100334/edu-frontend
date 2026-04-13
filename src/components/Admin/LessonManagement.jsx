@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   PlusIcon, PencilIcon, TrashIcon, XMarkIcon, 
   VideoCameraIcon, DocumentIcon,
-  AcademicCapIcon, BookOpenIcon, CloudArrowUpIcon
+  AcademicCapIcon, BookOpenIcon, CloudArrowUpIcon, FolderIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -34,16 +34,27 @@ const LessonManagement = () => {
     try {
       const token = localStorage.getItem('token');
       const authHeader = { headers: { Authorization: `Bearer ${token}` } };
+      
       const [lessonsRes, subjectsRes, quizzesRes] = await Promise.all([
         api.get('/api/admin/lessons', authHeader),
-        api.get('/api/admin/subjects/all', authHeader),
+        api.get('/api/admin/subjects/all', authHeader),   // ✅ corrected endpoint
         api.get('/api/admin/quizzes', authHeader)
       ]);
+      
       if (lessonsRes.data.success) setLessons(lessonsRes.data.lessons);
-      if (subjectsRes.data.success) setSubjects(subjectsRes.data.subjects || []);
+      
+      // ✅ Extract subjects from the correct endpoint
+      let subjectsArray = [];
+      if (subjectsRes.data.success) {
+        subjectsArray = subjectsRes.data.subjects || [];
+      }
+      console.log('✅ Subjects loaded:', subjectsArray);
+      setSubjects(subjectsArray);
+      
       if (quizzesRes.data.success) setQuizzes(quizzesRes.data.quizzes || []);
     } catch (error) {
-      toast.error('Sync failed');
+      console.error('Error loading data:', error);
+      toast.error('Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -51,16 +62,29 @@ const LessonManagement = () => {
 
   useEffect(() => { loadDashboardData(); }, [loadDashboardData]);
 
+  // Helper to get subject name from ID (supports both string and number IDs)
+  const getSubjectName = (subjectId) => {
+    const subject = subjects.find(s => String(s.id) === String(subjectId));
+    return subject ? subject.name.replace(/\s+/g, '_') : 'uncategorized';
+  };
+
   const uploadToR2 = async (file, type) => {
     if (!file) return;
+    if (!formData.subject_id) {
+      toast.error('Please select a subject first before uploading a file.');
+      return;
+    }
+    const subjectFolder = getSubjectName(formData.subject_id);
+    const resourceFolder = formData.resource_type === 'video' ? 'videos' : 'pdfs';
+    const fullFolder = `${resourceFolder}/${subjectFolder}`;
+    
     setUploadStatus(prev => ({ ...prev, [type]: true }));
     try {
       const token = localStorage.getItem('token');
-      const folder = formData.resource_type === 'video' ? 'videos' : 'pdfs';
       const { data } = await api.post('/api/admin/r2-upload-url', {
         fileName: file.name,
         fileType: file.type,
-        folder: folder,
+        folder: fullFolder,
       }, { headers: { Authorization: `Bearer ${token}` } });
 
       const upload = await fetch(data.uploadUrl, {
@@ -73,7 +97,7 @@ const LessonManagement = () => {
       const fileUrl = data.fileUrl || data.publicUrl || data.url;
       const urlField = formData.resource_type === 'video' ? 'video_url' : 'pdf_url';
       setFormData(prev => ({ ...prev, [urlField]: fileUrl }));
-      toast.success(`${type.toUpperCase()} uploaded to ${folder}/`);
+      toast.success(`${type.toUpperCase()} uploaded to ${fullFolder}/`);
     } catch (err) {
       toast.error(`Upload error: ${err.message}`);
     } finally {
@@ -107,18 +131,20 @@ const LessonManagement = () => {
       const res = await api[method](url, payload, { headers: { Authorization: `Bearer ${token}` } });
 
       if (res.data.success) {
-        toast.success(editingLesson ? 'Lesson Refined' : 'Lesson Published');
+        toast.success(editingLesson ? 'Lesson Updated' : 'Lesson Created');
         setShowModal(false);
         loadDashboardData();
+      } else {
+        toast.error(res.data.message || 'Failed to save');
       }
     } catch (error) {
-      toast.error('Failed to save changes');
+      console.error(error);
+      toast.error(error.response?.data?.message || 'Failed to save changes');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // 🗑️ DELETE LESSON FUNCTION
   const handleDeleteLesson = async (lesson) => {
     if (!window.confirm(`Delete "${lesson.title}" permanently? This action cannot be undone.`)) return;
     try {
@@ -128,7 +154,7 @@ const LessonManagement = () => {
       });
       if (response.data.success) {
         toast.success('Lesson deleted successfully');
-        loadDashboardData(); // refresh the list
+        loadDashboardData();
       } else {
         toast.error(response.data.message || 'Failed to delete lesson');
       }
@@ -201,48 +227,58 @@ const LessonManagement = () => {
               <tr>
                 <th className="px-6 py-4 text-[11px] font-bold uppercase text-slate-500 tracking-wider w-20 text-center">Order</th>
                 <th className="px-6 py-4 text-[11px] font-bold uppercase text-slate-500 tracking-wider">Lesson Detail</th>
+                <th className="px-6 py-4 text-[11px] font-bold uppercase text-slate-500 tracking-wider">Subject Folder</th>
                 <th className="px-6 py-4 text-[11px] font-bold uppercase text-slate-500 tracking-wider">Scope</th>
                 <th className="px-6 py-4 text-[11px] font-bold uppercase text-slate-500 tracking-wider text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {lessons.map((lesson) => (
-                <tr key={lesson.id} className="hover:bg-azure/5 transition-colors group">
-                  <td className="px-6 py-4 text-center">
-                    <span className="text-sm font-bold text-[#D4AF37]">#{lesson.display_order}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-lg bg-azure/10 flex items-center justify-center text-azure">
-                        {lesson.resource_type === 'video' ? <VideoCameraIcon className="w-5 h-5" /> : <DocumentIcon className="w-5 h-5" />}
+              {lessons.map((lesson) => {
+                const subjectName = subjects.find(s => String(s.id) === String(lesson.subject_id))?.name || 'General';
+                return (
+                  <tr key={lesson.id} className="hover:bg-azure/5 transition-colors group">
+                    <td className="px-6 py-4 text-center">
+                      <span className="text-sm font-bold text-[#D4AF37]">#{lesson.display_order}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-lg bg-azure/10 flex items-center justify-center text-azure">
+                          {lesson.resource_type === 'video' ? <VideoCameraIcon className="w-5 h-5" /> : <DocumentIcon className="w-5 h-5" />}
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-800">{lesson.title}</p>
+                          <p className="text-xs text-slate-400 font-medium">{lesson.resource_type === 'video' ? 'Video Lesson' : 'PDF Document'}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-slate-800">{lesson.title}</p>
-                        <p className="text-xs text-slate-400 font-medium">{lesson.subject?.name || 'General'}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-1 text-xs text-slate-500">
+                        <FolderIcon className="w-4 h-4 text-azure" />
+                        <span>{lesson.resource_type === 'video' ? 'videos/' : 'pdfs/'}{subjectName}</span>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full text-[10px] font-black bg-white border border-[#D4AF37] text-[#D4AF37] uppercase">
-                      {lesson.target_form}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <button onClick={() => openModal(lesson)} className="p-2 text-slate-400 hover:text-azure transition-colors">
-                      <PencilIcon className="w-5 h-5" />
-                    </button>
-                    <button onClick={() => handleDeleteLesson(lesson)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
-                      <TrashIcon className="w-5 h-5" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="px-3 py-1 rounded-full text-[10px] font-black bg-white border border-[#D4AF37] text-[#D4AF37] uppercase">
+                        {lesson.target_form}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <button onClick={() => openModal(lesson)} className="p-2 text-slate-400 hover:text-azure transition-colors">
+                        <PencilIcon className="w-5 h-5" />
+                      </button>
+                      <button onClick={() => handleDeleteLesson(lesson)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
+                        <TrashIcon className="w-5 h-5" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Editor Modal (unchanged) */}
+      {/* Editor Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl border border-[#D4AF37]/20 flex flex-col overflow-hidden animate-in zoom-in-95">
@@ -279,7 +315,11 @@ const LessonManagement = () => {
                       className="w-full bg-white border-2 border-azure/30 rounded-xl px-4 py-3 text-slate-700 font-bold focus:border-azure outline-none cursor-pointer"
                     >
                       <option value="">Select Subject</option>
-                      {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      {subjects && subjects.length > 0 ? (
+                        subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)
+                      ) : (
+                        <option disabled>No subjects available</option>
+                      )}
                     </select>
                   </div>
                   <div>
@@ -358,7 +398,13 @@ const LessonManagement = () => {
                     className="w-full text-xs bg-white border border-azure/20 rounded p-2 focus:border-azure outline-none" 
                     placeholder="File URL (auto-filled after upload)" 
                   />
-                  <p className="text-[9px] text-slate-400 mt-1">Upload directly to designated folder: /{formData.resource_type === 'video' ? 'videos' : 'pdfs'}/</p>
+                  {formData.subject_id ? (
+                    <p className="text-[9px] text-azure mt-1">
+                      📁 Will be stored in: {formData.resource_type === 'video' ? 'videos' : 'pdfs'}/{getSubjectName(formData.subject_id)}/
+                    </p>
+                  ) : (
+                    <p className="text-[9px] text-red-500 mt-1">⚠️ Select a subject before uploading</p>
+                  )}
                 </div>
               </div>
 

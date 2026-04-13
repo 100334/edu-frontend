@@ -10,7 +10,9 @@ import {
   HomeIcon,
   XMarkIcon,
   ArchiveBoxIcon,
-  TrophyIcon
+  TrophyIcon,
+  FolderIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/solid';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -23,6 +25,9 @@ const LearningSpace = ({ onStartQuiz }) => {
   const [selectedLesson, setSelectedLesson] = useState(null);
   const [showLessonModal, setShowLessonModal] = useState(false);
   const [viewMode, setViewMode] = useState('list');
+  // State for expanded subjects – key is subject name, value is boolean
+  // We reset it when activeFolder changes to avoid conflicts between folders
+  const [expandedSubjects, setExpandedSubjects] = useState({});
 
   const folderConfig = [
     { id: 'videos', name: 'Video Lessons', type: 'video', icon: VideoCameraIcon, folderColor: '#0EA5E9' },
@@ -33,6 +38,11 @@ const LearningSpace = ({ onStartQuiz }) => {
   ];
 
   useEffect(() => { loadLessonsAndQuizzes(); }, []);
+
+  // Reset expanded subjects whenever active folder changes
+  useEffect(() => {
+    setExpandedSubjects({});
+  }, [activeFolderId]);
 
   const loadLessonsAndQuizzes = async () => {
     setLoading(true);
@@ -55,7 +65,28 @@ const LearningSpace = ({ onStartQuiz }) => {
         console.warn('Quiz API returned error, continuing without quizzes');
       }
 
-      // Preserve all fields from the quiz, including already_taken, attempt_status, disabled
+      // Preserve subject_name for all items
+      const videoItems = lessons
+        .filter(l => l.resource_type === 'video')
+        .map(l => ({
+          ...l,
+          subject_name: l.subject_name || 'Uncategorized'
+        }));
+
+      const pdfItems = lessons
+        .filter(l => l.resource_type === 'pdf')
+        .map(l => ({
+          ...l,
+          subject_name: l.subject_name || 'Uncategorized'
+        }));
+
+      const pastpaperItems = lessons
+        .filter(l => l.resource_type === 'pastpaper')
+        .map(l => ({
+          ...l,
+          subject_name: l.subject_name || 'Uncategorized'
+        }));
+
       const quizItems = quizzes.map(quiz => ({
         id: quiz.id,
         title: quiz.title,
@@ -67,14 +98,15 @@ const LearningSpace = ({ onStartQuiz }) => {
         target_form: quiz.target_form,
         already_taken: quiz.already_taken || false,
         attempt_status: quiz.attempt_status || null,
-        disabled: quiz.disabled || false
+        disabled: quiz.disabled || false,
+        subject_name: quiz.subject_name || 'Uncategorized'
       }));
 
       const grouped = {
-        video: lessons.filter(l => l.resource_type === 'video'),
-        pdf: lessons.filter(l => l.resource_type === 'pdf'),
+        video: videoItems,
+        pdf: pdfItems,
         quiz: quizItems,
-        pastpaper: lessons.filter(l => l.resource_type === 'pastpaper'),
+        pastpaper: pastpaperItems,
         results: []
       };
 
@@ -91,6 +123,110 @@ const LearningSpace = ({ onStartQuiz }) => {
   };
 
   const activeFolder = folders.find(f => f.id === activeFolderId);
+
+  // Helper to render a grouped resource (video, pdf, pastpaper, quiz)
+  const renderGroupedResources = (items, resourceType) => {
+    if (!items || items.length === 0) {
+      return <div className="text-center py-12 text-slate-400 text-sm">No content available.</div>;
+    }
+
+    // Group by subject_name
+    const grouped = items.reduce((acc, item) => {
+      const subject = item.subject_name || 'Uncategorized';
+      if (!acc[subject]) acc[subject] = [];
+      acc[subject].push(item);
+      return acc;
+    }, {});
+
+    return (
+      <div className="space-y-4">
+        {Object.entries(grouped).map(([subjectName, subjectItems]) => {
+          const isExpanded = expandedSubjects[subjectName] || false;
+          return (
+            <div key={subjectName} className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+              <button
+                onClick={() => setExpandedSubjects(prev => ({ ...prev, [subjectName]: !prev[subjectName] }))}
+                className="w-full flex items-center justify-between p-3 bg-slate-50 hover:bg-slate-100 transition"
+              >
+                <div className="flex items-center gap-3">
+                  <FolderIcon className="w-5 h-5 text-amber-500" />
+                  <span className="font-medium text-slate-800">{subjectName}</span>
+                  <span className="text-xs text-slate-400">({subjectItems.length})</span>
+                </div>
+                <ChevronRightIcon className={`w-4 h-4 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+              </button>
+              {isExpanded && (
+                <div className="p-3 border-t border-slate-100">
+                  <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" : "space-y-1"}>
+                    {subjectItems.map(item => {
+                      // For quizzes, we have special disabled/resume logic
+                      const isQuiz = resourceType === 'quiz';
+                      const isDisabled = isQuiz && (item.disabled === true);
+                      const isResumable = isQuiz && (item.attempt_status === 'in-progress');
+                      
+                      return (
+                        <div 
+                          key={item.id}
+                          onClick={() => {
+                            if (isQuiz) {
+                              if (isDisabled) {
+                                if (isResumable) {
+                                  toast('You have an in‑progress attempt. Resume it?', { duration: 3000 });
+                                  if (onStartQuiz) onStartQuiz(item.quiz_id);
+                                } else {
+                                  toast.success('You have already completed this quiz. Multiple attempts are not allowed.');
+                                }
+                                return;
+                              }
+                              if (onStartQuiz) onStartQuiz(item.quiz_id);
+                            } else {
+                              // Video, PDF, Pastpaper
+                              setSelectedLesson(item);
+                              setShowLessonModal(true);
+                            }
+                          }}
+                          className={`group flex items-center p-3 rounded border transition-all ${
+                            isQuiz && isDisabled ? 'opacity-60 bg-gray-100 cursor-not-allowed' : 'cursor-pointer'
+                          } ${
+                            viewMode === 'grid' 
+                              ? 'flex-col text-center border-slate-100 hover:bg-sky-50' 
+                              : 'border-transparent hover:bg-slate-100 hover:border-slate-200'
+                          }`}
+                        >
+                          <div className={`${viewMode === 'grid' ? 'mb-2' : 'mr-3'}`}>
+                            {resourceType === 'video' && <VideoCameraIcon className="w-5 h-5 text-sky-500" />}
+                            {resourceType === 'pdf' && <DocumentTextIcon className="w-5 h-5 text-emerald-500" />}
+                            {resourceType === 'pastpaper' && <ArchiveBoxIcon className="w-5 h-5 text-purple-500" />}
+                            {resourceType === 'quiz' && <BookOpenIcon className="w-5 h-5 text-amber-500" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-sm font-medium text-slate-700 truncate">{item.title}</h4>
+                            {viewMode === 'grid' && item.description && (
+                              <p className="text-[10px] text-slate-400 mt-1 line-clamp-2">{item.description}</p>
+                            )}
+                          </div>
+                          {viewMode === 'list' && (
+                            <div className="flex items-center gap-2">
+                              {isQuiz && isDisabled && (
+                                <span className="text-xs text-amber-600 font-medium">
+                                  {isResumable ? 'Resume' : 'Taken'}
+                                </span>
+                              )}
+                              <ArrowRightCircleIcon className="w-4 h-4 text-slate-300 group-hover:text-slate-500" />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   if (loading) return <div className="h-64 flex items-center justify-center font-mono text-slate-400">Mounting drive...</div>;
 
@@ -147,75 +283,17 @@ const LearningSpace = ({ onStartQuiz }) => {
               <QuizResults />
             ) : (
               <>
-                <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3" : "space-y-1"}>
-                  {activeFolder.lessons.map(lesson => {
-                    const isDisabled = lesson.disabled === true;
-                    const isResumable = lesson.attempt_status === 'in-progress';
-                    
-                    return (
-                      <div 
-                        key={lesson.id}
-                        onClick={() => {
-                          if (activeFolder.type === 'quiz') {
-                            if (isDisabled) {
-                              if (isResumable) {
-                                toast('You have an in‑progress attempt. Resume it?', { duration: 3000 });
-                                if (onStartQuiz) onStartQuiz(lesson.quiz_id);
-                              } else {
-                                // ✅ GREEN toast for completed quiz
-                                toast.success('You have already completed this quiz. Multiple attempts are not allowed.');
-                              }
-                              return;
-                            }
-                            if (onStartQuiz) onStartQuiz(lesson.quiz_id);
-                          } else {
-                            setSelectedLesson(lesson);
-                            setShowLessonModal(true);
-                          }
-                        }}
-                        className={`group flex items-center p-3 rounded border transition-all ${
-                          isDisabled ? 'opacity-60 bg-gray-100 cursor-not-allowed' : 'cursor-pointer'
-                        } ${
-                          viewMode === 'grid' 
-                            ? 'flex-col text-center border-slate-100 hover:bg-sky-50' 
-                            : 'border-transparent hover:bg-slate-100 hover:border-slate-200'
-                        }`}
-                      >
-                        <div className={`${viewMode === 'grid' ? 'mb-2' : 'mr-3'}`}>
-                          <activeFolder.icon className={`w-5 h-5 ${activeFolder.id === 'videos' ? 'text-sky-500' : activeFolder.id === 'pdfs' ? 'text-emerald-500' : activeFolder.id === 'quizzes' ? 'text-amber-500' : 'text-purple-500'}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-sm font-medium text-slate-700 truncate">{lesson.title}</h4>
-                          {viewMode === 'grid' && lesson.description && (
-                            <p className="text-[10px] text-slate-400 mt-1 line-clamp-2">{lesson.description}</p>
-                          )}
-                        </div>
-                        {viewMode === 'list' && (
-                          <div className="flex items-center gap-2">
-                            {isDisabled && (
-                              <span className="text-xs text-amber-600 font-medium">
-                                {isResumable ? 'Resume' : 'Taken'}
-                              </span>
-                            )}
-                            <ArrowRightCircleIcon className="w-4 h-4 text-slate-300 group-hover:text-slate-500" />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {activeFolder.lessons.length === 0 && (
-                    <div className="col-span-full text-center py-12 text-slate-400 text-sm">
-                      This folder is empty.
-                    </div>
-                  )}
-                </div>
+                {activeFolder.type === 'video' && renderGroupedResources(activeFolder.lessons, 'video')}
+                {activeFolder.type === 'pdf' && renderGroupedResources(activeFolder.lessons, 'pdf')}
+                {activeFolder.type === 'pastpaper' && renderGroupedResources(activeFolder.lessons, 'pastpaper')}
+                {activeFolder.type === 'quiz' && renderGroupedResources(activeFolder.lessons, 'quiz')}
               </>
             )}
           </div>
         )}
       </div>
 
-      {/* SYSTEM VIEWER (Modal for video/pdf) */}
+      {/* SYSTEM VIEWER (Modal for video/pdf/pastpaper) */}
       {showLessonModal && selectedLesson && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col border border-slate-300">
