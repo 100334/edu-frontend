@@ -160,6 +160,9 @@ export default function LearnerDashboard() {
   const [reports, setReports] = useState([]);
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [quizAttempts, setQuizAttempts] = useState([]);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [currentUserRank, setCurrentUserRank] = useState(null);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [stats, setStats] = useState({
     reportsCount: 0,
     attendanceRate: '—',
@@ -407,6 +410,29 @@ export default function LearnerDashboard() {
     }
   }, [user, extractFilters]);
 
+  // Load leaderboard data
+  const loadLeaderboardData = useCallback(async () => {
+    if (!user?.id) return;
+
+    setLeaderboardLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await api.get('/api/learner/leaderboard', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.data.success) {
+        setLeaderboard(res.data.leaderboard || []);
+        setCurrentUserRank(res.data.current_user_rank);
+      }
+    } catch (error) {
+      console.error('Leaderboard loading error:', error);
+      toast.error('Failed to load leaderboard');
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  }, [user]);
+
   // Fetch notifications (unchanged)
   const fetchNotifications = async () => {
     try {
@@ -454,14 +480,10 @@ export default function LearnerDashboard() {
   }, [user, loadDashboardData]);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
-        setShowNotifications(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    if (user?.id && activeTab === 'leaderboard') {
+      loadLeaderboardData();
+    }
+  }, [user, activeTab, loadLeaderboardData]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -1002,6 +1024,9 @@ export default function LearnerDashboard() {
               <button onClick={() => { setActiveTab('attendance'); setMobileMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${activeTab === 'attendance' ? 'bg-[#2A9D8F] text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
                 <span className="mr-2">📅</span> Attendance
               </button>
+              <button onClick={() => { setActiveTab('leaderboard'); setMobileMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${activeTab === 'leaderboard' ? 'bg-[#2A9D8F] text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
+                <span className="mr-2">🏆</span> Leaderboard
+              </button>
             </div>
           </div>
         </div>
@@ -1015,6 +1040,7 @@ export default function LearnerDashboard() {
             <NavItem icon="🎓" label="Learning Space" isActive={activeTab === 'learning'} onClick={() => setActiveTab('learning')} />
             <NavItem icon="📋" label="Reports" isActive={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
             <NavItem icon="📅" label="Attendance" isActive={activeTab === 'attendance'} onClick={() => setActiveTab('attendance')} />
+            <NavItem icon="🏆" label="Leaderboard" isActive={activeTab === 'leaderboard'} onClick={() => setActiveTab('leaderboard')} />
           </div>
         </div>
       </div>
@@ -1489,6 +1515,135 @@ export default function LearnerDashboard() {
                 {attendanceRecords.length > 15 && <div className="px-4 py-2 text-center text-[10px] text-gray-400 border-t border-gray-100">Showing last 15 of {attendanceRecords.length} records</div>}
               </div>
             </div>
+          </>
+        )}
+
+        {/* Leaderboard Tab */}
+        {activeTab === 'leaderboard' && (
+          <>
+            <div className="mb-3 sm:mb-4 md:mb-5 lg:mb-6">
+              <h1 className="font-serif text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-[#0A2540] mb-1">🏆 Class Leaderboard</h1>
+              <p className="text-[10px] sm:text-xs md:text-sm text-gray-500">See how you rank against your classmates</p>
+            </div>
+
+            {leaderboardLoading ? (
+              <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm p-8 text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2A9D8F] mx-auto mb-4"></div>
+                <p className="text-gray-500">Loading leaderboard...</p>
+              </div>
+            ) : leaderboard.length === 0 ? (
+              <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm p-8 text-center">
+                <TrophyIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500">No leaderboard data available yet</p>
+                <p className="text-sm text-gray-400 mt-2">Complete quizzes and reports to see rankings</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Current User Rank Card */}
+                {currentUserRank && (
+                  <div className="bg-gradient-to-r from-[#2A9D8F] to-[#1e6b60] text-white rounded-xl p-4 sm:p-5 shadow-lg">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-sm sm:text-base mb-1">Your Current Rank</h3>
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl sm:text-3xl font-bold">#{currentUserRank}</span>
+                          <span className="text-sm opacity-90">out of {leaderboard.length} students</span>
+                        </div>
+                      </div>
+                      <TrophyIcon className="w-8 h-8 sm:w-10 sm:h-10 opacity-80" />
+                    </div>
+                  </div>
+                )}
+
+                {/* Leaderboard Table */}
+                <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
+                  <div className="px-3 sm:px-4 md:px-5 lg:px-6 py-2 sm:py-2.5 md:py-3 lg:py-4 border-b border-[#d4cfc6]">
+                    <h2 className="font-semibold text-[#0A2540] text-xs sm:text-sm md:text-base">📊 Rankings</h2>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[600px]">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase">Rank</th>
+                          <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase">Student</th>
+                          <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase">Quiz Score</th>
+                          <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase">Report Score</th>
+                          <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase">Attendance</th>
+                          <th className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3 text-left text-[9px] sm:text-[10px] lg:text-xs font-semibold text-gray-500 uppercase">Overall</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {leaderboard.map((student, index) => (
+                          <tr key={student.id} className={`hover:bg-gray-50 ${student.id === user?.id ? 'bg-[#2A9D8F]/5 border-l-4 border-l-[#2A9D8F]' : ''}`}>
+                            <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
+                              <div className="flex items-center">
+                                {student.rank <= 3 ? (
+                                  <span className={`text-sm sm:text-base font-bold ${
+                                    student.rank === 1 ? 'text-yellow-500' :
+                                    student.rank === 2 ? 'text-gray-400' :
+                                    'text-amber-600'
+                                  }`}>
+                                    {student.rank === 1 ? '🥇' : student.rank === 2 ? '🥈' : '🥉'}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs sm:text-sm font-semibold text-gray-600">#{student.rank}</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
+                              <div>
+                                <div className="text-xs sm:text-sm font-medium text-gray-900">{student.name}</div>
+                                <div className="text-[9px] sm:text-[10px] text-gray-500">{student.reg_number}</div>
+                              </div>
+                            </td>
+                            <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
+                              <div className="text-center">
+                                <div className="text-xs sm:text-sm font-semibold text-gray-900">{student.quiz_score}%</div>
+                                <div className="text-[9px] sm:text-[10px] text-gray-500">{student.quiz_count} quiz{student.quiz_count !== 1 ? 'es' : ''}</div>
+                              </div>
+                            </td>
+                            <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
+                              <div className="text-center">
+                                <div className="text-xs sm:text-sm font-semibold text-gray-900">{student.report_score}%</div>
+                                <div className="text-[9px] sm:text-[10px] text-gray-500">{student.report_count} report{student.report_count !== 1 ? 's' : ''}</div>
+                              </div>
+                            </td>
+                            <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
+                              <div className="text-center">
+                                <div className="text-xs sm:text-sm font-semibold text-gray-900">{student.attendance_rate}%</div>
+                                <div className="text-[9px] sm:text-[10px] text-gray-500">{student.attendance_count} days</div>
+                              </div>
+                            </td>
+                            <td className="px-2 sm:px-3 lg:px-4 py-2 sm:py-2.5 lg:py-3">
+                              <div className="text-center">
+                                <span className={`px-2 py-1 rounded-full text-[9px] sm:text-[10px] font-semibold ${
+                                  student.overall_score >= 80 ? 'bg-green-100 text-green-700' :
+                                  student.overall_score >= 60 ? 'bg-blue-100 text-blue-700' :
+                                  student.overall_score >= 40 ? 'bg-yellow-100 text-yellow-700' :
+                                  'bg-red-100 text-red-700'
+                                }`}>
+                                  {student.overall_score}%
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Scoring Info */}
+                <div className="bg-blue-50 rounded-xl border border-blue-200 p-3 sm:p-4">
+                  <h3 className="font-semibold text-blue-900 text-xs sm:text-sm mb-2">📊 How Rankings Work</h3>
+                  <div className="text-[10px] sm:text-xs text-blue-800 space-y-1">
+                    <p>• <strong>40%</strong> Quiz Performance - Average score from completed quizzes</p>
+                    <p>• <strong>40%</strong> Report Card Performance - Average score from report cards</p>
+                    <p>• <strong>20%</strong> Attendance Rate - Percentage of present/late days</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </main>

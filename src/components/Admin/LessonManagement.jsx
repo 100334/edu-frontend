@@ -29,32 +29,62 @@ const LessonManagement = () => {
     resource_type: 'video'
   });
 
+  // Helper: robust extraction of subjects array from API response
+  const extractSubjectsArray = (responseData) => {
+    if (!responseData) return [];
+    if (responseData.subjects && Array.isArray(responseData.subjects)) return responseData.subjects;
+    if (responseData.data && Array.isArray(responseData.data)) return responseData.data;
+    if (responseData.items && Array.isArray(responseData.items)) return responseData.items;
+    if (Array.isArray(responseData)) return responseData;
+    return [];
+  };
+
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
       const authHeader = { headers: { Authorization: `Bearer ${token}` } };
       
-      const [lessonsRes, subjectsRes, quizzesRes] = await Promise.all([
+      // Fetch all data with better error handling
+      const [lessonsRes, subjectsRes, quizzesRes] = await Promise.allSettled([
         api.get('/api/admin/lessons', authHeader),
-        api.get('/api/admin/subjects/all', authHeader),   // ✅ corrected endpoint
+        api.get('/api/admin/subjects/all', authHeader),
         api.get('/api/admin/quizzes', authHeader)
       ]);
       
-      if (lessonsRes.data.success) setLessons(lessonsRes.data.lessons);
-      
-      // ✅ Extract subjects from the correct endpoint
-      let subjectsArray = [];
-      if (subjectsRes.data.success) {
-        subjectsArray = subjectsRes.data.subjects || [];
+      // Handle lessons
+      if (lessonsRes.status === 'fulfilled' && lessonsRes.value?.data?.success) {
+        setLessons(lessonsRes.value.data.lessons || []);
+        console.log('✅ Lessons loaded:', lessonsRes.value.data.lessons?.length);
+      } else {
+        console.warn('⚠️ Failed to load lessons:', lessonsRes.status === 'rejected' ? lessonsRes.reason : lessonsRes.value?.data?.message);
+        setLessons([]);
       }
-      console.log('✅ Subjects loaded:', subjectsArray);
-      setSubjects(subjectsArray);
       
-      if (quizzesRes.data.success) setQuizzes(quizzesRes.data.quizzes || []);
+      // Handle subjects
+      if (subjectsRes.status === 'fulfilled') {
+        const subjectsArray = extractSubjectsArray(subjectsRes.value.data);
+        console.log('✅ Subjects loaded:', subjectsArray.length);
+        setSubjects(subjectsArray);
+      } else {
+        console.warn('⚠️ Failed to load subjects:', subjectsRes.reason);
+        setSubjects([]);
+      }
+      
+      // Handle quizzes
+      if (quizzesRes.status === 'fulfilled' && quizzesRes.value?.data?.success) {
+        setQuizzes(quizzesRes.value.data.quizzes || []);
+        console.log('✅ Quizzes loaded:', quizzesRes.value.data.quizzes?.length);
+      } else {
+        console.warn('⚠️ Failed to load quizzes:', quizzesRes.status === 'rejected' ? quizzesRes.reason : quizzesRes.value?.data?.message);
+        setQuizzes([]);
+      }
     } catch (error) {
-      console.error('Error loading data:', error);
-      toast.error('Failed to load data');
+      console.error('Unexpected error loading data:', error);
+      setLessons([]);
+      setSubjects([]);
+      setQuizzes([]);
+      toast.error('Error loading dashboard data');
     } finally {
       setLoading(false);
     }
@@ -62,10 +92,12 @@ const LessonManagement = () => {
 
   useEffect(() => { loadDashboardData(); }, [loadDashboardData]);
 
-  // Helper to get subject name from ID (supports both string and number IDs)
+  // Helper to get sanitized subject name for folder paths
   const getSubjectName = (subjectId) => {
     const subject = subjects.find(s => String(s.id) === String(subjectId));
-    return subject ? subject.name.replace(/\s+/g, '_') : 'uncategorized';
+    if (!subject) return 'uncategorized';
+    // Replace spaces and special chars to make folder-safe
+    return subject.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '');
   };
 
   const uploadToR2 = async (file, type) => {
@@ -309,18 +341,38 @@ const LessonManagement = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-[11px] font-bold text-slate-500 uppercase ml-1 mb-1 block">Subject Category</label>
-                    <select 
-                      value={formData.subject_id}
-                      onChange={(e) => setFormData({...formData, subject_id: e.target.value})}
-                      className="w-full bg-white border-2 border-azure/30 rounded-xl px-4 py-3 text-slate-700 font-bold focus:border-azure outline-none cursor-pointer"
-                    >
-                      <option value="">Select Subject</option>
-                      {subjects && subjects.length > 0 ? (
-                        subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)
-                      ) : (
-                        <option disabled>No subjects available</option>
-                      )}
-                    </select>
+                    <div className="flex gap-2 items-center">
+                      <select 
+                        value={formData.subject_id}
+                        onChange={(e) => setFormData({...formData, subject_id: e.target.value})}
+                        className="flex-1 bg-white border-2 border-azure/30 rounded-xl px-4 py-3 text-slate-700 font-bold focus:border-azure outline-none cursor-pointer"
+                        required
+                      >
+                        <option value="">-- Select a Subject --</option>
+                        {subjects.length > 0 ? (
+                          subjects.map(s => (
+                            <option key={s.id} value={s.id}>
+                              {s.name}
+                            </option>
+                          ))
+                        ) : (
+                          <option disabled>No subjects available – please create one first</option>
+                        )}
+                      </select>
+                      <button 
+                        type="button"
+                        onClick={() => loadDashboardData()}
+                        className="px-3 py-2 bg-slate-100 rounded-xl text-slate-600 hover:bg-slate-200 transition-colors"
+                        title="Refresh subjects"
+                      >
+                        ↻
+                      </button>
+                    </div>
+                    {subjects.length === 0 && (
+                      <p className="text-xs text-red-500 mt-1">
+                        ⚠️ No subjects found. Please create a subject in Subject Management first.
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="text-[11px] font-bold text-slate-500 uppercase ml-1 mb-1 block">Target Form</label>
