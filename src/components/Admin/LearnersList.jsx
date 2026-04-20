@@ -133,7 +133,29 @@ export default function LearnersList() {
     setShowDetailsModal(true);
   };
 
-  // Filter learners based on form, status, and search term
+  // Download learners list as CSV
+  const handleDownloadLearners = () => {
+    const csvData = filteredLearners.map(learner => ({
+      'Name': learner.name,
+      'Registration Number': learner.reg_number,
+      'Form': learner.form
+    }));
+
+    const csvContent = [
+      Object.keys(csvData[0]).join(','),
+      ...csvData.map(row => Object.values(row).map(value => `"${value}"`).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `learners_list_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
   const filteredLearners = learners.filter(learner => {
     const matchesForm = selectedForm === 'all' || learner.form === selectedForm;
     const matchesStatus = selectedStatus === 'all' || learner.status === selectedStatus;
@@ -191,15 +213,27 @@ export default function LearnersList() {
               </div>
             </div>
           </div>
-          <button
-            onClick={() => window.location.href = '/admin/register-learner'}
-            className="group relative px-6 py-3 bg-[#c9933a] text-white rounded-xl hover:bg-[#b5822e] transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
-          >
-            <span className="flex items-center gap-2">
-              <span className="text-xl">➕</span>
-              Register New Learner
-            </span>
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleDownloadLearners}
+              disabled={filteredLearners.length === 0}
+              className="group relative px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-xl hover:shadow-lg transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            >
+              <span className="flex items-center gap-2">
+                <span className="text-xl">📥</span>
+                Download List (Name, Reg#, Form)
+              </span>
+            </button>
+            <button
+              onClick={() => window.location.href = '/admin/register-learner'}
+              className="group relative px-6 py-3 bg-[#c9933a] text-white rounded-xl hover:bg-[#b5822e] transition-all duration-300 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
+            >
+              <span className="flex items-center gap-2">
+                <span className="text-xl">➕</span>
+                Register New Learner
+              </span>
+            </button>
+          </div>
         </div>
       </div>
 
