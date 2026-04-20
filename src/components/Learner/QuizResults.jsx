@@ -97,8 +97,11 @@ const QuizResults = () => {
     const incorrect = totalQuestions - correct - partially;
     const earned = attempt.earned_points || 0;
     const possible = attempt.total_points || 0;
-    const percent = possible > 0 ? Math.round((earned / possible) * 100) : 0;
-    return { totalQuestions, correct, partially, incorrect, earned, possible, percent, passed: percent >= 50 };
+    const percentFromScores = possible > 0 ? Math.round((earned / possible) * 100) : 0;
+    const percent = attempt.percentage !== undefined && attempt.percentage !== null
+      ? Number(attempt.percentage)
+      : percentFromScores;
+    return { totalQuestions, correct, partially, incorrect, earned, possible, percent, passed: percent >= 40 };
   };
 
   if (loading) {

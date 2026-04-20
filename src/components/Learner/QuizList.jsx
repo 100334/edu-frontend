@@ -141,10 +141,39 @@ const QuizList = ({ onStartQuiz }) => {
           const isCompleted = attempted?.status === 'completed';
           const score = Math.round(attempted?.percentage || 0);
           const isRestricted = quiz.target_form && quiz.target_form !== 'All' && quiz.target_form !== learnerForm;
+          const startTime = quiz.scheduled_start ? new Date(quiz.scheduled_start) : null;
+          const endTime = quiz.scheduled_end ? new Date(quiz.scheduled_end) : null;
+          const now = new Date();
+          const isUpcoming = startTime && now < startTime;
+          const isClosed = endTime && now > endTime;
+          const canStart = !isRestricted && !isUpcoming && !isClosed;
 
           return (
             <div key={quizId} className="group relative bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 flex flex-col overflow-hidden">
               
+              {/* Scheduling Tooltip */}
+              {(isUpcoming || isClosed) && (
+                <div className="absolute top-4 right-4 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                  <div className="bg-slate-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg max-w-xs">
+                    <div className="font-semibold mb-1">
+                      {isUpcoming ? 'Available Starting:' : 'Assessment Closed'}
+                    </div>
+                    {startTime && (
+                      <div className="text-slate-300">
+                        📅 {startTime.toLocaleDateString()} <br />
+                        🕐 {startTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </div>
+                    )}
+                    {endTime && (
+                      <div className="text-slate-300 mt-1">
+                        📅 Ends: {endTime.toLocaleDateString()} <br />
+                        🕐 {endTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Restricted Overlay */}
               {isRestricted && !isCompleted && (
                 <div className="absolute inset-0 bg-[#0F172A]/40 backdrop-blur-[2px] z-20 flex items-center justify-center p-6">
@@ -217,11 +246,11 @@ const QuizList = ({ onStartQuiz }) => {
                 ) : (
                   <button
                     onClick={() => onStartQuiz(getQuizId(quiz))}
-                    disabled={isRestricted}
-                    className="w-full py-4 bg-[#0F172A] text-white rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-navy-900/20 hover:bg-[#007FFF] hover:shadow-blue-500/30 transition-all duration-300 group/btn"
+                    disabled={!canStart}
+                    className={`w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all duration-300 ${canStart ? 'bg-[#0F172A] text-white hover:bg-[#007FFF] hover:shadow-blue-500/30 shadow-navy-900/20' : 'bg-slate-200 text-slate-500 cursor-not-allowed'}`}
                   >
-                    Take Assessment
-                    <ChevronRightIcon className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                    {isUpcoming ? '⏰ Coming Soon' : isClosed ? '🔒 Closed' : 'Take Assessment'}
+                    <ChevronRightIcon className="w-4 h-4" />
                   </button>
                 )}
               </div>

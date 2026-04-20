@@ -443,7 +443,7 @@ export default function LearnerDashboard() {
       if (res.data.success) {
         const notifs = res.data.notifications || [];
         setNotifications(notifs);
-        setUnreadCount(notifs.filter(n => !n.is_read).length);
+        setUnreadCount(notifs.filter((n) => n.is_read === false || n.is_read === 'false' || n.is_read === null || n.is_read === undefined).length);
       }
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
@@ -461,6 +461,12 @@ export default function LearnerDashboard() {
       console.error('Failed to mark as read:', error);
     }
   };
+
+  useEffect(() => {
+    if (showNotifications) {
+      fetchNotifications();
+    }
+  }, [showNotifications]);
 
   useEffect(() => {
     if (user?.id) {

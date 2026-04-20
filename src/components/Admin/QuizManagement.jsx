@@ -6,7 +6,8 @@ import {
   CheckCircleIcon, UserGroupIcon, ClipboardDocumentListIcon,
   ArrowPathIcon, BookOpenIcon, ChartBarIcon,
   AcademicCapIcon, CalendarIcon, TagIcon, 
-  AdjustmentsHorizontalIcon, GlobeAltIcon, FolderIcon
+  AdjustmentsHorizontalIcon, GlobeAltIcon, FolderIcon,
+  DocumentArrowDownIcon, PhotoIcon
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -51,7 +52,9 @@ const QuizManagement = () => {
     is_active: true,
     target_form: 'All',
     exam_year: new Date().getFullYear(),
-    exam_type: 'SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION'
+    exam_type: 'SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION',
+    scheduled_start: '',
+    scheduled_end: ''
   });
   
   const [questionForm, setQuestionForm] = useState({
@@ -137,7 +140,7 @@ const QuizManagement = () => {
             question_id: ans.question_id,
             question_text: ans.question_text,
             question_type: ans.question_type,
-            answer: ans.selected_answer_text || ans.answer,
+            answer: ans.selected_answer_text || ans.answer || ans.answer_text || ans.response || ans.short_answer || ans.submitted_answer || '',
             max_marks: ans.max_marks,
             given_marks: ans.given_marks ?? null,
             feedback: ans.feedback || ''
@@ -202,7 +205,9 @@ const QuizManagement = () => {
         total_marks: parseInt(quizForm.total_marks),
         section_a_marks: parseInt(quizForm.section_a_marks),
         section_b_marks: parseInt(quizForm.section_b_marks),
-        exam_year: parseInt(quizForm.exam_year)
+        exam_year: parseInt(quizForm.exam_year),
+        scheduled_start: quizForm.scheduled_start ? new Date(quizForm.scheduled_start).toISOString() : null,
+        scheduled_end: quizForm.scheduled_end ? new Date(quizForm.scheduled_end).toISOString() : null
       };
       const response = await api.post('/api/admin/quizzes', payload, {
         headers: { Authorization: `Bearer ${token}` }
@@ -234,7 +239,9 @@ const QuizManagement = () => {
         total_marks: parseInt(quizForm.total_marks),
         section_a_marks: parseInt(quizForm.section_a_marks),
         section_b_marks: parseInt(quizForm.section_b_marks),
-        exam_year: parseInt(quizForm.exam_year)
+        exam_year: parseInt(quizForm.exam_year),
+        scheduled_start: quizForm.scheduled_start ? new Date(quizForm.scheduled_start).toISOString() : null,
+        scheduled_end: quizForm.scheduled_end ? new Date(quizForm.scheduled_end).toISOString() : null
       };
       const response = await api.put(`/api/admin/quizzes/${editingQuiz.id}`, payload, {
         headers: { Authorization: `Bearer ${token}` }
@@ -430,7 +437,9 @@ const QuizManagement = () => {
       is_active: true,
       target_form: 'All',
       exam_year: new Date().getFullYear(),
-      exam_type: 'SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION'
+      exam_type: 'SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION',
+      scheduled_start: '',
+      scheduled_end: ''
     });
   };
 
@@ -464,7 +473,9 @@ const QuizManagement = () => {
       is_active: quiz.is_active !== false,
       target_form: quiz.target_form || 'All',
       exam_year: quiz.exam_year || new Date().getFullYear(),
-      exam_type: quiz.exam_type || 'SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION'
+      exam_type: quiz.exam_type || 'SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION',
+      scheduled_start: quiz.scheduled_start ? new Date(quiz.scheduled_start).toISOString().slice(0, 16) : '',
+      scheduled_end: quiz.scheduled_end ? new Date(quiz.scheduled_end).toISOString().slice(0, 16) : ''
     });
     setShowQuizModal(true);
   };
@@ -602,54 +613,58 @@ const QuizManagement = () => {
 
   const renderQuestionWithControls = (question, index, sectionLetter) => {
     return (
-      <div key={question.id} className="exam-question mb-6 pb-4 border-b border-gray-200 last:border-0 relative group">
-        <div className="flex justify-between items-start">
-          <h4 className="font-bold text-lg text-gray-800">{index+1}. <span dangerouslySetInnerHTML={{ __html: question.question_text.replace(/\n/g, '<br/>') }} /></h4>
-          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition">
-            <button onClick={() => openEditQuestion(question)} className="p-1 text-gray-500 hover:text-blue-600">
-              <PencilIcon className="w-4 h-4" />
-            </button>
-            <button onClick={() => handleDeleteQuestion(question)} className="p-1 text-gray-500 hover:text-red-600">
-              <TrashIcon className="w-4 h-4" />
-            </button>
+      <div key={question.id} className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition">
+        {/* Compact header */}
+        <div className="px-4 py-2 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100 flex justify-between items-center">
+          <div className="flex gap-2">
+            <span className="px-2 py-0.5 bg-azure/10 text-azure rounded-md text-xs font-bold">Q{index+1}</span>
+            {question.question_image && (
+              <span className="px-2 py-0.5 bg-teal/10 text-teal rounded-md text-xs font-bold flex items-center gap-1">
+                <PhotoIcon className="w-3 h-3" /> Diagram
+              </span>
+            )}
           </div>
-        </div>
-        <div className="flex justify-between items-start mt-1">
-          <span className="text-sm font-semibold text-teal-700 bg-teal-50 px-2 py-0.5 rounded">({question.marks || 1} marks)</span>
-          <span className="text-xs text-gray-400">Section {sectionLetter}</span>
-        </div>
-        {question.question_image && (
-          <div className="my-3 p-3 bg-gray-50 border border-gray-200 rounded-lg inline-block">
-            <img src={question.question_image} alt="Question diagram" className="max-h-48 rounded shadow-sm" />
-            <p className="text-xs text-gray-500 mt-1 text-center">Figure {index+1}</p>
-          </div>
-        )}
-        <div className="answer-space mt-3 pl-2">
-          <div className="bg-white border-l-4 border-azure-300 p-3 rounded-r-md">
-            <p className="text-sm text-gray-500 mb-1 font-serif">Candidate's answer:</p>
-            <div className="min-h-[70px] bg-gray-50 p-2 rounded border border-dashed border-gray-300 font-mono text-sm text-gray-400 italic">
-              [Answer space]
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-slate-500 font-medium">{question.marks} {question.marks === 1 ? 'mark' : 'marks'}</span>
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+              <button onClick={() => openEditQuestion(question)} className="p-1 text-slate-500 hover:text-azure rounded">
+                <PencilIcon className="w-3.5 h-3.5" />
+              </button>
+              <button onClick={() => handleDeleteQuestion(question)} className="p-1 text-slate-500 hover:text-red-500 rounded">
+                <TrashIcon className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
         </div>
-        {question.question_type === 'multiple_choice' && question.options && (
-          <div className="mt-2 pl-4 text-sm">
-            <p className="font-semibold text-gray-600">Options:</p>
-            <div className="grid grid-cols-1 gap-1 mt-1">
-              {question.options.map((opt, i) => (
-                <div key={i} className="flex items-start gap-2">
-                  <span className="font-mono font-bold w-6">{String.fromCharCode(65+i)}.</span>
-                  <span>{opt}</span>
+        {/* Body */}
+        <div className="p-4">
+          {question.question_text && (
+            <h2 className="text-base font-semibold text-slate-800 leading-relaxed mb-3">{question.question_text}</h2>
+          )}
+          {question.question_image && (
+            <div className="mb-4">
+              <img src={question.question_image} alt="Diagram" className="max-w-full h-auto max-h-48 mx-auto rounded-md shadow-sm" />
+            </div>
+          )}
+          <div className="space-y-2">
+            {question.question_type === 'multiple_choice' && question.options ? (
+              question.options.map((opt, optIdx) => (
+                <div key={optIdx} className="w-full text-left p-2.5 rounded-lg border border-slate-200 bg-slate-50/50">
+                  <div className="flex items-start gap-2">
+                    <span className="flex-shrink-0 w-4 h-4 rounded-full border-2 border-slate-300 flex items-center justify-center mt-0.5 text-xs font-bold text-slate-500">
+                      {String.fromCharCode(65 + optIdx)}
+                    </span>
+                    <span className="text-sm text-slate-700">{opt}</span>
+                  </div>
                 </div>
-              ))}
-            </div>
+              ))
+            ) : (
+              <div className="w-full p-3 border border-slate-200 rounded-lg bg-slate-50/50 min-h-[100px] text-sm text-slate-500 italic">
+                [Answer space for short answer question]
+              </div>
+            )}
           </div>
-        )}
-        {question.question_type === 'short_answer' && (
-          <div className="mt-2 text-xs text-gray-500 border-t pt-1 italic">
-            Expected answer: {question.expected_answer}
-          </div>
-        )}
+        </div>
       </div>
     );
   };
@@ -837,7 +852,10 @@ const QuizManagement = () => {
                             Mark Script
                           </button>
                           <button
-                            onClick={() => handleDeleteSubmission(sub.id, sub.student_name)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSubmission(sub.id, sub.student_name);
+                            }}
                             className="py-2 px-3 bg-red-50 text-red-600 rounded-lg text-sm hover:bg-red-100 transition"
                             title="Delete submission permanently"
                           >
@@ -1025,45 +1043,64 @@ const QuizManagement = () => {
 
       {/* PAPER PREVIEW SIDE PANEL */}
       {selectedQuiz && activeTab !== 'grading' && activeTab !== 'allSubmissions' && (
-        <div className="fixed inset-y-0 right-0 w-full max-w-3xl bg-white shadow-2xl z-50 transform transition-transform duration-300 border-l border-gray-200 overflow-y-auto" style={{ fontFamily: "'Times New Roman', 'Georgia', serif" }}>
-          <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex justify-between items-center z-10 shadow-sm">
-            <div>
-              <h2 className="text-xl font-bold text-gray-800">{selectedQuiz.title}</h2>
-              <p className="text-sm text-gray-600">Mock Examination — {selectedQuiz.subject_name || 'General'} Paper</p>
-            </div>
-            <div className="flex gap-2">
-              <button 
-                onClick={() => setPaperPreviewMode(!paperPreviewMode)} 
-                className="px-3 py-1.5 bg-gray-100 rounded-lg text-sm flex items-center gap-1 hover:bg-gray-200 transition"
-              >
-                {paperPreviewMode ? <EyeIcon className="w-4 h-4" /> : <BookOpenIcon className="w-4 h-4" />}
-                {paperPreviewMode ? 'Admin View' : 'Paper Preview'}
-              </button>
-              <button onClick={() => setSelectedQuiz(null)} className="p-2 hover:bg-gray-100 rounded-full transition">
-                <XMarkIcon className="w-5 h-5" />
-              </button>
+        <div className="fixed inset-y-0 right-0 w-full max-w-3xl bg-slate-50 shadow-2xl z-50 transform transition-transform duration-300 border-l border-slate-200 overflow-y-auto">
+          <div 
+            className="sticky top-0 z-10 shadow-sm text-white"
+            style={{ background: 'linear-gradient(90deg, #0A192F 0%, #00B0FF 50%, #0A192F 100%)' }}
+          >
+            <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] opacity-80">Exam Preview</p>
+                <h2 className="text-2xl font-bold tracking-tight mt-1">{selectedQuiz.title}</h2>
+                <p className="text-sm opacity-80 mt-1">
+                  {selectedQuiz.subject_name || 'General'} • {selectedQuiz.exam_year || new Date().getFullYear()}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setPaperPreviewMode(!paperPreviewMode)} 
+                  className="inline-flex items-center gap-2 rounded-lg bg-white/15 px-3 py-2 text-sm font-semibold text-white hover:bg-white/25 transition"
+                >
+                  {paperPreviewMode ? <EyeIcon className="w-4 h-4" /> : <BookOpenIcon className="w-4 h-4" />}
+                  {paperPreviewMode ? 'Admin View' : 'Paper Preview'}
+                </button>
+                <button onClick={() => setSelectedQuiz(null)} className="inline-flex items-center justify-center rounded-full bg-white/15 p-2 hover:bg-white/25 transition">
+                  <XMarkIcon className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           </div>
-          <div className="p-6 bg-gray-50">
-            <div className="text-center border-b-2 border-gray-300 pb-4 mb-6">
-              <p className="text-sm">
-                {selectedQuiz.exam_year || new Date().getFullYear()} {selectedQuiz.exam_type || 'SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION'}
-              </p>
-              <h3 className="text-2xl font-bold mt-1 text-gray-800">
-                {selectedQuiz.subject_name?.toUpperCase() || 'GENERAL EXAMINATION'}
-              </h3>
-              <p className="text-sm">
-                Subject Code: {selectedQuiz.subject_code || 'M073/II'} &nbsp;|&nbsp; 
-                Time: {selectedQuiz.duration || 2} hours &nbsp;|&nbsp; 
-                {selectedQuiz.title || 'Paper'}
-              </p>
-              <p className="text-xs text-gray-600 mt-2">
-                Total marks: {selectedQuiz.total_marks || 100}
-              </p>
+
+          <div className="p-6 space-y-6">
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Duration</p>
+                  <p className="text-lg font-semibold text-slate-900">{selectedQuiz.duration || 30} minutes</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Total marks</p>
+                  <p className="text-lg font-semibold text-slate-900">{selectedQuiz.total_marks || 100}</p>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Target form</p>
+                  <p className="text-lg font-semibold text-slate-900">{selectedQuiz.target_form || 'All'}</p>
+                </div>
+              </div>
+              <div className="mt-5 text-sm text-slate-600">
+                <p className="font-semibold text-slate-800">{selectedQuiz.exam_type || 'SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION'}</p>
+                <p className="mt-1">{selectedQuiz.subject_name?.toUpperCase() || 'GENERAL EXAMINATION'} | Subject Code: {selectedQuiz.subject_code || 'M073/II'}</p>
+              </div>
             </div>
-            <div className="mb-6 p-4 bg-white border border-gray-200 rounded-lg text-sm">
-              <p className="font-bold text-gray-800">Instructions to candidates:</p>
-              <ol className="list-decimal ml-5 mt-1 space-y-1 text-gray-700">
+
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-azure/10 text-azure">
+                  <DocumentArrowDownIcon className="w-5 h-5" />
+                </span>
+                <h3 className="text-lg font-semibold text-slate-900">Instructions to candidates</h3>
+              </div>
+              <ol className="list-decimal space-y-2 pl-5 text-slate-700">
                 <li>This paper consists of <strong>{selectedQuiz.questions?.length || 0}</strong> questions.</li>
                 <li>Answer ALL questions in Section A and ONE question from Section B.</li>
                 <li>Write your examination number on every page.</li>
@@ -1071,43 +1108,47 @@ const QuizManagement = () => {
                 <li>Use the spaces provided for answers.</li>
               </ol>
             </div>
-            <div className="mb-8">
-              <div className="flex justify-between items-center mb-2">
-                <h4 className="text-lg font-bold bg-gray-200 px-3 py-1 inline-block rounded">
-                  SECTION A ({selectedQuiz.section_a_marks || 75} marks)
-                </h4>
+
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
+                <div>
+                  <h4 className="text-lg font-bold text-slate-900">SECTION A</h4>
+                  <p className="text-sm text-slate-600">Answer all questions in this section.</p>
+                </div>
                 <button 
                   onClick={() => { resetQuestionForm(); setQuestionForm(prev => ({ ...prev, section: 'A' })); setShowQuestionModal(true); }} 
-                  className="px-3 py-1.5 bg-azure text-white rounded-lg text-sm flex items-center gap-1 hover:bg-azure/90 transition"
+                  className="inline-flex items-center gap-2 rounded-lg bg-azure px-3 py-2 text-sm font-semibold text-white hover:bg-azure/90 transition"
                 >
                   <PlusIcon className="w-4 h-4" /> Add Question
                 </button>
               </div>
-              <p className="text-sm italic mt-1 mb-4 text-gray-600">Answer all questions in this section.</p>
+              <p className="mb-4 text-sm text-slate-500">SECTION A ({selectedQuiz.section_a_marks || 75} marks)</p>
               <div className="space-y-6">
                 {selectedQuiz.questions?.filter(q => q.section === 'A').map((q, idx) => renderQuestionWithControls(q, idx, 'A'))}
                 {selectedQuiz.questions?.filter(q => q.section === 'A').length === 0 && (
-                  <p className="text-gray-400 text-center py-4">No questions in Section A yet. Click "Add Question" above.</p>
+                  <p className="text-center text-slate-400 py-4">No questions in Section A yet. Click "Add Question" above.</p>
                 )}
               </div>
             </div>
-            <div className="mt-8 pt-4 border-t border-gray-200">
-              <div className="flex justify-between items-center mb-2">
-                <h4 className="text-lg font-bold bg-gray-200 px-3 py-1 inline-block rounded">
-                  SECTION B ({selectedQuiz.section_b_marks || 25} marks)
-                </h4>
+
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
+                <div>
+                  <h4 className="text-lg font-bold text-slate-900">SECTION B</h4>
+                  <p className="text-sm text-slate-600">Answer one question only from this section.</p>
+                </div>
                 <button 
                   onClick={() => { resetQuestionForm(); setQuestionForm(prev => ({ ...prev, section: 'B' })); setShowQuestionModal(true); }} 
-                  className="px-3 py-1.5 bg-azure text-white rounded-lg text-sm flex items-center gap-1 hover:bg-azure/90 transition"
+                  className="inline-flex items-center gap-2 rounded-lg bg-azure px-3 py-2 text-sm font-semibold text-white hover:bg-azure/90 transition"
                 >
                   <PlusIcon className="w-4 h-4" /> Add Question
                 </button>
               </div>
-              <p className="text-sm italic mt-1 mb-4 text-gray-600">Answer one question only from this section.</p>
+              <p className="mb-4 text-sm text-slate-500">SECTION B ({selectedQuiz.section_b_marks || 25} marks)</p>
               <div className="space-y-6">
                 {selectedQuiz.questions?.filter(q => q.section === 'B').map((q, idx) => renderQuestionWithControls(q, idx, 'B'))}
                 {selectedQuiz.questions?.filter(q => q.section === 'B').length === 0 && (
-                  <p className="text-gray-400 text-center py-4">No questions in Section B yet. Click "Add Question" above.</p>
+                  <p className="text-center text-slate-400 py-4">No questions in Section B yet. Click "Add Question" above.</p>
                 )}
               </div>
             </div>
@@ -1234,6 +1275,34 @@ const QuizManagement = () => {
                         <option value="PRIMARY SCHOOL LEAVING EXAMINATION">Primary Leaving</option>
                       </select>
                     </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+                <div className="flex items-center gap-2 mb-4">
+                  <CalendarIcon className="w-5 h-5 text-blue-600" />
+                  <h4 className="font-semibold text-gray-800">Scheduling (Optional)</h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">Start Date & Time</label>
+                    <input 
+                      type="datetime-local" 
+                      value={quizForm.scheduled_start} 
+                      onChange={(e) => setQuizForm({...quizForm, scheduled_start: e.target.value})}
+                      className="w-full p-2.5 border border-gray-300 rounded-lg"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Leave empty for immediate availability</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1">End Date & Time</label>
+                    <input 
+                      type="datetime-local" 
+                      value={quizForm.scheduled_end} 
+                      onChange={(e) => setQuizForm({...quizForm, scheduled_end: e.target.value})}
+                      className="w-full p-2.5 border border-gray-300 rounded-lg"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Leave empty for no end time</p>
                   </div>
                 </div>
               </div>
@@ -1415,7 +1484,9 @@ const QuizManagement = () => {
                   <p className="font-bold text-lg text-gray-800">{idx+1}. {ans.question_text}</p>
                   <div className="mt-2 p-3 bg-gray-50 rounded-lg border-l-4 border-azure">
                     <p className="text-sm font-semibold text-gray-700">Candidate's answer:</p>
-                    <p className="font-mono whitespace-pre-wrap bg-white p-2 rounded border mt-1">{ans.answer || '(No answer provided)'}</p>
+                    <p className="font-mono whitespace-pre-wrap bg-white p-2 rounded border mt-1">
+                      {ans.answer && ans.answer !== '' ? ans.answer : '(No answer provided)'}
+                    </p>
                   </div>
                   <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div>

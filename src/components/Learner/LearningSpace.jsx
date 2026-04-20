@@ -99,6 +99,8 @@ const LearningSpace = ({ onStartQuiz }) => {
         already_taken: quiz.already_taken || false,
         attempt_status: quiz.attempt_status || null,
         disabled: quiz.disabled || false,
+        scheduled_start: quiz.scheduled_start || null,
+        scheduled_end: quiz.scheduled_end || null,
         subject_name: quiz.subject_name || 'Uncategorized'
       }));
 
@@ -161,7 +163,13 @@ const LearningSpace = ({ onStartQuiz }) => {
                     {subjectItems.map(item => {
                       // For quizzes, we have special disabled/resume logic
                       const isQuiz = resourceType === 'quiz';
+                      const startTime = isQuiz && item.scheduled_start ? new Date(item.scheduled_start) : null;
+                      const endTime = isQuiz && item.scheduled_end ? new Date(item.scheduled_end) : null;
+                      const now = new Date();
+                      const isUpcoming = isQuiz && startTime && now < startTime;
+                      const isClosed = isQuiz && endTime && now > endTime;
                       const isDisabled = isQuiz && (item.disabled === true);
+                      const isUnavailable = isQuiz && (isUpcoming || isClosed);
                       const isResumable = isQuiz && (item.attempt_status === 'in-progress');
                       
                       return (
@@ -169,6 +177,14 @@ const LearningSpace = ({ onStartQuiz }) => {
                           key={item.id}
                           onClick={() => {
                             if (isQuiz) {
+                              if (isClosed) {
+                                toast.error('This assessment is closed.');
+                                return;
+                              }
+                              if (isUpcoming) {
+                                toast(`This quiz opens on ${startTime.toLocaleString()}`, { duration: 4000 });
+                                return;
+                              }
                               if (isDisabled) {
                                 if (isResumable) {
                                   toast('You have an in‑progress attempt. Resume it?', { duration: 3000 });
@@ -186,7 +202,7 @@ const LearningSpace = ({ onStartQuiz }) => {
                             }
                           }}
                           className={`group flex items-center p-3 rounded border transition-all ${
-                            isQuiz && isDisabled ? 'opacity-60 bg-gray-100 cursor-not-allowed' : 'cursor-pointer'
+                            isQuiz && (isDisabled || isUnavailable) ? 'opacity-60 bg-gray-100 cursor-not-allowed' : 'cursor-pointer'
                           } ${
                             viewMode === 'grid' 
                               ? 'flex-col text-center border-slate-100 hover:bg-sky-50' 
@@ -207,7 +223,12 @@ const LearningSpace = ({ onStartQuiz }) => {
                           </div>
                           {viewMode === 'list' && (
                             <div className="flex items-center gap-2">
-                              {isQuiz && isDisabled && (
+                              {isQuiz && (isUpcoming || isClosed) && (
+                                <span className="text-xs text-slate-500 font-medium">
+                                  {isUpcoming ? 'Upcoming' : 'Closed'}
+                                </span>
+                              )}
+                              {isQuiz && isDisabled && !isUnavailable && (
                                 <span className="text-xs text-amber-600 font-medium">
                                   {isResumable ? 'Resume' : 'Taken'}
                                 </span>
