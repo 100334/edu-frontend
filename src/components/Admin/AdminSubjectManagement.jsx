@@ -331,7 +331,7 @@ const AdminSubjectManagement = ({ user, onBack }) => {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="space-y-4">
               {subjects.map((subject, index) => (
                 <div key={subject.id} className="bg-white border border-gray-200 rounded-lg p-4 sm:p-5 hover:shadow-md transition-all hover:border-[#c9933a]/30">
                   <div className="flex flex-wrap justify-between items-start gap-2 mb-3">

@@ -79,6 +79,22 @@ const getOverallGradeFromPoints = (totalPoints) => {
   return { description: 'Fail' };
 };
 
+// Calculate status based on number of subjects passed (for all forms)
+const calculateStatusByPassedSubjects = (subjects) => {
+  if (!subjects || subjects.length === 0) {
+    return { status: 'FAIL', message: 'No subjects assessed', color: '#c0392b' };
+  }
+  
+  // Count subjects with score >= 40 (passing score)
+  const passedCount = subjects.filter(s => s.score >= 40).length;
+  
+  if (passedCount >= 6) {
+    return { status: 'PASS', message: `Passed ${passedCount} subjects - Overall Result: PASS`, color: '#10b981' };
+  } else {
+    return { status: 'FAIL', message: `Passed only ${passedCount} subject(s) - Overall Result: FAIL`, color: '#c0392b' };
+  }
+};
+
 // Get final status based on English pass/fail and total points
 const getFinalStatus = (englishPassed, totalPoints) => {
   if (!englishPassed) return { status: 'FAIL', message: 'Failed English - Overall Result: FAIL', color: '#c0392b' };
@@ -445,6 +461,9 @@ export default function TeacherDashboard() {
       englishPassed = result.englishPassed;
       pointsGrade = getOverallGradeFromPoints(totalPoints);
       finalStatus = getFinalStatus(englishPassed, totalPoints);
+    } else {
+      // For Form 1/2, calculate status based on number of subjects passed
+      finalStatus = calculateStatusByPassedSubjects(subjectsData);
     }
     
     const avgScore = Math.round(subjectsData.reduce((sum, s) => sum + s.score, 0) / subjectsData.length);
@@ -459,7 +478,8 @@ export default function TeacherDashboard() {
           finalComment = `${finalStatus.status} - ${finalStatus.message} Total points from best ${bestSubjects.length} subjects: ${totalPoints}. ${getPointsInterpretation(totalPoints)}`;
         }
       } else {
-        finalComment = `Average score: ${avgScore}%. ${grade.description}. ${grade.description === 'Excellent' ? 'Outstanding work!' : grade.description === 'Very good' ? 'Well done!' : grade.description === 'Good' ? 'Good effort!' : grade.description === 'Pass' ? 'Satisfactory, keep improving!' : 'Needs more effort.'}`;
+        const passedCount = subjectsData.filter(s => s.score >= 40).length;
+        finalComment = `Passed ${passedCount} out of ${subjectsData.length} subjects. ${finalStatus.message}. Average score: ${avgScore}%. ${grade.description}.`;
       }
     }
     
@@ -609,6 +629,9 @@ export default function TeacherDashboard() {
       totalPoints = result.totalPoints;
       englishPassed = result.englishPassed;
       finalStatus = getFinalStatus(englishPassed, totalPoints);
+    } else {
+      // For Form 1/2, calculate status based on number of subjects passed
+      finalStatus = calculateStatusByPassedSubjects(report.subjects);
     }
     
     const avg = Math.round(report.subjects.reduce((s, x) => s + x.score, 0) / report.subjects.length);
@@ -640,6 +663,11 @@ export default function TeacherDashboard() {
                     ⚠️ FAILED: English score below passing mark (35%)
                   </div>
                 ` : ''}
+              ` : ''}
+              ${!isUpperForm && finalStatus ? `
+                <div style="font-size: 11px; font-weight: 500; color: ${finalStatus.color}; margin-top: 4px;">
+                  Overall Result: <strong>${finalStatus.status}</strong>
+                </div>
               ` : ''}
             </div>
           </div>
@@ -1274,6 +1302,10 @@ export default function TeacherDashboard() {
                             englishPassed = result.englishPassed;
                             const status = getFinalStatus(englishPassed, totalPoints);
                             finalStatus = status.status;
+                          } else if (!isUpperForm && report.subjects) {
+                            // For Form 1/2, calculate status based on number of subjects passed
+                            const status = calculateStatusByPassedSubjects(report.subjects);
+                            finalStatus = status.status;
                           }
                           
                           return (
@@ -1293,7 +1325,7 @@ export default function TeacherDashboard() {
                                 {isUpperForm && totalPoints !== null ? `${totalPoints} pts` : '—'}
                               </td>
                               <td className="px-3 lg:px-4 py-3">
-                                {isUpperForm && finalStatus ? (
+                                {finalStatus ? (
                                   <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
                                     finalStatus === 'DISTINCTION' ? 'bg-green-100 text-green-700' :
                                     finalStatus === 'CREDIT' ? 'bg-blue-100 text-blue-700' :

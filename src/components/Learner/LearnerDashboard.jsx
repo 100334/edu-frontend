@@ -94,6 +94,22 @@ const getOverallGradeFromPoints = (totalPoints) => {
   return { description: 'Fail' };
 };
 
+// Calculate status based on number of subjects passed (for all forms)
+const calculateStatusByPassedSubjects = (subjects) => {
+  if (!subjects || subjects.length === 0) {
+    return { status: 'FAIL', message: 'No subjects assessed', color: '#c0392b' };
+  }
+  
+  // Count subjects with score >= 40 (passing score)
+  const passedCount = subjects.filter(s => s.score >= 40).length;
+  
+  if (passedCount >= 6) {
+    return { status: 'PASS', message: `Passed ${passedCount} subjects - Overall Result: PASS`, color: '#10b981' };
+  } else {
+    return { status: 'FAIL', message: `Passed only ${passedCount} subject(s) - Overall Result: FAIL`, color: '#c0392b' };
+  }
+};
+
 // Get final status (unchanged)
 const getFinalStatus = (englishPassed, totalPoints) => {
   if (!englishPassed) return { status: 'FAIL', message: 'Failed English - Overall Result: FAIL', color: '#c0392b' };
@@ -801,7 +817,7 @@ export default function LearnerDashboard() {
     const avgGrade = getGradeFromScore(avg, report.form);
     const pointsGrade = isUpperForm && totalPoints ? getOverallGradeFromPoints(totalPoints) : null;
     const englishPassed = isUpperForm ? (validSubjects.find(s => s.name.toLowerCase().includes('english'))?.score >= 35) : true;
-    const finalStatus = isUpperForm ? getFinalStatus(englishPassed, totalPoints) : null;
+    const finalStatus = isUpperForm ? getFinalStatus(englishPassed, totalPoints) : calculateStatusByPassedSubjects(validSubjects);
     return `
       <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(10,37,64,0.1);">
         <div style="background: linear-gradient(135deg, #0A2540, #1E3A5F); color: white; padding: 20px;">
@@ -825,7 +841,7 @@ export default function LearnerDashboard() {
             </div>
             <div style="background: #F8FAFC; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0;">
               <div style="font-size: 11px; color: #64748b; font-weight: 600;">STATUS</div>
-              <div style="font-size: 16px; font-weight: bold; color: ${avg >= 50 ? '#10b981' : '#ef4444'};">${avg >= 50 ? 'PASS' : 'FAIL'}</div>
+              <div style="font-size: 16px; font-weight: bold; color: ${finalStatus.color};">${finalStatus.status}</div>
             </div>
           </div>
           <div style="overflow-x: auto;">

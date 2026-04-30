@@ -29,16 +29,6 @@ const LessonManagement = () => {
     resource_type: 'video'
   });
 
-  // Helper: robust extraction of subjects array from API response
-  const extractSubjectsArray = (responseData) => {
-    if (!responseData) return [];
-    if (responseData.subjects && Array.isArray(responseData.subjects)) return responseData.subjects;
-    if (responseData.data && Array.isArray(responseData.data)) return responseData.data;
-    if (responseData.items && Array.isArray(responseData.items)) return responseData.items;
-    if (Array.isArray(responseData)) return responseData;
-    return [];
-  };
-
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
@@ -61,10 +51,29 @@ const LessonManagement = () => {
         setLessons([]);
       }
       
-      // Handle subjects
+      // Handle subjects - FIXED VERSION
       if (subjectsRes.status === 'fulfilled') {
-        const subjectsArray = extractSubjectsArray(subjectsRes.value.data);
-        console.log('✅ Subjects loaded:', subjectsArray.length);
+        const responseData = subjectsRes.value.data;
+        console.log('📦 Subjects API response:', responseData);
+        
+        let subjectsArray = [];
+        
+        // Check different response structures
+        if (responseData) {
+          if (responseData.success && Array.isArray(responseData.subjects)) {
+            subjectsArray = responseData.subjects;
+          } else if (Array.isArray(responseData.subjects)) {
+            subjectsArray = responseData.subjects;
+          } else if (Array.isArray(responseData.data)) {
+            subjectsArray = responseData.data;
+          } else if (Array.isArray(responseData)) {
+            subjectsArray = responseData;
+          } else if (responseData.items && Array.isArray(responseData.items)) {
+            subjectsArray = responseData.items;
+          }
+        }
+        
+        console.log('✅ Subjects loaded:', subjectsArray.length, subjectsArray);
         setSubjects(subjectsArray);
       } else {
         console.warn('⚠️ Failed to load subjects:', subjectsRes.reason);
@@ -305,6 +314,15 @@ const LessonManagement = () => {
                   </tr>
                 );
               })}
+              {lessons.length === 0 && (
+                <tr>
+                  <td colSpan="5" className="px-6 py-12 text-center text-slate-400">
+                    <BookOpenIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm font-medium">No lessons created yet</p>
+                    <p className="text-xs mt-1">Click "Add New Module" to get started</p>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -341,33 +359,23 @@ const LessonManagement = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-[11px] font-bold text-slate-500 uppercase ml-1 mb-1 block">Subject Category</label>
-                    <div className="flex gap-2 items-center">
-                      <select 
-                        value={formData.subject_id}
-                        onChange={(e) => setFormData({...formData, subject_id: e.target.value})}
-                        className="flex-1 bg-white border-2 border-azure/30 rounded-xl px-4 py-3 text-slate-700 font-bold focus:border-azure outline-none cursor-pointer"
-                        required
-                      >
-                        <option value="">-- Select a Subject --</option>
-                        {subjects.length > 0 ? (
-                          subjects.map(s => (
-                            <option key={s.id} value={s.id}>
-                              {s.name}
-                            </option>
-                          ))
-                        ) : (
-                          <option disabled>No subjects available – please create one first</option>
-                        )}
-                      </select>
-                      <button 
-                        type="button"
-                        onClick={() => loadDashboardData()}
-                        className="px-3 py-2 bg-slate-100 rounded-xl text-slate-600 hover:bg-slate-200 transition-colors"
-                        title="Refresh subjects"
-                      >
-                        ↻
-                      </button>
-                    </div>
+                    <select 
+                      value={formData.subject_id}
+                      onChange={(e) => setFormData({...formData, subject_id: e.target.value})}
+                      className="w-full bg-white border-2 border-azure/30 rounded-xl px-4 py-3 text-slate-700 font-bold focus:border-azure outline-none cursor-pointer"
+                      required
+                    >
+                      <option value="">-- Select a Subject --</option>
+                      {subjects.length > 0 ? (
+                        subjects.map(s => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))
+                      ) : (
+                        <option disabled>No subjects available – please create one first</option>
+                      )}
+                    </select>
                     {subjects.length === 0 && (
                       <p className="text-xs text-red-500 mt-1">
                         ⚠️ No subjects found. Please create a subject in Subject Management first.
@@ -460,16 +468,57 @@ const LessonManagement = () => {
                 </div>
               </div>
 
+              {/* Optional: Quiz Selection (for future enhancement) */}
+              {quizzes.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase ml-1 mb-1 block">Associated Quiz (Optional)</label>
+                  <select 
+                    value={formData.quiz_id}
+                    onChange={(e) => setFormData({...formData, quiz_id: e.target.value})}
+                    className="w-full bg-white border-2 border-azure/30 rounded-xl px-4 py-3 text-slate-700 font-bold focus:border-azure outline-none"
+                  >
+                    <option value="">-- No Quiz --</option>
+                    {quizzes.map(q => (
+                      <option key={q.id} value={q.id}>{q.title}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Description Field */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-bold text-slate-500 uppercase ml-1 mb-1 block">Description (Optional)</label>
+                <textarea 
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  rows="3"
+                  className="w-full bg-white border-2 border-azure/30 rounded-xl px-4 py-3 text-slate-700 focus:border-azure outline-none resize-none"
+                  placeholder="Enter a brief description of this lesson..."
+                />
+              </div>
+
               <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-bold text-slate-400 uppercase">Sort order:</span>
-                  <input type="number" value={formData.display_order} onChange={(e) => setFormData({...formData, display_order: parseInt(e.target.value)})} className="w-12 border-b-2 border-azure/30 text-center font-bold text-azure focus:border-azure outline-none" />
+                  <input 
+                    type="number" 
+                    value={formData.display_order} 
+                    onChange={(e) => setFormData({...formData, display_order: parseInt(e.target.value) || 0})} 
+                    className="w-16 border-b-2 border-azure/30 text-center font-bold text-azure focus:border-azure outline-none" 
+                  />
                 </div>
                 <div className="flex gap-3">
-                  <button type="button" onClick={() => setShowModal(false)} className="px-5 py-2 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors">Discard</button>
                   <button 
+                    type="button" 
+                    onClick={() => setShowModal(false)} 
+                    className="px-5 py-2 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    Discard
+                  </button>
+                  <button 
+                    type="submit"
                     disabled={submitting}
-                    className="bg-[#007FFF] text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-azure/20 hover:bg-[#0066CC] transition-all flex items-center gap-2"
+                    className="bg-[#007FFF] text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-azure/20 hover:bg-[#0066CC] transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {submitting && <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>}
                     Save Changes
