@@ -29,6 +29,26 @@ const LessonManagement = () => {
     resource_type: 'video'
   });
 
+  const loadSubjects = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      // Use the same endpoint as QuizManagement
+      const response = await api.get('/api/admin/quiz-subjects', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (response.data.success) {
+        console.log('✅ Subjects loaded:', response.data.subjects?.length);
+        setSubjects(response.data.subjects || []);
+      } else {
+        console.warn('Failed to load subjects:', response.data.message);
+        setSubjects([]);
+      }
+    } catch (error) {
+      console.error('Error loading subjects:', error);
+      setSubjects([]);
+    }
+  };
+
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
@@ -37,31 +57,8 @@ const LessonManagement = () => {
       
       console.log('🔄 Loading dashboard data...');
       
-      // Fetch subjects first separately to debug
-      try {
-        const subjectsResponse = await api.get('/api/admin/subjects/all', authHeader);
-        console.log('📦 Subjects API Full Response:', subjectsResponse);
-        console.log('📦 Subjects API Data:', subjectsResponse.data);
-        
-        // Handle different response structures
-        let subjectsArray = [];
-        if (subjectsResponse.data && subjectsResponse.data.success && Array.isArray(subjectsResponse.data.subjects)) {
-          subjectsArray = subjectsResponse.data.subjects;
-        } else if (subjectsResponse.data && Array.isArray(subjectsResponse.data.data)) {
-          subjectsArray = subjectsResponse.data.data;
-        } else if (Array.isArray(subjectsResponse.data)) {
-          subjectsArray = subjectsResponse.data;
-        } else if (subjectsResponse.data && subjectsResponse.data.subjects && Array.isArray(subjectsResponse.data.subjects)) {
-          subjectsArray = subjectsResponse.data.subjects;
-        }
-        
-        console.log('✅ Processed subjects:', subjectsArray);
-        setSubjects(subjectsArray);
-      } catch (subjectsError) {
-        console.error('❌ Failed to load subjects:', subjectsError);
-        setSubjects([]);
-        toast.error('Failed to load subjects. Please check if subjects exist.');
-      }
+      // Load subjects first using the quiz-subjects endpoint
+      await loadSubjects();
       
       // Load lessons
       try {
@@ -77,7 +74,7 @@ const LessonManagement = () => {
         setLessons([]);
       }
       
-      // Load quizzes
+      // Load quizzes for association
       try {
         const quizzesResponse = await api.get('/api/admin/quizzes', authHeader);
         if (quizzesResponse.data && quizzesResponse.data.success) {
@@ -150,7 +147,6 @@ const LessonManagement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validation
     if (!formData.title.trim()) {
       toast.error('Lesson title is required');
       return;
@@ -204,7 +200,6 @@ const LessonManagement = () => {
         toast.success(editingLesson ? 'Lesson Updated Successfully' : 'Lesson Created Successfully');
         setShowModal(false);
         loadDashboardData();
-        // Reset form
         setFormData({
           title: '',
           description: '',
@@ -334,18 +329,18 @@ const LessonManagement = () => {
                             <p className="text-xs text-slate-400 font-medium">{lesson.resource_type === 'video' ? 'Video Lesson' : 'PDF Document'}</p>
                           </div>
                         </div>
-                       </td>
+                      </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1 text-xs text-slate-500">
                           <FolderIcon className="w-4 h-4 text-azure" />
                           <span>{subjectName}</span>
                         </div>
-                       </td>
+                      </td>
                       <td className="px-6 py-4">
                         <span className="px-3 py-1 rounded-full text-[10px] font-black bg-white border border-[#D4AF37] text-[#D4AF37] uppercase">
                           {lesson.target_form}
                         </span>
-                       </td>
+                      </td>
                       <td className="px-6 py-4 text-right">
                         <button onClick={() => openModal(lesson)} className="p-2 text-slate-400 hover:text-azure transition-colors">
                           <PencilIcon className="w-5 h-5" />
@@ -353,7 +348,7 @@ const LessonManagement = () => {
                         <button onClick={() => handleDeleteLesson(lesson)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
                           <TrashIcon className="w-5 h-5" />
                         </button>
-                       </td>
+                      </td>
                     </tr>
                   );
                 })
@@ -417,7 +412,7 @@ const LessonManagement = () => {
                     </select>
                     {subjects.length === 0 && (
                       <p className="text-xs text-red-500 mt-2">
-                        ⚠️ No subjects found. Please create a subject first.
+                        ⚠️ No subjects found. Please create a subject in Quiz Management first.
                       </p>
                     )}
                   </div>
@@ -509,6 +504,23 @@ const LessonManagement = () => {
                   )}
                 </div>
               </div>
+
+              {/* Optional: Quiz Selection */}
+              {quizzes.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-500 uppercase ml-1 mb-1 block">Associated Quiz (Optional)</label>
+                  <select 
+                    value={formData.quiz_id}
+                    onChange={(e) => setFormData({...formData, quiz_id: e.target.value})}
+                    className="w-full bg-white border-2 border-azure/30 rounded-xl px-4 py-3 text-slate-700 font-bold focus:border-azure outline-none"
+                  >
+                    <option value="">-- No Quiz --</option>
+                    {quizzes.map(quiz => (
+                      <option key={quiz.id} value={quiz.id}>{quiz.title}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Description */}
               <div className="space-y-2">
