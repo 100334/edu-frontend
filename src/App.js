@@ -170,11 +170,9 @@ const AdminSubjectManagementWrapper = () => {
 
 function AppContent() {
   const [serverStatus, setServerStatus] = useState(null);
-  const [isCheckingServer, setIsCheckingServer] = useState(true);
 
   useEffect(() => {
     const checkServer = async () => {
-      setIsCheckingServer(true);
       try {
         console.log('🔍 Checking server connection...');
         console.log('API URL:', api.defaults.baseURL);
@@ -182,31 +180,17 @@ function AppContent() {
         if (healthResult.success) {
           console.log('✅ Server connected:', healthResult.data);
           setServerStatus({ status: 'online', data: healthResult.data });
-          toast.success('Connected to EduPortal server', {
-            duration: 3000,
-            icon: '🚀'
-          });
         } else {
           console.warn('⚠️ Server connection failed:', healthResult.error);
           setServerStatus({ status: 'offline', error: healthResult.error });
-          toast.error('Unable to connect to server. Please check your connection.', {
-            duration: 5000,
-            icon: '🔌'
-          });
         }
       } catch (error) {
         console.error('❌ Server check error:', error);
         setServerStatus({ status: 'offline', error: error.message });
-      } finally {
-        setIsCheckingServer(false);
       }
     };
     checkServer();
   }, []);
-
-  if (isCheckingServer) {
-    return <LoadingScreen />;
-  }
 
   return (
     <>
@@ -285,41 +269,6 @@ function AppContent() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       
-      {/* Offline Mode Indicator */}
-      {serverStatus?.status === 'offline' && (
-        <div style={{
-          position: 'fixed',
-          bottom: '16px',
-          left: '16px',
-          background: '#c0392b',
-          color: 'white',
-          padding: '8px 16px',
-          borderRadius: '8px',
-          fontSize: '12px',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
-          <span>🔴</span>
-          <span>Offline Mode - Server not connected</span>
-          <button 
-            onClick={() => window.location.reload()}
-            style={{
-              marginLeft: '8px',
-              padding: '4px 8px',
-              background: 'white',
-              color: '#c0392b',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '11px'
-            }}
-          >
-            Retry
-          </button>
-        </div>
-      )}
     </>
   );
 }
