@@ -1,563 +1,440 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  PlusIcon, PencilIcon, TrashIcon, XMarkIcon, 
+import {
+  PlusIcon, PencilIcon, TrashIcon, XMarkIcon,
   VideoCameraIcon, DocumentIcon,
-  AcademicCapIcon, BookOpenIcon, CloudArrowUpIcon, FolderIcon
+  AcademicCapIcon, BookOpenIcon, FolderIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 
+// ── shared input style ────────────────────────────────────────────────────────
+const inp = 'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#00B4D8] focus:border-[#00B4D8] transition';
+
 const LessonManagement = () => {
-  const [lessons, setLessons] = useState([]);
-  const [subjects, setSubjects] = useState([]);
-  const [quizzes, setQuizzes] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
+  const [lessons,       setLessons]       = useState([]);
+  const [subjects,      setSubjects]      = useState([]);
+  const [quizzes,       setQuizzes]       = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [showModal,     setShowModal]     = useState(false);
   const [editingLesson, setEditingLesson] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState({ video: false, pdf: false });
+  const [submitting,    setSubmitting]    = useState(false);
+  const [uploadStatus,  setUploadStatus]  = useState({ video: false, pdf: false });
 
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    video_url: '',
-    pdf_url: '',
-    subject_id: '',
-    target_form: 'All',
-    quiz_id: '',
-    display_order: 0,
-    resource_type: 'video'
-  });
+  const emptyForm = {
+    title: '', description: '', video_url: '', pdf_url: '',
+    subject_id: '', target_form: 'All', quiz_id: '',
+    display_order: 0, resource_type: 'video',
+  };
+  const [formData, setFormData] = useState(emptyForm);
 
+  // ── data loading ────────────────────────────────────────────────────────────
   const loadSubjects = async () => {
     try {
       const token = localStorage.getItem('token');
-      // Use the same endpoint as QuizManagement
-      const response = await api.get('/api/admin/quiz-subjects', {
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await api.get('/api/admin/quiz-subjects', {
+        headers: { Authorization: `Bearer ${token}` },
       });
-      if (response.data.success) {
-        console.log('✅ Subjects loaded:', response.data.subjects?.length);
-        setSubjects(response.data.subjects || []);
-      } else {
-        console.warn('Failed to load subjects:', response.data.message);
-        setSubjects([]);
-      }
-    } catch (error) {
-      console.error('Error loading subjects:', error);
-      setSubjects([]);
-    }
+      if (res.data.success) setSubjects(res.data.subjects || []);
+      else setSubjects([]);
+    } catch { setSubjects([]); }
   };
 
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const authHeader = { headers: { Authorization: `Bearer ${token}` } };
-      
-      console.log('🔄 Loading dashboard data...');
-      
-      // Load subjects first using the quiz-subjects endpoint
+      const auth = { headers: { Authorization: `Bearer ${token}` } };
       await loadSubjects();
-      
-      // Load lessons
       try {
-        const lessonsResponse = await api.get('/api/admin/lessons', authHeader);
-        if (lessonsResponse.data && lessonsResponse.data.success) {
-          setLessons(lessonsResponse.data.lessons || []);
-          console.log('✅ Lessons loaded:', lessonsResponse.data.lessons?.length);
-        } else {
-          setLessons([]);
-        }
-      } catch (lessonsError) {
-        console.error('❌ Failed to load lessons:', lessonsError);
-        setLessons([]);
-      }
-      
-      // Load quizzes for association
+        const r = await api.get('/api/admin/lessons', auth);
+        setLessons(r.data.success ? (r.data.lessons || []) : []);
+      } catch { setLessons([]); }
       try {
-        const quizzesResponse = await api.get('/api/admin/quizzes', authHeader);
-        if (quizzesResponse.data && quizzesResponse.data.success) {
-          setQuizzes(quizzesResponse.data.quizzes || []);
-          console.log('✅ Quizzes loaded:', quizzesResponse.data.quizzes?.length);
-        } else {
-          setQuizzes([]);
-        }
-      } catch (quizzesError) {
-        console.error('❌ Failed to load quizzes:', quizzesError);
-        setQuizzes([]);
-      }
-      
-    } catch (error) {
-      console.error('Unexpected error loading data:', error);
-      toast.error('Error loading dashboard data');
-    } finally {
-      setLoading(false);
-    }
+        const r = await api.get('/api/admin/quizzes', auth);
+        setQuizzes(r.data.success ? (r.data.quizzes || []) : []);
+      } catch { setQuizzes([]); }
+    } catch { toast.error('Error loading data'); }
+    finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { 
-    loadDashboardData(); 
-  }, [loadDashboardData]);
+  useEffect(() => { loadDashboardData(); }, [loadDashboardData]);
 
-  // Helper to get sanitized subject name for folder paths
+  // ── helpers ─────────────────────────────────────────────────────────────────
   const getSubjectName = (subjectId) => {
-    const subject = subjects.find(s => String(s.id) === String(subjectId));
-    if (!subject) return 'uncategorized';
-    return subject.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '');
+    const s = subjects.find(s => String(s.id) === String(subjectId));
+    return s ? s.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '') : 'uncategorized';
   };
 
+  const getSubjectLabel = (subjectId) => {
+    const s = subjects.find(s => String(s.id) === String(subjectId));
+    return s?.name || 'General';
+  };
+
+  // ── upload ──────────────────────────────────────────────────────────────────
   const uploadToR2 = async (file, type) => {
     if (!file) return;
-    if (!formData.subject_id) {
-      toast.error('Please select a subject first before uploading a file.');
-      return;
-    }
-    const subjectFolder = getSubjectName(formData.subject_id);
-    const resourceFolder = formData.resource_type === 'video' ? 'videos' : 'pdfs';
-    const fullFolder = `${resourceFolder}/${subjectFolder}`;
-    
-    setUploadStatus(prev => ({ ...prev, [type]: true }));
+    if (!formData.subject_id) { toast.error('Select a subject first before uploading.'); return; }
+    const folder = `${formData.resource_type === 'video' ? 'videos' : 'pdfs'}/${getSubjectName(formData.subject_id)}`;
+    setUploadStatus(p => ({ ...p, [type]: true }));
     try {
       const token = localStorage.getItem('token');
       const { data } = await api.post('/api/admin/r2-upload-url', {
-        fileName: file.name,
-        fileType: file.type,
-        folder: fullFolder,
+        fileName: file.name, fileType: file.type, folder,
       }, { headers: { Authorization: `Bearer ${token}` } });
-
-      const upload = await fetch(data.uploadUrl, {
-        method: 'PUT',
-        body: file,
-        headers: { 'Content-Type': file.type },
-      });
-
+      const upload = await fetch(data.uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
       if (!upload.ok) throw new Error('Upload failed');
       const fileUrl = data.fileUrl || data.publicUrl || data.url;
-      const urlField = formData.resource_type === 'video' ? 'video_url' : 'pdf_url';
-      setFormData(prev => ({ ...prev, [urlField]: fileUrl }));
-      toast.success(`${type.toUpperCase()} uploaded to ${fullFolder}/`);
-    } catch (err) {
-      toast.error(`Upload error: ${err.message}`);
-    } finally {
-      setUploadStatus(prev => ({ ...prev, [type]: false }));
-    }
+      const field   = formData.resource_type === 'video' ? 'video_url' : 'pdf_url';
+      setFormData(p => ({ ...p, [field]: fileUrl }));
+      toast.success(`Uploaded to ${folder}/`);
+    } catch (err) { toast.error(`Upload error: ${err.message}`); }
+    finally { setUploadStatus(p => ({ ...p, [type]: false })); }
   };
 
+  // ── submit ──────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!formData.title.trim()) {
-      toast.error('Lesson title is required');
-      return;
-    }
-    
-    if (!formData.subject_id) {
-      toast.error('Please select a subject');
-      return;
-    }
-    
-    if (formData.resource_type === 'video' && !formData.video_url) {
-      toast.error('Please upload a video file');
-      return;
-    }
-    
-    if (formData.resource_type === 'pdf' && !formData.pdf_url) {
-      toast.error('Please upload a PDF file');
-      return;
-    }
-    
+    if (!formData.title.trim())                              { toast.error('Lesson title is required'); return; }
+    if (!formData.subject_id)                                { toast.error('Please select a subject');  return; }
+    if (formData.resource_type === 'video' && !formData.video_url) { toast.error('Please upload a video file'); return; }
+    if (formData.resource_type === 'pdf'   && !formData.pdf_url)   { toast.error('Please upload a PDF file');   return; }
+
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('token');
-      const method = editingLesson ? 'put' : 'post';
-      const url = editingLesson ? `/api/admin/lessons/${editingLesson.id}` : '/api/admin/lessons';
-      
+      const token   = localStorage.getItem('token');
+      const method  = editingLesson ? 'put' : 'post';
+      const url     = editingLesson ? `/api/admin/lessons/${editingLesson.id}` : '/api/admin/lessons';
       const payload = {
-        title: formData.title.trim(),
-        description: formData.description || '',
-        subject_id: parseInt(formData.subject_id),
-        target_form: formData.target_form,
+        title:         formData.title.trim(),
+        description:   formData.description || '',
+        subject_id:    parseInt(formData.subject_id),
+        target_form:   formData.target_form,
         display_order: parseInt(formData.display_order) || 0,
         resource_type: formData.resource_type,
+        ...(formData.quiz_id ? { quiz_id: parseInt(formData.quiz_id) } : {}),
+        ...(formData.resource_type === 'video' ? { video_url: formData.video_url } : { pdf_url: formData.pdf_url }),
       };
-      
-      if (formData.quiz_id) {
-        payload.quiz_id = parseInt(formData.quiz_id);
-      }
-      
-      if (formData.resource_type === 'video') {
-        payload.video_url = formData.video_url;
-      } else {
-        payload.pdf_url = formData.pdf_url;
-      }
-
-      console.log('📤 Submitting payload:', payload);
-      
       const res = await api[method](url, payload, { headers: { Authorization: `Bearer ${token}` } });
-
       if (res.data.success) {
-        toast.success(editingLesson ? 'Lesson Updated Successfully' : 'Lesson Created Successfully');
+        toast.success(editingLesson ? 'Lesson updated' : 'Lesson created');
         setShowModal(false);
+        setFormData(emptyForm);
         loadDashboardData();
-        setFormData({
-          title: '',
-          description: '',
-          video_url: '',
-          pdf_url: '',
-          subject_id: '',
-          target_form: 'All',
-          quiz_id: '',
-          display_order: 0,
-          resource_type: 'video'
-        });
-      } else {
-        toast.error(res.data.message || 'Failed to save lesson');
-      }
-    } catch (error) {
-      console.error('Submit error:', error);
-      toast.error(error.response?.data?.message || 'Failed to save changes');
-    } finally {
-      setSubmitting(false);
-    }
+      } else toast.error(res.data.message || 'Failed to save lesson');
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to save changes'); }
+    finally { setSubmitting(false); }
   };
 
+  // ── delete ──────────────────────────────────────────────────────────────────
   const handleDeleteLesson = async (lesson) => {
-    if (!window.confirm(`Delete "${lesson.title}" permanently? This action cannot be undone.`)) return;
+    if (!window.confirm(`Delete "${lesson.title}"? This cannot be undone.`)) return;
     try {
       const token = localStorage.getItem('token');
-      const response = await api.delete(`/api/admin/lessons/${lesson.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.data.success) {
-        toast.success('Lesson deleted successfully');
-        loadDashboardData();
-      } else {
-        toast.error(response.data.message || 'Failed to delete lesson');
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message || 'Failed to delete lesson');
-    }
+      const res   = await api.delete(`/api/admin/lessons/${lesson.id}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data.success) { toast.success('Lesson deleted'); loadDashboardData(); }
+      else toast.error(res.data.message || 'Failed to delete');
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to delete'); }
   };
 
+  // ── open modal ──────────────────────────────────────────────────────────────
   const openModal = (lesson = null) => {
-    if (lesson) {
-      setEditingLesson(lesson);
-      setFormData({
-        title: lesson.title || '',
-        description: lesson.description || '',
-        video_url: lesson.video_url || '',
-        pdf_url: lesson.pdf_url || '',
-        subject_id: lesson.subject_id || '',
-        target_form: lesson.target_form || 'All',
-        quiz_id: lesson.quiz_id || '',
-        display_order: lesson.display_order || 0,
-        resource_type: lesson.resource_type || 'video'
-      });
-    } else {
-      setEditingLesson(null);
-      setFormData({
-        title: '',
-        description: '',
-        video_url: '',
-        pdf_url: '',
-        subject_id: '',
-        target_form: 'All',
-        quiz_id: '',
-        display_order: 0,
-        resource_type: 'video'
-      });
-    }
+    setEditingLesson(lesson);
+    setFormData(lesson ? {
+      title:         lesson.title         || '',
+      description:   lesson.description   || '',
+      video_url:     lesson.video_url     || '',
+      pdf_url:       lesson.pdf_url       || '',
+      subject_id:    lesson.subject_id    || '',
+      target_form:   lesson.target_form   || 'All',
+      quiz_id:       lesson.quiz_id       || '',
+      display_order: lesson.display_order || 0,
+      resource_type: lesson.resource_type || 'video',
+    } : emptyForm);
     setShowModal(true);
   };
 
+  // ── loading ─────────────────────────────────────────────────────────────────
   if (loading) return (
-    <div className="flex flex-col h-screen items-center justify-center bg-[#FDFDFD]">
-      <div className="w-12 h-12 border-4 border-azure/20 border-t-azure rounded-full animate-spin"></div>
-      <p className="mt-4 text-xs font-bold text-slate-400 tracking-widest uppercase">Loading Modules...</p>
+    <div className="flex flex-col items-center justify-center py-16">
+      <div className="w-8 h-8 border-4 border-[#006770] border-t-transparent rounded-full animate-spin" />
+      <p className="mt-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">Loading lessons…</p>
     </div>
   );
 
+  // ── render ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#FDFDFD] font-sans text-slate-900">
-      {/* Header Bar */}
-      <div className="bg-gradient-to-r from-[#001F3F] to-[#007FFF] px-8 py-10 shadow-lg">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight">Lesson Management</h1>
-            <p className="text-white/70 text-sm mt-1 font-medium">Configure your digital curriculum and assets</p>
-          </div>
-          <button 
-            onClick={() => openModal()}
-            className="bg-white text-[#007FFF] hover:bg-slate-50 px-6 py-3 rounded-xl font-bold flex items-center gap-2 transition-all shadow-md active:scale-95"
-          >
-            <PlusIcon className="w-5 h-5" /> Add New Module
-          </button>
-        </div>
+    <div>
+      {/* Toolbar */}
+      <div className="flex items-center justify-between mb-5">
+        <span className="text-xs text-gray-400 font-medium">
+          {lessons.length} lesson{lessons.length !== 1 ? 's' : ''}
+        </span>
+        <button
+          onClick={() => openModal()}
+          className="flex items-center gap-1.5 px-4 py-2 bg-[#006770] text-white rounded-lg text-sm font-medium hover:bg-[#005a62] transition"
+        >
+          <PlusIcon className="w-4 h-4" /> Add Lesson
+        </button>
       </div>
 
-      <div className="max-w-7xl mx-auto p-8">
-        <div className="bg-white rounded-2xl border border-[#D4AF37]/30 shadow-sm overflow-hidden">
-          <table className="w-full text-left">
-            <thead className="bg-slate-50 border-b border-slate-100">
+      {/* Table */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[560px]">
+            <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-4 text-[11px] font-bold uppercase text-slate-500 tracking-wider w-20 text-center">Order</th>
-                <th className="px-6 py-4 text-[11px] font-bold uppercase text-slate-500 tracking-wider">Lesson Detail</th>
-                <th className="px-6 py-4 text-[11px] font-bold uppercase text-slate-500 tracking-wider">Subject</th>
-                <th className="px-6 py-4 text-[11px] font-bold uppercase text-slate-500 tracking-wider">Scope</th>
-                <th className="px-6 py-4 text-[11px] font-bold uppercase text-slate-500 tracking-wider text-right">Actions</th>
+                {['#', 'Lesson', 'Subject', 'Form', 'Type', 'Actions'].map(h => (
+                  <th key={h} className="px-4 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wide">{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
-              {lessons.length > 0 ? (
-                lessons.map((lesson) => {
-                  const subject = subjects.find(s => String(s.id) === String(lesson.subject_id));
-                  const subjectName = subject?.name || 'General';
-                  return (
-                    <tr key={lesson.id} className="hover:bg-azure/5 transition-colors group">
-                      <td className="px-6 py-4 text-center">
-                        <span className="text-sm font-bold text-[#D4AF37]">#{lesson.display_order}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-lg bg-azure/10 flex items-center justify-center text-azure">
-                            {lesson.resource_type === 'video' ? <VideoCameraIcon className="w-5 h-5" /> : <DocumentIcon className="w-5 h-5" />}
-                          </div>
-                          <div>
-                            <p className="font-bold text-slate-800">{lesson.title}</p>
-                            <p className="text-xs text-slate-400 font-medium">{lesson.resource_type === 'video' ? 'Video Lesson' : 'PDF Document'}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-1 text-xs text-slate-500">
-                          <FolderIcon className="w-4 h-4 text-azure" />
-                          <span>{subjectName}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="px-3 py-1 rounded-full text-[10px] font-black bg-white border border-[#D4AF37] text-[#D4AF37] uppercase">
-                          {lesson.target_form}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button onClick={() => openModal(lesson)} className="p-2 text-slate-400 hover:text-azure transition-colors">
-                          <PencilIcon className="w-5 h-5" />
-                        </button>
-                        <button onClick={() => handleDeleteLesson(lesson)} className="p-2 text-slate-400 hover:text-red-500 transition-colors">
-                          <TrashIcon className="w-5 h-5" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
+            <tbody className="divide-y divide-gray-100">
+              {lessons.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-12 text-center text-slate-400">
-                    <BookOpenIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p className="text-sm font-medium">No lessons created yet</p>
-                    <p className="text-xs mt-1">Click "Add New Module" to get started</p>
+                  <td colSpan={6} className="px-4 py-12 text-center">
+                    <BookOpenIcon className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+                    <p className="text-sm text-gray-400">No lessons yet.</p>
+                    <button onClick={() => openModal()} className="mt-1 text-xs text-[#006770] hover:underline">
+                      Add the first lesson →
+                    </button>
                   </td>
                 </tr>
-              )}
+              ) : lessons.map(lesson => (
+                <tr key={lesson.id} className="hover:bg-[#f0faf9] transition-colors">
+                  <td className="px-4 py-3 text-xs font-bold text-gray-300">#{lesson.display_order}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-[#006770]/10 flex items-center justify-center flex-shrink-0">
+                        {lesson.resource_type === 'video'
+                          ? <VideoCameraIcon className="w-4 h-4 text-[#006770]" />
+                          : <DocumentIcon    className="w-4 h-4 text-[#006770]" />}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-[#003B46]">{lesson.title}</p>
+                        {lesson.description && (
+                          <p className="text-[10px] text-gray-400 line-clamp-1">{lesson.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="flex items-center gap-1 text-xs text-gray-500">
+                      <FolderIcon className="w-3.5 h-3.5 text-[#00B4D8]" />
+                      {getSubjectLabel(lesson.subject_id)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="px-2 py-0.5 bg-[#e0f7fa] text-[#006770] text-[10px] font-semibold rounded">
+                      {lesson.target_form}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                      lesson.resource_type === 'video'
+                        ? 'bg-purple-50 text-purple-600'
+                        : 'bg-green-50 text-green-600'
+                    }`}>
+                      {lesson.resource_type === 'video' ? 'Video' : 'PDF'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => openModal(lesson)}
+                        className="p-1.5 text-[#006770] hover:bg-[#006770]/10 rounded-lg transition" title="Edit">
+                        <PencilIcon className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDeleteLesson(lesson)}
+                        className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition" title="Delete">
+                        <TrashIcon className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Editor Modal */}
+      {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl border border-[#D4AF37]/20 flex flex-col overflow-hidden animate-in zoom-in-95">
-            
-            <div className="bg-gradient-to-r from-[#001F3F] to-[#007FFF] p-6 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-white flex items-center gap-3">
-                <AcademicCapIcon className="w-6 h-6" /> {editingLesson ? 'Edit Module' : 'Create New Module'}
-              </h3>
-              <button onClick={() => setShowModal(false)} className="text-white/80 hover:text-white transition-colors">
-                <XMarkIcon className="w-6 h-6" />
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <AcademicCapIcon className="w-4 h-4 text-[#006770]" />
+                <h3 className="text-sm font-bold text-[#003B46]">
+                  {editingLesson ? 'Edit Lesson' : 'Add New Lesson'}
+                </h3>
+              </div>
+              <button onClick={() => setShowModal(false)} className="p-1 hover:bg-gray-100 rounded-lg transition">
+                <XMarkIcon className="w-4 h-4 text-gray-400" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-8 space-y-6 overflow-y-auto max-h-[80vh]">
-              <div className="space-y-4">
+            {/* Modal form */}
+            <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 p-5 space-y-4">
+
+              {/* Title */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Lesson Title *</label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={e => setFormData(p => ({ ...p, title: e.target.value }))}
+                  placeholder="Enter lesson title…"
+                  className={inp}
+                  required
+                  autoFocus
+                />
+              </div>
+
+              {/* Subject + Form row */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[11px] font-bold text-slate-500 uppercase ml-1 mb-1 block">Lesson Title *</label>
-                  <input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full bg-white border-2 border-azure/30 rounded-xl px-4 py-3 text-slate-800 font-bold focus:border-azure focus:ring-2 focus:ring-azure/10 outline-none transition-all"
-                    placeholder="Enter lesson title..."
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Subject *</label>
+                  <select
+                    value={formData.subject_id}
+                    onChange={e => setFormData(p => ({ ...p, subject_id: e.target.value }))}
+                    className={inp}
                     required
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-500 uppercase ml-1 mb-1 block">Subject *</label>
-                    <select 
-                      value={formData.subject_id}
-                      onChange={(e) => setFormData({...formData, subject_id: e.target.value})}
-                      className="w-full bg-white border-2 border-azure/30 rounded-xl px-4 py-3 text-slate-700 font-bold focus:border-azure outline-none cursor-pointer"
-                      required
-                    >
-                      <option value="">-- Select Subject --</option>
-                      {subjects.map(subject => (
-                        <option key={subject.id} value={subject.id}>
-                          {subject.name}
-                        </option>
-                      ))}
-                    </select>
-                    {subjects.length === 0 && (
-                      <p className="text-xs text-red-500 mt-2">
-                        ⚠️ No subjects found. Please create a subject in Quiz Management first.
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-500 uppercase ml-1 mb-1 block">Target Form</label>
-                    <select 
-                      value={formData.target_form}
-                      onChange={(e) => setFormData({...formData, target_form: e.target.value})}
-                      className="w-full bg-white border-2 border-azure/30 rounded-xl px-4 py-3 text-slate-700 font-bold focus:border-azure outline-none"
-                    >
-                      <option value="All">All Forms</option>
-                      <option value="Form 1">Form 1</option>
-                      <option value="Form 2">Form 2</option>
-                      <option value="Form 3">Form 3</option>
-                      <option value="Form 4">Form 4</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Resource Type Selector */}
-              <div className="space-y-4 border-t border-slate-100 pt-6">
-                <p className="text-[11px] font-black text-azure uppercase tracking-widest">Resource Type *</p>
-                <div className="flex gap-6">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="resource_type" 
-                      value="video"
-                      checked={formData.resource_type === 'video'}
-                      onChange={(e) => setFormData({...formData, resource_type: e.target.value, video_url: '', pdf_url: ''})}
-                      className="w-4 h-4 text-azure focus:ring-azure"
-                    />
-                    <VideoCameraIcon className="w-5 h-5 text-azure" />
-                    <span className="text-sm font-medium">Video Lesson</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input 
-                      type="radio" 
-                      name="resource_type" 
-                      value="pdf"
-                      checked={formData.resource_type === 'pdf'}
-                      onChange={(e) => setFormData({...formData, resource_type: e.target.value, video_url: '', pdf_url: ''})}
-                      className="w-4 h-4 text-azure focus:ring-azure"
-                    />
-                    <DocumentIcon className="w-5 h-5 text-azure" />
-                    <span className="text-sm font-medium">PDF Document</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Dynamic Resource Upload */}
-              <div className="space-y-4">
-                <p className="text-[11px] font-black text-azure uppercase tracking-widest">Upload Resource *</p>
-                <div className="p-4 rounded-xl border-2 border-azure/20 bg-slate-50/50">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase flex items-center gap-1">
-                      {formData.resource_type === 'video' ? <VideoCameraIcon className="w-4 h-4" /> : <DocumentIcon className="w-4 h-4" />}
-                      {formData.resource_type === 'video' ? 'Video File' : 'PDF File'}
-                    </span>
-                    <label className="text-[10px] font-black text-azure cursor-pointer hover:underline uppercase">
-                      {uploadStatus[formData.resource_type] ? 'Uploading...' : 'Choose File'}
-                      <input 
-                        type="file" 
-                        className="hidden" 
-                        accept={formData.resource_type === 'video' ? 'video/*' : '.pdf'} 
-                        onChange={(e) => uploadToR2(e.target.files[0], formData.resource_type)} 
-                      />
-                    </label>
-                  </div>
-                  <input 
-                    type="text" 
-                    value={formData.resource_type === 'video' ? formData.video_url : formData.pdf_url} 
-                    onChange={(e) => {
-                      if (formData.resource_type === 'video') {
-                        setFormData({...formData, video_url: e.target.value});
-                      } else {
-                        setFormData({...formData, pdf_url: e.target.value});
-                      }
-                    }}
-                    className="w-full text-xs bg-white border border-azure/20 rounded p-2 focus:border-azure outline-none" 
-                    placeholder="File URL (auto-filled after upload)" 
-                    required
-                  />
-                  {formData.subject_id && (
-                    <p className="text-[9px] text-azure mt-1">
-                      📁 Folder: {formData.resource_type === 'video' ? 'videos' : 'pdfs'}/{getSubjectName(formData.subject_id)}/
-                    </p>
+                  >
+                    <option value="">Select subject…</option>
+                    {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                  {subjects.length === 0 && (
+                    <p className="text-[10px] text-red-500 mt-1">No subjects found. Create one in Quiz Management first.</p>
                   )}
                 </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Target Form</label>
+                  <select
+                    value={formData.target_form}
+                    onChange={e => setFormData(p => ({ ...p, target_form: e.target.value }))}
+                    className={inp}
+                  >
+                    {['All', 'Form 1', 'Form 2', 'Form 3', 'Form 4'].map(f => (
+                      <option key={f} value={f}>{f}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              {/* Optional: Quiz Selection */}
+              {/* Resource type */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-2">Resource Type *</label>
+                <div className="flex gap-4">
+                  {[{ val: 'video', Icon: VideoCameraIcon, label: 'Video' }, { val: 'pdf', Icon: DocumentIcon, label: 'PDF' }, { val: 'pastpaper', Icon: DocumentIcon, label: 'Past Paper' }].map(({ val, Icon, label }) => (
+                    <label key={val} className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition text-sm ${
+                      formData.resource_type === val
+                        ? 'bg-[#006770]/10 border-[#006770] text-[#006770] font-semibold'
+                        : 'border-gray-200 text-gray-500 hover:border-[#006770]/40'
+                    }`}>
+                      <input
+                        type="radio" name="resource_type" value={val}
+                        checked={formData.resource_type === val}
+                        onChange={e => setFormData(p => ({ ...p, resource_type: e.target.value, video_url: '', pdf_url: '' }))}
+                        className="sr-only"
+                      />
+                      <Icon className="w-4 h-4" /> {label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* File upload */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  Upload File * <span className="text-gray-400 font-normal">(or paste URL below)</span>
+                </label>
+                <div className="flex gap-2 items-center mb-2">
+                  <label className="flex items-center gap-1.5 px-3 py-2 bg-[#006770]/10 text-[#006770] rounded-lg text-xs font-semibold cursor-pointer hover:bg-[#006770]/20 transition">
+                    {uploadStatus[formData.resource_type] ? (
+                      <><div className="w-3.5 h-3.5 border-2 border-[#006770]/30 border-t-[#006770] rounded-full animate-spin" /> Uploading…</>
+                    ) : (
+                      <><VideoCameraIcon className="w-3.5 h-3.5" /> Choose File</>
+                    )}
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept={formData.resource_type === 'video' ? 'video/*' : '.pdf'}
+                      onChange={e => uploadToR2(e.target.files[0], formData.resource_type)}
+                    />
+                  </label>
+                  {formData.subject_id && (
+                    <span className="text-[10px] text-[#006770] bg-[#e0f7fa] px-2 py-1 rounded">
+                      {formData.resource_type === 'video' ? 'videos' : 'pdfs'}/{getSubjectName(formData.subject_id)}/
+                    </span>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  value={formData.resource_type === 'video' ? formData.video_url : formData.pdf_url}
+                  onChange={e => {
+                    const field = formData.resource_type === 'video' ? 'video_url' : 'pdf_url';
+                    setFormData(p => ({ ...p, [field]: e.target.value }));
+                  }}
+                  placeholder="File URL (auto-filled after upload, or paste manually)"
+                  className={inp}
+                  required
+                />
+              </div>
+
+              {/* Optional quiz */}
               {quizzes.length > 0 && (
-                <div className="space-y-2">
-                  <label className="text-[11px] font-bold text-slate-500 uppercase ml-1 mb-1 block">Associated Quiz (Optional)</label>
-                  <select 
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    Associated Quiz <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <select
                     value={formData.quiz_id}
-                    onChange={(e) => setFormData({...formData, quiz_id: e.target.value})}
-                    className="w-full bg-white border-2 border-azure/30 rounded-xl px-4 py-3 text-slate-700 font-bold focus:border-azure outline-none"
+                    onChange={e => setFormData(p => ({ ...p, quiz_id: e.target.value }))}
+                    className={inp}
                   >
-                    <option value="">-- No Quiz --</option>
-                    {quizzes.map(quiz => (
-                      <option key={quiz.id} value={quiz.id}>{quiz.title}</option>
-                    ))}
+                    <option value="">No quiz</option>
+                    {quizzes.map(q => <option key={q.id} value={q.id}>{q.title}</option>)}
                   </select>
                 </div>
               )}
 
               {/* Description */}
-              <div className="space-y-2">
-                <label className="text-[11px] font-bold text-slate-500 uppercase ml-1 mb-1 block">Description (Optional)</label>
-                <textarea 
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  Description <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <textarea
                   value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  rows="3"
-                  className="w-full bg-white border-2 border-azure/30 rounded-xl px-4 py-3 text-slate-700 focus:border-azure outline-none resize-none"
-                  placeholder="Enter a brief description of this lesson..."
+                  onChange={e => setFormData(p => ({ ...p, description: e.target.value }))}
+                  rows={3}
+                  placeholder="Brief description of this lesson…"
+                  className={inp}
                 />
               </div>
 
-              <div className="pt-6 border-t border-slate-100 flex items-center justify-between">
+              {/* Display order + actions */}
+              <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-bold text-slate-400 uppercase">Display Order:</span>
-                  <input 
-                    type="number" 
-                    value={formData.display_order} 
-                    onChange={(e) => setFormData({...formData, display_order: parseInt(e.target.value) || 0})} 
-                    className="w-20 border-b-2 border-azure/30 text-center font-bold text-azure focus:border-azure outline-none" 
+                  <label className="text-xs font-semibold text-gray-500">Display Order</label>
+                  <input
+                    type="number"
+                    value={formData.display_order}
+                    onChange={e => setFormData(p => ({ ...p, display_order: parseInt(e.target.value) || 0 }))}
+                    className="w-16 px-2 py-1.5 border border-gray-200 rounded-lg text-sm text-center focus:outline-none focus:ring-1 focus:ring-[#00B4D8] focus:border-[#00B4D8]"
                   />
                 </div>
-                <div className="flex gap-3">
-                  <button 
-                    type="button" 
-                    onClick={() => setShowModal(false)} 
-                    className="px-5 py-2 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors"
-                  >
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setShowModal(false)}
+                    className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition">
                     Cancel
                   </button>
-                  <button 
+                  <button
                     type="submit"
                     disabled={submitting || subjects.length === 0}
-                    className="bg-[#007FFF] text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-azure/20 hover:bg-[#0066CC] transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="px-5 py-2 bg-[#006770] text-white rounded-lg text-sm font-semibold hover:bg-[#005a62] transition disabled:opacity-50 flex items-center gap-2"
                   >
-                    {submitting && <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>}
+                    {submitting && <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
                     {editingLesson ? 'Update Lesson' : 'Create Lesson'}
                   </button>
                 </div>
