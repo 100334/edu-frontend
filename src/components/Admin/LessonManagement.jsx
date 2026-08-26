@@ -34,8 +34,18 @@ const LessonManagement = () => {
       const res = await api.get('/api/admin/quiz-subjects', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.data.success) setSubjects(res.data.subjects || []);
-      else setSubjects([]);
+      if (res.data.success) {
+        // Deduplicate by name — keep first occurrence of each unique subject name
+        const raw = res.data.subjects || [];
+        const seen = new Set();
+        const unique = raw.filter(s => {
+          const key = s.name?.trim().toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        setSubjects(unique);
+      } else setSubjects([]);
     } catch { setSubjects([]); }
   };
 
