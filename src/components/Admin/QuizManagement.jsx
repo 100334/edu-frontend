@@ -1,231 +1,162 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  PlusIcon, PencilIcon, TrashIcon, EyeIcon, XMarkIcon, 
-  DocumentTextIcon, ClockIcon, QuestionMarkCircleIcon, 
+import {
+  PlusIcon, PencilIcon, TrashIcon, EyeIcon, XMarkIcon,
+  DocumentTextIcon, ClockIcon, QuestionMarkCircleIcon,
   TrophyIcon, ChevronRightIcon, ArchiveBoxIcon,
   CheckCircleIcon, UserGroupIcon, ClipboardDocumentListIcon,
   ArrowPathIcon, BookOpenIcon, ChartBarIcon,
-  AcademicCapIcon, CalendarIcon, TagIcon, 
+  AcademicCapIcon, CalendarIcon,
   AdjustmentsHorizontalIcon, GlobeAltIcon, FolderIcon,
-  DocumentArrowDownIcon, PhotoIcon
+  DocumentArrowDownIcon, PhotoIcon,
+  ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import ImageUploader from '../common/ImageUploader';
 
+// ── shared input style ────────────────────────────────────────────────────────
+const inp = 'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#00B4D8] focus:border-[#00B4D8] transition';
+
+const TABS = [
+  { id: 'all',            label: 'All Papers',      Icon: DocumentTextIcon         },
+  { id: 'active',         label: 'Active',          Icon: CheckCircleIcon          },
+  { id: 'draft',          label: 'Draft',           Icon: ArchiveBoxIcon           },
+  { id: 'grading',        label: 'Marking',         Icon: UserGroupIcon            },
+  { id: 'allSubmissions', label: 'Submissions',     Icon: ClipboardDocumentListIcon},
+];
+
 const QuizManagement = () => {
-  const [quizzes, setQuizzes] = useState([]);
-  const [subjects, setSubjects] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('all');
-  const [selectedQuiz, setSelectedQuiz] = useState(null);
-  const [showQuizModal, setShowQuizModal] = useState(false);
-  const [showQuestionModal, setShowQuestionModal] = useState(false);
-  const [editingQuiz, setEditingQuiz] = useState(null);
-  const [editingQuestion, setEditingQuestion] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [paperPreviewMode, setPaperPreviewMode] = useState(false);
-  
-  const [submissions, setSubmissions] = useState([]);
-  const [selectedSubmission, setSelectedSubmission] = useState(null);
-  const [gradingModal, setGradingModal] = useState(false);
-  const [loadingSubmissions, setLoadingSubmissions] = useState(false);
-  const [gradingQuizId, setGradingQuizId] = useState(null);
-  
-  // State for All Submissions tab
-  const [allSubmissions, setAllSubmissions] = useState([]);
-  const [loadingAllSubmissions, setLoadingAllSubmissions] = useState(false);
-  const [submissionFilters, setSubmissionFilters] = useState({ quiz_id: '', learner_id: '', status: '' });
-  const [availableQuizzesForFilter, setAvailableQuizzesForFilter] = useState([]);
-  
-  // State for expandable subject folders
-  const [expandedSubjects, setExpandedSubjects] = useState({});
-  
+  const [quizzes,        setQuizzes]        = useState([]);
+  const [subjects,       setSubjects]       = useState([]);
+  const [loading,        setLoading]        = useState(true);
+  const [activeTab,      setActiveTab]      = useState('all');
+  const [selectedQuiz,   setSelectedQuiz]   = useState(null);
+  const [showQuizModal,  setShowQuizModal]  = useState(false);
+  const [showQModal,     setShowQModal]     = useState(false);
+  const [editingQuiz,    setEditingQuiz]    = useState(null);
+  const [editingQ,       setEditingQ]       = useState(null);
+  const [submitting,     setSubmitting]     = useState(false);
+  const [confirmDelete,  setConfirmDelete]  = useState(null); // { type:'quiz'|'submission'|'question', item }
+
+  const [submissions,         setSubmissions]         = useState([]);
+  const [selectedSub,         setSelectedSub]         = useState(null);
+  const [gradingModal,        setGradingModal]        = useState(false);
+  const [loadingSubs,         setLoadingSubs]         = useState(false);
+  const [gradingQuizId,       setGradingQuizId]       = useState(null);
+  const [allSubmissions,      setAllSubmissions]      = useState([]);
+  const [loadingAllSubs,      setLoadingAllSubs]      = useState(false);
+  const [subFilters,          setSubFilters]          = useState({ quiz_id: '', status: '' });
+  const [filterQuizzes,       setFilterQuizzes]       = useState([]);
+  const [expandedSubjects,    setExpandedSubjects]    = useState({});
+
   const [quizForm, setQuizForm] = useState({
-    subject_id: '',
-    title: '',
-    description: '',
-    duration: 30,
-    total_marks: 100,
-    section_a_marks: 75,
-    section_b_marks: 25,
-    is_active: true,
-    target_form: 'All',
+    subject_id: '', title: '', description: '', duration: 30,
+    total_marks: 100, section_a_marks: 75, section_b_marks: 25,
+    is_active: true, target_form: 'All',
     exam_year: new Date().getFullYear(),
     exam_type: 'SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION',
-    scheduled_start: '',
-    scheduled_end: ''
-  });
-  
-  const [questionForm, setQuestionForm] = useState({
-    question_text: '',
-    question_image: '',
-    question_type: 'multiple_choice',
-    options: ['', '', '', ''],
-    option_images: ['', '', '', ''],
-    correct_answer: 0,
-    expected_answer: '',
-    answer_image: '',
-    explanation: '',
-    marks: 1,
-    section: 'A'
+    scheduled_start: '', scheduled_end: '',
   });
 
-  useEffect(() => {
-    loadQuizzes();
-    loadSubjects();
-  }, []);
+  const [qForm, setQForm] = useState({
+    question_text: '', question_image: '', question_type: 'multiple_choice',
+    options: ['', '', '', ''], option_images: ['', '', '', ''],
+    correct_answer: 0, expected_answer: '', answer_image: '',
+    explanation: '', marks: 1, section: 'A',
+  });
 
+  useEffect(() => { loadQuizzes(); loadSubjects(); }, []);
   useEffect(() => {
-    if (activeTab === 'allSubmissions') {
-      loadAllSubmissions();
-      loadQuizzesForFilter();
-    }
-  }, [activeTab, submissionFilters]);
+    if (activeTab === 'allSubmissions') { loadAllSubmissions(); loadFilterQuizzes(); }
+  }, [activeTab, subFilters]);
 
+  // ── loaders ─────────────────────────────────────────────────────────────────
   const loadSubjects = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await api.get('/api/admin/quiz-subjects', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.data.success) {
-        setSubjects(response.data.subjects || []);
-      } else {
-        toast.error(response.data.message || 'Failed to load subjects');
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to load subjects');
-    }
+      const res = await api.get('/api/admin/quiz-subjects', { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data.success) setSubjects(res.data.subjects || []);
+    } catch { toast.error('Failed to load subjects'); }
   };
 
   const loadQuizzes = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await api.get('/api/admin/quizzes', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.data.success) {
-        setQuizzes(response.data.quizzes || []);
-      } else {
-        toast.error(response.data.message || 'Failed to load quizzes');
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to load quizzes');
-    } finally {
-      setLoading(false);
-    }
+      const res = await api.get('/api/admin/quizzes', { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data.success) setQuizzes(res.data.quizzes || []);
+      else toast.error(res.data.message || 'Failed');
+    } catch { toast.error('Failed to load quizzes'); }
+    finally { setLoading(false); }
   };
 
   const loadSubmissions = async (quizId) => {
     if (!quizId) return;
-    setLoadingSubmissions(true);
+    setLoadingSubs(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await api.get(`/api/admin/quizzes/${quizId}/submissions`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get(`/api/admin/quizzes/${quizId}/submissions`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.data.success) {
         const formatted = (res.data.submissions || []).map(sub => ({
-          id: sub.id,
-          student_name: sub.student_name,
-          submitted_at: sub.submitted_at,
-          total_marks: sub.total_marks,
-          earned_marks: sub.earned_marks,
-          quiz_id: sub.quiz_id,
-          answers: (sub.answers || []).map(ans => ({
-            question_id: ans.question_id,
-            question_text: ans.question_text,
-            question_type: ans.question_type,
-            answer: ans.selected_answer_text || ans.answer || ans.answer_text || ans.response || ans.short_answer || ans.submitted_answer || '',
-            max_marks: ans.max_marks,
-            given_marks: ans.given_marks ?? null,
-            feedback: ans.feedback || ''
-          }))
+          id: sub.id, student_name: sub.student_name, submitted_at: sub.submitted_at,
+          total_marks: sub.total_marks, earned_marks: sub.earned_marks, quiz_id: sub.quiz_id,
+          answers: (sub.answers || []).map(a => ({
+            question_id: a.question_id, question_text: a.question_text,
+            question_type: a.question_type,
+            answer: a.selected_answer_text || a.answer || a.answer_text || a.short_answer || '',
+            max_marks: a.max_marks, given_marks: a.given_marks ?? null, feedback: a.feedback || '',
+          })),
         }));
         setSubmissions(formatted);
-        if (formatted.length === 0) toast('No submissions yet', { icon: 'ℹ️' });
-        else toast.success(`Loaded ${formatted.length} submission(s)`);
-      } else {
-        toast.error(res.data.message || 'Failed to load submissions');
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || 'Failed to load submissions');
-    } finally {
-      setLoadingSubmissions(false);
-    }
+      } else toast.error(res.data.message || 'Failed');
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to load submissions'); }
+    finally { setLoadingSubs(false); }
   };
 
   const loadAllSubmissions = async () => {
-    setLoadingAllSubmissions(true);
+    setLoadingAllSubs(true);
     try {
       const token = localStorage.getItem('token');
       const params = new URLSearchParams();
-      if (submissionFilters.quiz_id) params.append('quiz_id', submissionFilters.quiz_id);
-      if (submissionFilters.learner_id) params.append('learner_id', submissionFilters.learner_id);
-      if (submissionFilters.status) params.append('status', submissionFilters.status);
-      const url = `/api/admin/all-submissions${params.toString() ? '?' + params.toString() : ''}`;
-      const response = await api.get(url, { headers: { Authorization: `Bearer ${token}` } });
-      if (response.data.success) {
-        setAllSubmissions(response.data.submissions || []);
-      } else {
-        toast.error(response.data.message);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to load submissions');
-    } finally {
-      setLoadingAllSubmissions(false);
-    }
+      if (subFilters.quiz_id) params.append('quiz_id', subFilters.quiz_id);
+      if (subFilters.status)  params.append('status', subFilters.status);
+      const res = await api.get(`/api/admin/all-submissions${params.toString() ? '?' + params : ''}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data.success) setAllSubmissions(res.data.submissions || []);
+      else toast.error(res.data.message);
+    } catch { toast.error('Failed to load submissions'); }
+    finally { setLoadingAllSubs(false); }
   };
 
-  const loadQuizzesForFilter = async () => {
+  const loadFilterQuizzes = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await api.get('/api/admin/quizzes', { headers: { Authorization: `Bearer ${token}` } });
-      if (response.data.success) setAvailableQuizzesForFilter(response.data.quizzes || []);
-    } catch (err) { console.error(err); }
+      const res = await api.get('/api/admin/quizzes', { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data.success) setFilterQuizzes(res.data.quizzes || []);
+    } catch { /* silent */ }
   };
 
+  // ── quiz CRUD ────────────────────────────────────────────────────────────────
+  const parseQuizPayload = (form) => ({
+    ...form,
+    duration:        parseInt(form.duration),
+    total_marks:     parseInt(form.total_marks),
+    section_a_marks: parseInt(form.section_a_marks),
+    section_b_marks: parseInt(form.section_b_marks),
+    exam_year:       parseInt(form.exam_year),
+    scheduled_start: form.scheduled_start ? new Date(form.scheduled_start).toISOString() : null,
+    scheduled_end:   form.scheduled_end   ? new Date(form.scheduled_end).toISOString()   : null,
+  });
+
   const handleCreateQuiz = async () => {
-    if (!quizForm.subject_id || !quizForm.title.trim()) {
-      toast.error('Please select a subject and enter a title');
-      return;
-    }
+    if (!quizForm.subject_id || !quizForm.title.trim()) { toast.error('Subject and title are required'); return; }
     setSubmitting(true);
     try {
       const token = localStorage.getItem('token');
-      const payload = {
-        ...quizForm,
-        duration: parseInt(quizForm.duration),
-        total_marks: parseInt(quizForm.total_marks),
-        section_a_marks: parseInt(quizForm.section_a_marks),
-        section_b_marks: parseInt(quizForm.section_b_marks),
-        exam_year: parseInt(quizForm.exam_year),
-        scheduled_start: quizForm.scheduled_start ? new Date(quizForm.scheduled_start).toISOString() : null,
-        scheduled_end: quizForm.scheduled_end ? new Date(quizForm.scheduled_end).toISOString() : null
-      };
-      const response = await api.post('/api/admin/quizzes', payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.data.success) {
-        toast.success('Quiz created successfully!');
-        setShowQuizModal(false);
-        resetQuizForm();
-        loadQuizzes();
-      } else {
-        toast.error(response.data.message);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message || 'Failed to create quiz');
-    } finally {
-      setSubmitting(false);
-    }
+      const res = await api.post('/api/admin/quizzes', parseQuizPayload(quizForm), { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data.success) { toast.success('Quiz created'); setShowQuizModal(false); resetQuizForm(); loadQuizzes(); }
+      else toast.error(res.data.message);
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+    finally { setSubmitting(false); }
   };
 
   const handleUpdateQuiz = async () => {
@@ -233,631 +164,321 @@ const QuizManagement = () => {
     setSubmitting(true);
     try {
       const token = localStorage.getItem('token');
-      const payload = {
-        ...quizForm,
-        duration: parseInt(quizForm.duration),
-        total_marks: parseInt(quizForm.total_marks),
-        section_a_marks: parseInt(quizForm.section_a_marks),
-        section_b_marks: parseInt(quizForm.section_b_marks),
-        exam_year: parseInt(quizForm.exam_year),
-        scheduled_start: quizForm.scheduled_start ? new Date(quizForm.scheduled_start).toISOString() : null,
-        scheduled_end: quizForm.scheduled_end ? new Date(quizForm.scheduled_end).toISOString() : null
-      };
-      const response = await api.put(`/api/admin/quizzes/${editingQuiz.id}`, payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.data.success) {
-        toast.success('Quiz updated successfully!');
-        setShowQuizModal(false);
-        setEditingQuiz(null);
-        resetQuizForm();
-        loadQuizzes();
-      } else {
-        toast.error(response.data.message);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message);
-    } finally {
-      setSubmitting(false);
-    }
+      const res = await api.put(`/api/admin/quizzes/${editingQuiz.id}`, parseQuizPayload(quizForm), { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data.success) { toast.success('Quiz updated'); setShowQuizModal(false); setEditingQuiz(null); resetQuizForm(); loadQuizzes(); }
+      else toast.error(res.data.message);
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+    finally { setSubmitting(false); }
   };
 
   const handleDeleteQuiz = async (quiz) => {
-    if (!window.confirm(`Delete "${quiz.title}" permanently? This will also delete all questions and attempts.`)) return;
     try {
       const token = localStorage.getItem('token');
-      const response = await api.delete(`/api/admin/quizzes/${quiz.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.data.success) {
-        toast.success('Quiz deleted');
-        loadQuizzes();
+      const res = await api.delete(`/api/admin/quizzes/${quiz.id}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data.success) {
+        toast.success('Quiz deleted'); loadQuizzes();
         if (selectedQuiz?.id === quiz.id) setSelectedQuiz(null);
-        if (gradingQuizId === quiz.id) {
-          setGradingQuizId(null);
-          setSubmissions([]);
-        }
-      } else {
-        toast.error(response.data.message);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message);
-    }
+        if (gradingQuizId === quiz.id) { setGradingQuizId(null); setSubmissions([]); }
+      } else toast.error(res.data.message);
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+    finally { setConfirmDelete(null); }
   };
 
-  const handleDeleteSubmission = async (submissionId, studentName) => {
-    if (!window.confirm(`⚠️ Permanently delete ${studentName}'s submission?\n\nAll answers and grades will be lost. The learner can retake the quiz.`)) return;
+  const handleDeleteSubmission = async (sub) => {
     try {
       const token = localStorage.getItem('token');
-      await api.delete(`/api/admin/attempts/${submissionId}/reset`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      toast.success('Submission deleted successfully');
-      if (activeTab === 'grading') {
-        refreshSubmissions();
-      } else if (activeTab === 'allSubmissions') {
-        loadAllSubmissions();
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message || 'Failed to delete submission');
-    }
+      await api.delete(`/api/admin/attempts/${sub.id}/reset`, { headers: { Authorization: `Bearer ${token}` } });
+      toast.success('Submission deleted');
+      if (activeTab === 'grading') loadSubmissions(gradingQuizId);
+      else loadAllSubmissions();
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+    finally { setConfirmDelete(null); }
   };
 
+  // ── question CRUD ────────────────────────────────────────────────────────────
   const handleAddOrUpdateQuestion = async () => {
-    if (!selectedQuiz) {
-      toast.error('No quiz selected');
-      return;
-    }
-    if (!questionForm.question_text && !questionForm.question_image) {
-      toast.error('Please enter question text or upload a diagram');
-      return;
-    }
-    if (questionForm.question_type === 'multiple_choice') {
-      if (questionForm.options.some(opt => !opt.trim())) {
-        toast.error('All options must be filled');
-        return;
-      }
-    } else {
-      if (!questionForm.expected_answer.trim() && !questionForm.answer_image) {
-        toast.error('Please provide expected answer');
-        return;
-      }
-    }
+    if (!selectedQuiz) { toast.error('No quiz selected'); return; }
+    if (!qForm.question_text && !qForm.question_image) { toast.error('Enter question text or upload a diagram'); return; }
+    if (qForm.question_type === 'multiple_choice' && qForm.options.some(o => !o.trim())) { toast.error('All options must be filled'); return; }
+    if (qForm.question_type !== 'multiple_choice' && !qForm.expected_answer.trim() && !qForm.answer_image) { toast.error('Provide expected answer'); return; }
     setSubmitting(true);
     try {
       const token = localStorage.getItem('token');
       const payload = {
-        question_text: questionForm.question_text.trim() || null,
-        question_image: questionForm.question_image || null,
-        question_type: questionForm.question_type,
-        marks: questionForm.marks,
-        explanation: questionForm.explanation?.trim() || null,
-        section: questionForm.section
+        question_text:  qForm.question_text.trim() || null,
+        question_image: qForm.question_image || null,
+        question_type:  qForm.question_type,
+        marks:          qForm.marks,
+        explanation:    qForm.explanation?.trim() || null,
+        section:        qForm.section,
+        ...(qForm.question_type === 'multiple_choice'
+          ? { options: qForm.options.map(o => o.trim()), option_images: qForm.option_images, correct_answer: qForm.correct_answer }
+          : { expected_answer: qForm.expected_answer.trim(), answer_image: qForm.answer_image || null }),
       };
-      if (questionForm.question_type === 'multiple_choice') {
-        payload.options = questionForm.options.map(opt => opt.trim());
-        payload.option_images = questionForm.option_images;
-        payload.correct_answer = questionForm.correct_answer;
-      } else {
-        payload.expected_answer = questionForm.expected_answer.trim();
-        payload.answer_image = questionForm.answer_image || null;
-      }
-      
-      let response;
-      if (editingQuestion) {
-        response = await api.put(`/api/admin/quizzes/${selectedQuiz.id}/questions/${editingQuestion.id}`, payload, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      } else {
-        response = await api.post(`/api/admin/quizzes/${selectedQuiz.id}/questions`, payload, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      }
-      
-      if (response.data.success) {
-        toast.success(editingQuestion ? 'Question updated!' : 'Question added!');
-        setShowQuestionModal(false);
-        setEditingQuestion(null);
-        resetQuestionForm();
-        const updatedQuiz = await api.get(`/api/admin/quizzes/${selectedQuiz.id}/questions`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setSelectedQuiz({
-          ...selectedQuiz,
-          questions: updatedQuiz.data.questions || []
-        });
+      const res = editingQ
+        ? await api.put(`/api/admin/quizzes/${selectedQuiz.id}/questions/${editingQ.id}`, payload, { headers: { Authorization: `Bearer ${token}` } })
+        : await api.post(`/api/admin/quizzes/${selectedQuiz.id}/questions`, payload, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data.success) {
+        toast.success(editingQ ? 'Question updated' : 'Question added');
+        setShowQModal(false); setEditingQ(null); resetQForm();
+        const updated = await api.get(`/api/admin/quizzes/${selectedQuiz.id}/questions`, { headers: { Authorization: `Bearer ${token}` } });
+        setSelectedQuiz({ ...selectedQuiz, questions: updated.data.questions || [] });
         loadQuizzes();
-      } else {
-        toast.error(response.data.message);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message || 'Failed to save question');
-    } finally {
-      setSubmitting(false);
-    }
+      } else toast.error(res.data.message);
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+    finally { setSubmitting(false); }
   };
 
   const handleDeleteQuestion = async (question) => {
-    if (!window.confirm('Delete this question?')) return;
     try {
       const token = localStorage.getItem('token');
-      const response = await api.delete(`/api/admin/quizzes/${selectedQuiz.id}/questions/${question.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.data.success) {
+      const res = await api.delete(`/api/admin/quizzes/${selectedQuiz.id}/questions/${question.id}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data.success) {
         toast.success('Question deleted');
-        const updatedQuiz = await api.get(`/api/admin/quizzes/${selectedQuiz.id}/questions`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setSelectedQuiz({
-          ...selectedQuiz,
-          questions: updatedQuiz.data.questions || []
-        });
+        const updated = await api.get(`/api/admin/quizzes/${selectedQuiz.id}/questions`, { headers: { Authorization: `Bearer ${token}` } });
+        setSelectedQuiz({ ...selectedQuiz, questions: updated.data.questions || [] });
         loadQuizzes();
-      } else {
-        toast.error(response.data.message);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message);
-    }
+      } else toast.error(res.data.message);
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+    finally { setConfirmDelete(null); }
   };
 
-  const openEditQuestion = (question) => {
-    setEditingQuestion(question);
-    setQuestionForm({
-      question_text: question.question_text || '',
-      question_image: question.question_image || '',
-      question_type: question.question_type || 'multiple_choice',
-      options: question.options || ['', '', '', ''],
-      option_images: question.option_images || ['', '', '', ''],
-      correct_answer: question.correct_answer || 0,
-      expected_answer: question.expected_answer || '',
-      answer_image: question.answer_image || '',
-      explanation: question.explanation || '',
-      marks: question.marks || 1,
-      section: question.section || 'A'
-    });
-    setShowQuestionModal(true);
+  // ── grading ──────────────────────────────────────────────────────────────────
+  const saveGrades = async () => {
+    if (!selectedSub) return;
+    const quizId = selectedSub.quiz_id || gradingQuizId;
+    if (!quizId) { toast.error('Missing quiz ID'); return; }
+    try {
+      const token = localStorage.getItem('token');
+      const res = await api.post('/api/admin/grade', {
+        attempt_id: selectedSub.id, quiz_id: quizId,
+        answers: selectedSub.answers.map(a => ({ question_id: a.question_id, marks_awarded: a.given_marks, feedback: a.feedback || null })),
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data.success) { toast.success('Grades saved!'); setGradingModal(false); loadSubmissions(gradingQuizId); }
+      else toast.error(res.data.message);
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
   };
 
-  const resetQuizForm = () => {
-    setQuizForm({
-      subject_id: '',
-      title: '',
-      description: '',
-      duration: 30,
-      total_marks: 100,
-      section_a_marks: 75,
-      section_b_marks: 25,
-      is_active: true,
-      target_form: 'All',
-      exam_year: new Date().getFullYear(),
-      exam_type: 'SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION',
-      scheduled_start: '',
-      scheduled_end: ''
-    });
+  const handleResetAttempt = async () => {
+    if (!selectedSub) return;
+    try {
+      const token = localStorage.getItem('token');
+      const res = await api.delete(`/api/admin/attempts/${selectedSub.id}/reset`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data.success) { toast.success('Attempt reset. Learner can retake.'); setGradingModal(false); loadSubmissions(gradingQuizId); }
+      else toast.error(res.data.message);
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
   };
 
-  const resetQuestionForm = () => {
-    setQuestionForm({
-      question_text: '',
-      question_image: '',
-      question_type: 'multiple_choice',
-      options: ['', '', '', ''],
-      option_images: ['', '', '', ''],
-      correct_answer: 0,
-      expected_answer: '',
-      answer_image: '',
-      explanation: '',
-      marks: 1,
-      section: 'A'
-    });
-    setEditingQuestion(null);
-  };
+  // ── helpers ──────────────────────────────────────────────────────────────────
+  const resetQuizForm = () => setQuizForm({
+    subject_id: '', title: '', description: '', duration: 30,
+    total_marks: 100, section_a_marks: 75, section_b_marks: 25,
+    is_active: true, target_form: 'All',
+    exam_year: new Date().getFullYear(),
+    exam_type: 'SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION',
+    scheduled_start: '', scheduled_end: '',
+  });
+
+  const resetQForm = () => setQForm({
+    question_text: '', question_image: '', question_type: 'multiple_choice',
+    options: ['', '', '', ''], option_images: ['', '', '', ''],
+    correct_answer: 0, expected_answer: '', answer_image: '',
+    explanation: '', marks: 1, section: 'A',
+  });
 
   const openEditQuiz = (quiz) => {
     setEditingQuiz(quiz);
     setQuizForm({
-      subject_id: quiz.subject_id || '',
-      title: quiz.title || '',
-      description: quiz.description || '',
-      duration: quiz.duration || 30,
-      total_marks: quiz.total_marks || 100,
+      subject_id:      quiz.subject_id      || '',
+      title:           quiz.title           || '',
+      description:     quiz.description     || '',
+      duration:        quiz.duration        || 30,
+      total_marks:     quiz.total_marks     || 100,
       section_a_marks: quiz.section_a_marks || 75,
       section_b_marks: quiz.section_b_marks || 25,
-      is_active: quiz.is_active !== false,
-      target_form: quiz.target_form || 'All',
-      exam_year: quiz.exam_year || new Date().getFullYear(),
-      exam_type: quiz.exam_type || 'SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION',
+      is_active:       quiz.is_active !== false,
+      target_form:     quiz.target_form     || 'All',
+      exam_year:       quiz.exam_year       || new Date().getFullYear(),
+      exam_type:       quiz.exam_type       || 'SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION',
       scheduled_start: quiz.scheduled_start ? new Date(quiz.scheduled_start).toISOString().slice(0, 16) : '',
-      scheduled_end: quiz.scheduled_end ? new Date(quiz.scheduled_end).toISOString().slice(0, 16) : ''
+      scheduled_end:   quiz.scheduled_end   ? new Date(quiz.scheduled_end).toISOString().slice(0, 16)   : '',
     });
     setShowQuizModal(true);
+  };
+
+  const openEditQuestion = (q) => {
+    setEditingQ(q);
+    setQForm({
+      question_text:  q.question_text  || '',
+      question_image: q.question_image || '',
+      question_type:  q.question_type  || 'multiple_choice',
+      options:        q.options        || ['', '', '', ''],
+      option_images:  q.option_images  || ['', '', '', ''],
+      correct_answer: q.correct_answer || 0,
+      expected_answer: q.expected_answer || '',
+      answer_image:   q.answer_image   || '',
+      explanation:    q.explanation    || '',
+      marks:          q.marks          || 1,
+      section:        q.section        || 'A',
+    });
+    setShowQModal(true);
   };
 
   const viewQuizDetails = async (quiz) => {
     if (!quiz?.id) return;
     try {
       const token = localStorage.getItem('token');
-      const response = await api.get(`/api/admin/quizzes/${quiz.id}/questions`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setSelectedQuiz({
-        ...quiz,
-        questions: response.data.questions || []
-      });
-      setPaperPreviewMode(false);
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to load quiz details');
-    }
+      const res = await api.get(`/api/admin/quizzes/${quiz.id}/questions`, { headers: { Authorization: `Bearer ${token}` } });
+      setSelectedQuiz({ ...quiz, questions: res.data.questions || [] });
+    } catch { toast.error('Failed to load quiz details'); }
   };
 
   const handleGradingTab = () => {
     setActiveTab('grading');
-    if (gradingQuizId) {
-      loadSubmissions(gradingQuizId);
-    } else if (selectedQuiz && selectedQuiz.id) {
-      setGradingQuizId(selectedQuiz.id);
-      loadSubmissions(selectedQuiz.id);
-    }
-  };
-
-  const handleSelectQuizForGrading = (quizId) => {
-    setGradingQuizId(quizId);
-    loadSubmissions(quizId);
-  };
-
-  const refreshSubmissions = () => {
     if (gradingQuizId) loadSubmissions(gradingQuizId);
-  };
-
-  const saveGrades = async () => {
-    if (!selectedSubmission) return;
-    const quizId = selectedSubmission.quiz_id || gradingQuizId;
-    if (!quizId) {
-      toast.error('Missing quiz ID. Cannot save grades.');
-      console.error('No quiz_id found in submission or state');
-      return;
-    }
-    try {
-      const token = localStorage.getItem('token');
-      const payload = {
-        attempt_id: selectedSubmission.id,
-        quiz_id: quizId,
-        answers: selectedSubmission.answers.map(a => ({
-          question_id: a.question_id,
-          marks_awarded: a.given_marks,
-          feedback: a.feedback || null
-        }))
-      };
-      const response = await api.post('/api/admin/grade', payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.data.success) {
-        toast.success('Grades saved!');
-        setGradingModal(false);
-        refreshSubmissions();
-      } else {
-        toast.error(response.data.message);
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || 'Failed to save grades');
-    }
-  };
-
-  const handleResetAttempt = async () => {
-    if (!selectedSubmission) return;
-    const confirmReset = window.confirm(
-      `⚠️ WARNING: This will delete ${selectedSubmission.student_name}'s attempt permanently.\n\n` +
-      `All answers and grades will be removed. The learner can then retake the quiz from scratch.\n\n` +
-      `Are you absolutely sure?`
-    );
-    if (!confirmReset) return;
-    try {
-      const token = localStorage.getItem('token');
-      const response = await api.delete(`/api/admin/attempts/${selectedSubmission.id}/reset`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (response.data.success) {
-        toast.success('Attempt reset. Learner can now retake the quiz.');
-        setGradingModal(false);
-        refreshSubmissions();
-      } else {
-        toast.error(response.data.message || 'Failed to reset attempt');
-      }
-    } catch (error) {
-      console.error('Reset error:', error);
-      toast.error(error.response?.data?.message || 'Failed to reset attempt');
-    }
-  };
-
-  const getSubjectColor = (subjectName) => {
-    const colors = {
-      'Geography': 'bg-sky-100 text-sky-800',
-      'English': 'bg-blue-100 text-blue-800',
-      'Biology': 'bg-green-100 text-green-800',
-      'Agriculture': 'bg-lime-100 text-lime-800',
-      'Mathematics': 'bg-indigo-100 text-indigo-800',
-      'Physics': 'bg-sky-100 text-sky-800',
-      'Chemistry': 'bg-blue-100 text-blue-800'
-    };
-    return colors[subjectName] || 'bg-gray-100 text-gray-700';
-  };
-
-  const getTargetFormColor = (targetForm) => {
-    if (targetForm === 'Form 4') return 'bg-indigo-100 text-indigo-800';
-    if (targetForm === 'Form 3') return 'bg-blue-100 text-blue-800';
-    if (targetForm === 'Form 2') return 'bg-sky-100 text-sky-800';
-    if (targetForm === 'Form 1') return 'bg-cyan-100 text-cyan-800';
-    return 'bg-gray-100 text-gray-700';
+    else if (selectedQuiz?.id) { setGradingQuizId(selectedQuiz.id); loadSubmissions(selectedQuiz.id); }
   };
 
   const filteredQuizzes = quizzes.filter(q => {
     if (activeTab === 'active') return q.is_active;
-    if (activeTab === 'draft') return !q.is_active;
+    if (activeTab === 'draft')  return !q.is_active;
     return true;
   });
 
   const stats = {
-    total: quizzes.length,
-    active: quizzes.filter(q => q.is_active).length,
-    questions: quizzes.reduce((acc, q) => acc + (q.question_count || 0), 0)
+    total:     quizzes.length,
+    active:    quizzes.filter(q => q.is_active).length,
+    questions: quizzes.reduce((a, q) => a + (q.question_count || 0), 0),
   };
 
-  const renderQuestionWithControls = (question, index, sectionLetter) => {
-    return (
-      <div key={question.id} className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition">
-        {/* Compact header */}
-        <div className="px-4 py-2 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100 flex justify-between items-center">
-          <div className="flex gap-2">
-            <span className="px-2 py-0.5 bg-azure/10 text-azure rounded-md text-xs font-bold">Q{index+1}</span>
-            {question.question_image && (
-              <span className="px-2 py-0.5 bg-teal/10 text-teal rounded-md text-xs font-bold flex items-center gap-1">
-                <PhotoIcon className="w-3 h-3" /> Diagram
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-500 font-medium">{question.marks} {question.marks === 1 ? 'mark' : 'marks'}</span>
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
-              <button onClick={() => openEditQuestion(question)} className="p-1 text-slate-500 hover:text-azure rounded">
-                <PencilIcon className="w-3.5 h-3.5" />
-              </button>
-              <button onClick={() => handleDeleteQuestion(question)} className="p-1 text-slate-500 hover:text-red-500 rounded">
-                <TrashIcon className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        </div>
-        {/* Body */}
-        <div className="p-4">
-          {question.question_text && (
-            <h2 className="text-base font-semibold text-slate-800 leading-relaxed mb-3">{question.question_text}</h2>
-          )}
-          {question.question_image && (
-            <div className="mb-4">
-              <img src={question.question_image} alt="Diagram" className="max-w-full h-auto max-h-48 mx-auto rounded-md shadow-sm" />
-            </div>
-          )}
-          <div className="space-y-2">
-            {question.question_type === 'multiple_choice' && question.options ? (
-              question.options.map((opt, optIdx) => (
-                <div key={optIdx} className="w-full text-left p-2.5 rounded-lg border border-slate-200 bg-slate-50/50">
-                  <div className="flex items-start gap-2">
-                    <span className="flex-shrink-0 w-4 h-4 rounded-full border-2 border-slate-300 flex items-center justify-center mt-0.5 text-xs font-bold text-slate-500">
-                      {String.fromCharCode(65 + optIdx)}
-                    </span>
-                    <span className="text-sm text-slate-700">{opt}</span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="w-full p-3 border border-slate-200 rounded-lg bg-slate-50/50 min-h-[100px] text-sm text-slate-500 italic">
-                [Answer space for short answer question]
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
+  // ── confirm delete dispatcher ────────────────────────────────────────────────
+  const executeConfirmedDelete = () => {
+    if (!confirmDelete) return;
+    if (confirmDelete.type === 'quiz')       handleDeleteQuiz(confirmDelete.item);
+    if (confirmDelete.type === 'submission') handleDeleteSubmission(confirmDelete.item);
+    if (confirmDelete.type === 'question')   handleDeleteQuestion(confirmDelete.item);
   };
 
-  if (loading) {
-    return (
-      <div className="flex h-96 items-center justify-center">
-        <div className="h-12 w-12 animate-spin rounded-full border-4 border-azure border-t-transparent"></div>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center py-16">
+      <div className="w-8 h-8 border-4 border-[#006770] border-t-transparent rounded-full animate-spin" />
+      <p className="mt-3 text-xs text-gray-400 font-semibold uppercase tracking-wider">Loading…</p>
+    </div>
+  );
 
+  // ─────────────────────────────────────────────────────────────────────────────
   return (
-    <div className="max-w-7xl mx-auto pb-12 space-y-6 px-4 sm:px-6">
-      {/* Header with gradient bar */}
-      <div className="bg-gradient-to-r from-darkblue to-azure rounded-2xl shadow-lg p-6 text-white">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
-              <DocumentTextIcon className="w-8 h-8" />
-              Examination Paper Management
-            </h1>
-            <p className="text-white/80 mt-1">Create, edit, and grade digital assessments</p>
-          </div>
-          <button 
-            onClick={() => { setEditingQuiz(null); resetQuizForm(); setShowQuizModal(true); }}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 rounded-xl font-semibold transition shadow-md"
-          >
-            <PlusIcon className="w-5 h-5" />
-            Create New Paper
-          </button>
-        </div>
-      </div>
+    <div className="space-y-4">
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Stat strip */}
+      <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Total Papers', value: stats.total, icon: DocumentTextIcon, color: 'from-blue-500 to-cyan-500' },
-          { label: 'Active Assessments', value: stats.active, icon: CheckCircleIcon, color: 'from-emerald-500 to-teal-500' },
-          { label: 'Total Questions', value: stats.questions, icon: QuestionMarkCircleIcon, color: 'from-indigo-500 to-purple-500' },
-        ].map((stat, i) => (
-          <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition">
-            <div className="flex items-center gap-4">
-              <div className={`bg-gradient-to-br ${stat.color} p-3 rounded-xl text-white`}>
-                <stat.icon className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500 uppercase tracking-wide">{stat.label}</p>
-                <p className="text-3xl font-bold text-gray-800">{stat.value}</p>
-              </div>
+          { label: 'Total Papers',   value: stats.total,     Icon: DocumentTextIcon,       bg: 'bg-[#003B46]' },
+          { label: 'Active',         value: stats.active,    Icon: CheckCircleIcon,         bg: 'bg-[#006770]' },
+          { label: 'Questions',      value: stats.questions, Icon: QuestionMarkCircleIcon,  bg: 'bg-[#00B4D8]' },
+        ].map(({ label, value, Icon, bg }) => (
+          <div key={label} className={`${bg} text-white rounded-xl px-4 py-3 flex items-center gap-3`}>
+            <Icon className="w-5 h-5 opacity-70 flex-shrink-0" />
+            <div>
+              <p className="text-xl font-black leading-none">{value}</p>
+              <p className="text-[10px] opacity-70 uppercase tracking-wide mt-0.5">{label}</p>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-1.5 shadow-lg border border-white/20">
-        <div className="flex flex-wrap gap-1.5">
-          {[
-            { id: 'all', label: 'All Papers', icon: DocumentTextIcon },
-            { id: 'active', label: 'Active', icon: CheckCircleIcon },
-            { id: 'draft', label: 'Draft', icon: ArchiveBoxIcon },
-            { id: 'grading', label: 'Marking', icon: UserGroupIcon },
-            { id: 'allSubmissions', label: 'All Submissions', icon: ClipboardDocumentListIcon }
-          ].map((tab) => (
+      {/* Tabs + Add button */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap gap-1 bg-gray-100 p-1 rounded-xl">
+          {TABS.map(({ id, label, Icon }) => (
             <button
-              key={tab.id}
-              onClick={() => {
-                if (tab.id === 'grading') handleGradingTab();
-                else setActiveTab(tab.id);
-              }}
-              className={`
-                relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold
-                transition-all duration-200 ease-out
-                ${activeTab === tab.id 
-                  ? 'bg-gradient-to-r from-[#007FFF] via-[#00008B] to-[#007FFF] text-white shadow-md scale-105' 
-                  : 'text-gray-700 hover:bg-white/30 hover:text-gray-900'
-                }
-              `}
+              key={id}
+              onClick={() => { if (id === 'grading') handleGradingTab(); else setActiveTab(id); }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                activeTab === id
+                  ? 'bg-[#006770] text-white shadow-sm'
+                  : 'text-gray-500 hover:text-[#006770]'
+              }`}
             >
-              <tab.icon className={`w-4 h-4 transition-transform duration-200 ${activeTab === tab.id ? 'scale-110' : ''}`} />
-              <span>{tab.label}</span>
-              {activeTab === tab.id && (
-                <span className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-white rounded-full shadow-sm" />
-              )}
+              <Icon className="w-3.5 h-3.5" /> {label}
             </button>
           ))}
         </div>
+        <button
+          onClick={() => { setEditingQuiz(null); resetQuizForm(); setShowQuizModal(true); }}
+          className="flex items-center gap-1.5 px-4 py-2 bg-[#006770] text-white rounded-lg text-sm font-medium hover:bg-[#005a62] transition"
+        >
+          <PlusIcon className="w-4 h-4" /> New Quiz
+        </button>
       </div>
 
-      {/* GRADING VIEW (Redesigned) */}
-      {activeTab === 'grading' ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-200 p-5">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-                  <UserGroupIcon className="w-5 h-5 text-azure" />
-                  Mark Candidate Scripts
-                </h3>
-                <p className="text-sm text-gray-500 mt-0.5">Select an exam paper to view pending submissions</p>
-              </div>
-              {gradingQuizId && (
-                <button
-                  onClick={refreshSubmissions}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm transition"
-                >
-                  <ArrowPathIcon className="w-4 h-4" />
-                  Refresh
-                </button>
-              )}
+      {/* ── GRADING TAB ─────────────────────────────────────────────────────── */}
+      {activeTab === 'grading' && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex-1">
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Examination Paper</label>
+              <select
+                value={gradingQuizId || ''}
+                onChange={e => { setGradingQuizId(e.target.value); loadSubmissions(e.target.value); }}
+                className={`${inp} sm:w-80`}
+              >
+                <option value="">Select a paper to mark…</option>
+                {quizzes.map(q => (
+                  <option key={q.id} value={q.id}>{q.title} ({q.subject_name || '—'}) · {q.question_count || 0} Qs</option>
+                ))}
+              </select>
             </div>
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Examination Paper</label>
-              <div className="relative">
-                <select
-                  value={gradingQuizId || ''}
-                  onChange={(e) => handleSelectQuizForGrading(e.target.value)}
-                  className="w-full sm:w-96 px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-azure focus:border-azure appearance-none bg-white cursor-pointer"
-                >
-                  <option value="">-- Choose a paper to mark --</option>
-                  {quizzes.map(quiz => (
-                    <option key={quiz.id} value={quiz.id}>
-                      {quiz.title} ({quiz.subject_name || 'No subject'}) – {quiz.question_count || 0} Qs
-                    </option>
-                  ))}
-                </select>
-                <ChevronRightIcon className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none rotate-90" />
-              </div>
-            </div>
+            {gradingQuizId && (
+              <button onClick={() => loadSubmissions(gradingQuizId)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg text-sm transition mt-auto">
+                <ArrowPathIcon className="w-4 h-4" /> Refresh
+              </button>
+            )}
           </div>
           <div className="p-5">
             {!gradingQuizId ? (
-              <div className="text-center py-12">
-                <ClipboardDocumentListIcon className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                <p className="text-gray-500">Select a paper from the dropdown to view candidate submissions.</p>
+              <div className="text-center py-10">
+                <ClipboardDocumentListIcon className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">Select a paper above to view submissions.</p>
               </div>
-            ) : loadingSubmissions ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-2 border-azure border-t-transparent"></div>
+            ) : loadingSubs ? (
+              <div className="flex justify-center py-10">
+                <div className="w-7 h-7 border-4 border-[#006770] border-t-transparent rounded-full animate-spin" />
               </div>
             ) : submissions.length === 0 ? (
-              <div className="text-center py-12 bg-gray-50 rounded-lg">
-                <UserGroupIcon className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                <p className="text-gray-500">No submissions yet for this examination.</p>
-                <p className="text-sm text-gray-400 mt-1">When learners submit, they will appear here.</p>
+              <div className="text-center py-10 bg-gray-50 rounded-xl border border-gray-200">
+                <UserGroupIcon className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+                <p className="text-sm text-gray-400">No submissions yet for this paper.</p>
               </div>
             ) : (
               <>
-                <div className="flex justify-between items-center mb-4">
-                  <h4 className="text-md font-semibold text-gray-700">
-                    Pending Scripts <span className="bg-azure/10 text-azure px-2 py-0.5 rounded-full text-sm ml-2">{submissions.length}</span>
-                  </h4>
-                  <span className="text-xs text-gray-400">Click "Mark Script" to grade</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <p className="text-xs text-gray-400 mb-3">{submissions.length} submission{submissions.length !== 1 ? 's' : ''}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {submissions.map(sub => (
-                    <div key={sub.id} className="group border border-gray-200 rounded-xl bg-white hover:shadow-md transition-all duration-200 overflow-hidden">
+                    <div key={sub.id} className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition">
                       <div className="p-4">
-                        <div className="flex justify-between items-start">
+                        <div className="flex items-start justify-between mb-2">
                           <div>
-                            <h5 className="font-bold text-gray-800">{sub.student_name}</h5>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              Submitted: {new Date(sub.submitted_at).toLocaleString()}
-                            </p>
+                            <p className="text-sm font-bold text-[#003B46]">{sub.student_name}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{new Date(sub.submitted_at).toLocaleString()}</p>
                           </div>
-                          <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full font-medium">Pending</span>
+                          <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full">Pending</span>
                         </div>
-                        <div className="mt-3 flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-1 text-gray-600">
-                            <DocumentTextIcon className="w-4 h-4" />
-                            <span>{sub.answers?.length || 0} answers</span>
-                          </div>
-                          <div className="flex items-center gap-1 text-gray-600">
-                            <TrophyIcon className="w-4 h-4" />
-                            <span>{sub.earned_marks ?? 0} / {sub.total_marks}</span>
-                          </div>
+                        <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+                          <span className="flex items-center gap-1"><DocumentTextIcon className="w-3.5 h-3.5" /> {sub.answers?.length || 0} answers</span>
+                          <span className="flex items-center gap-1"><TrophyIcon className="w-3.5 h-3.5" /> {sub.earned_marks ?? 0}/{sub.total_marks}</span>
                         </div>
-                        <div className="mt-4 flex gap-2">
+                        <div className="flex gap-2">
                           <button
-                            onClick={() => { setSelectedSubmission(sub); setGradingModal(true); }}
-                            className="flex-1 py-2 bg-darkblue text-white rounded-lg text-sm font-medium hover:bg-darkblue/90 transition flex items-center justify-center gap-1"
+                            onClick={() => { setSelectedSub(sub); setGradingModal(true); }}
+                            className="flex-1 py-1.5 bg-[#006770] text-white rounded-lg text-xs font-semibold hover:bg-[#005a62] transition flex items-center justify-center gap-1"
                           >
-                            <PencilIcon className="w-4 h-4" />
-                            Mark Script
+                            <PencilIcon className="w-3.5 h-3.5" /> Mark Script
                           </button>
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteSubmission(sub.id, sub.student_name);
-                            }}
-                            className="py-2 px-3 bg-red-50 text-red-600 rounded-lg text-sm hover:bg-red-100 transition"
-                            title="Delete submission permanently"
+                            onClick={() => setConfirmDelete({ type: 'submission', item: sub, label: sub.student_name })}
+                            className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition"
                           >
                             <TrashIcon className="w-4 h-4" />
                           </button>
@@ -870,168 +491,184 @@ const QuizManagement = () => {
             )}
           </div>
         </div>
-      ) : activeTab === 'allSubmissions' ? (
-        /* ALL SUBMISSIONS TAB */
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex flex-wrap gap-4 mb-6">
+      )}
+
+      {/* ── ALL SUBMISSIONS TAB ─────────────────────────────────────────────── */}
+      {activeTab === 'allSubmissions' && (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100 flex flex-wrap gap-3 items-end">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Quiz</label>
-              <select
-                value={submissionFilters.quiz_id}
-                onChange={(e) => setSubmissionFilters({ ...submissionFilters, quiz_id: e.target.value })}
-                className="px-3 py-2 border rounded-lg w-64"
-              >
+              <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Quiz</label>
+              <select value={subFilters.quiz_id} onChange={e => setSubFilters(p => ({ ...p, quiz_id: e.target.value }))} className={`${inp} w-56`}>
                 <option value="">All Quizzes</option>
-                {availableQuizzesForFilter.map(q => (
-                  <option key={q.id} value={q.id}>{q.title} ({q.subject_name})</option>
-                ))}
+                {filterQuizzes.map(q => <option key={q.id} value={q.id}>{q.title} ({q.subject_name})</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select
-                value={submissionFilters.status}
-                onChange={(e) => setSubmissionFilters({ ...submissionFilters, status: e.target.value })}
-                className="px-3 py-2 border rounded-lg w-40"
-              >
+              <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Status</label>
+              <select value={subFilters.status} onChange={e => setSubFilters(p => ({ ...p, status: e.target.value }))} className={`${inp} w-36`}>
                 <option value="">All</option>
                 <option value="in-progress">In Progress</option>
-                <option value="submitted">Submitted (Pending)</option>
+                <option value="submitted">Pending</option>
                 <option value="completed">Graded</option>
               </select>
             </div>
-            <div className="flex items-end">
-              <button
-                onClick={() => setSubmissionFilters({ quiz_id: '', learner_id: '', status: '' })}
-                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-              >
-                Clear Filters
-              </button>
-            </div>
+            <button onClick={() => setSubFilters({ quiz_id: '', status: '' })}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-xs text-gray-500 hover:bg-gray-50 transition">
+              Clear
+            </button>
           </div>
-          {loadingAllSubmissions ? (
-            <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-2 border-azure border-t-transparent"></div></div>
-          ) : allSubmissions.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">No submissions found.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quiz</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Score</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Submitted</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {allSubmissions.map(sub => (
-                    <tr key={sub.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-sm">
-                        {sub.learner_name}<br />
-                        <span className="text-xs text-gray-500">{sub.learner_reg}</span>
-                       </td>
-                      <td className="px-4 py-3 text-sm">{sub.quiz_title}</td>
-                      <td className="px-4 py-3 text-sm">{sub.subject}</td>
-                      <td className="px-4 py-3 text-center text-sm">
-                        {sub.status === 'completed' ? `${sub.earned_marks}/${sub.total_marks}` : '—'}
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          sub.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          sub.status === 'submitted' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-blue-100 text-blue-800'
-                        }`}>
-                          {sub.status === 'completed' ? 'Graded' : sub.status === 'submitted' ? 'Pending' : 'In Progress'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm">{sub.submitted_at ? new Date(sub.submitted_at).toLocaleString() : '—'}</td>
-                      <td className="px-4 py-3 text-center">
-                        <button
-                          onClick={() => handleDeleteSubmission(sub.id, sub.learner_name)}
-                          className="px-3 py-1 bg-azure text-white rounded-md text-sm hover:bg-azure/80"
-                        >
-                          Delete
-                        </button>
-                      </td>
+          <div className="p-5">
+            {loadingAllSubs ? (
+              <div className="flex justify-center py-10"><div className="w-7 h-7 border-4 border-[#006770] border-t-transparent rounded-full animate-spin" /></div>
+            ) : allSubmissions.length === 0 ? (
+              <div className="text-center py-10"><p className="text-sm text-gray-400">No submissions found.</p></div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px]">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      {['Student', 'Quiz', 'Subject', 'Score', 'Status', 'Submitted', ''].map(h => (
+                        <th key={h} className="px-4 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wide">{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {allSubmissions.map(sub => (
+                      <tr key={sub.id} className="hover:bg-[#f0faf9] transition-colors">
+                        <td className="px-4 py-3">
+                          <p className="text-sm font-semibold text-[#003B46]">{sub.learner_name}</p>
+                          <p className="text-[10px] text-gray-400">{sub.learner_reg}</p>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{sub.quiz_title}</td>
+                        <td className="px-4 py-3 text-sm text-gray-500">{sub.subject}</td>
+                        <td className="px-4 py-3 text-sm font-mono text-[#003B46]">
+                          {sub.status === 'completed' ? `${sub.earned_marks}/${sub.total_marks}` : '—'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                            sub.status === 'completed' ? 'bg-green-100 text-green-700' :
+                            sub.status === 'submitted' ? 'bg-amber-100 text-amber-700' :
+                                                          'bg-sky-100 text-sky-700'
+                          }`}>
+                            {sub.status === 'completed' ? 'Graded' : sub.status === 'submitted' ? 'Pending' : 'In Progress'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-400">
+                          {sub.submitted_at ? new Date(sub.submitted_at).toLocaleString() : '—'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => setConfirmDelete({ type: 'submission', item: sub, label: sub.learner_name })}
+                            className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
-      ) : (
-        /* QUIZ GRID GROUPED BY SUBJECT (FOLDERS) */
+      )}
+
+      {/* ── QUIZ LIST (all / active / draft) ────────────────────────────────── */}
+      {(activeTab === 'all' || activeTab === 'active' || activeTab === 'draft') && (
         filteredQuizzes.length === 0 ? (
-          <div className="text-center py-16 border-2 border-dashed rounded-2xl bg-gray-50">
-            <ArchiveBoxIcon className="w-20 h-20 mx-auto text-gray-300 mb-4" />
-            <p className="text-gray-500 text-lg">No examination papers found</p>
-            <button onClick={() => setShowQuizModal(true)} className="mt-4 px-5 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition">Create First Paper</button>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm text-center py-12">
+            <ArchiveBoxIcon className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+            <p className="text-sm text-gray-400">No papers found.</p>
+            <button onClick={() => setShowQuizModal(true)} className="mt-2 text-xs text-[#006770] hover:underline">Create the first paper →</button>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-3">
             {Object.entries(
-              filteredQuizzes.reduce((acc, quiz) => {
-                const subject = quiz.subject_name || 'Uncategorized';
-                if (!acc[subject]) acc[subject] = [];
-                acc[subject].push(quiz);
+              filteredQuizzes.reduce((acc, q) => {
+                const sub = q.subject_name || 'Uncategorized';
+                if (!acc[sub]) acc[sub] = [];
+                acc[sub].push(q);
                 return acc;
               }, {})
-            ).map(([subjectName, subjectQuizzes]) => {
-              const isExpanded = expandedSubjects[subjectName] || false;
+            ).map(([subjectName, subQuizzes]) => {
+              const isExpanded = expandedSubjects[subjectName] ?? true;
               return (
-                <div key={subjectName} className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                <div key={subjectName} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                  {/* Subject header */}
                   <button
-                    onClick={() => setExpandedSubjects(prev => ({ ...prev, [subjectName]: !prev[subjectName] }))}
-                    className="w-full flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white hover:bg-gray-100 transition"
+                    onClick={() => setExpandedSubjects(p => ({ ...p, [subjectName]: !isExpanded }))}
+                    className="w-full flex items-center justify-between px-4 py-3 bg-[#f0faf9] hover:bg-[#e6f7f5] transition text-left"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg ${getSubjectColor(subjectName)}`}>
-                        <FolderIcon className="w-5 h-5" />
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-[#006770] flex items-center justify-center flex-shrink-0">
+                        <FolderIcon className="w-3.5 h-3.5 text-white" />
                       </div>
-                      <div className="text-left">
-                        <h3 className="font-bold text-gray-800">{subjectName}</h3>
-                        <p className="text-xs text-gray-500">{subjectQuizzes.length} paper{subjectQuizzes.length !== 1 ? 's' : ''}</p>
+                      <div>
+                        <span className="text-sm font-bold text-[#003B46]">{subjectName}</span>
+                        <span className="ml-2 text-[10px] text-gray-400">{subQuizzes.length} paper{subQuizzes.length !== 1 ? 's' : ''}</span>
                       </div>
                     </div>
-                    <ChevronRightIcon className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                    <ChevronRightIcon className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                   </button>
+
                   {isExpanded && (
-                    <div className="p-4 border-t border-gray-100">
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                        {subjectQuizzes.map((quiz) => (
-                          <div 
-                            key={quiz.id} 
-                            className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer"
-                            onClick={() => viewQuizDetails(quiz)}
-                          >
-                            <div className={`h-1.5 ${quiz.is_active ? 'bg-gradient-to-r from-teal-500 to-azure' : 'bg-gray-400'}`} />
-                            <div className="p-5">
-                              <div className="flex flex-wrap gap-2 mb-3">
-                                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${getTargetFormColor(quiz.target_form)}`}>
+                    <div className="overflow-x-auto">
+                      <table className="w-full min-w-[600px]">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            {['Title', 'Form', 'Duration', 'Marks', 'Questions', 'Status', 'Actions'].map(h => (
+                              <th key={h} className="px-4 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wide">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {subQuizzes.map(quiz => (
+                            <tr key={quiz.id} className="hover:bg-[#f0faf9] transition-colors">
+                              <td className="px-4 py-3">
+                                <p className="text-sm font-semibold text-[#003B46]">{quiz.title}</p>
+                                {quiz.description && <p className="text-[10px] text-gray-400 line-clamp-1">{quiz.description}</p>}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="px-2 py-0.5 bg-[#e0f7fa] text-[#006770] text-[10px] font-semibold rounded">
                                   {quiz.target_form === 'All' ? 'All Forms' : quiz.target_form}
                                 </span>
-                                {!quiz.is_active && <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600">Draft</span>}
-                              </div>
-                              <h3 className="text-xl font-bold text-gray-800 mb-1 group-hover:text-azure transition">{quiz.title}</h3>
-                              <p className="text-gray-500 text-sm line-clamp-2 mb-4">{quiz.description || 'No description'}</p>
-                              <div className="flex justify-between items-center pt-3 border-t text-xs text-gray-500">
-                                <div className="flex items-center gap-1"><QuestionMarkCircleIcon className="w-4 h-4" /> {quiz.question_count || 0}</div>
-                                <div className="flex items-center gap-1"><ClockIcon className="w-4 h-4" /> {quiz.duration} min</div>
-                                <div className="flex items-center gap-1"><TrophyIcon className="w-4 h-4" /> {quiz.total_marks || 0}</div>
-                              </div>
-                              <div className="mt-4 flex gap-2" onClick={(e) => e.stopPropagation()}>
-                                <button onClick={() => openEditQuiz(quiz)} className="flex-1 py-1.5 text-sm font-medium text-gray-600 hover:text-azure transition border rounded-lg">Edit</button>
-                                <button onClick={() => handleDeleteQuiz(quiz)} className="flex-1 py-1.5 text-sm font-medium text-gray-600 hover:text-red-600 transition border rounded-lg">Delete</button>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                              </td>
+                              <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                                <span className="flex items-center gap-1"><ClockIcon className="w-3.5 h-3.5" />{quiz.duration} min</span>
+                              </td>
+                              <td className="px-4 py-3 text-xs text-gray-500">
+                                <span className="flex items-center gap-1"><TrophyIcon className="w-3.5 h-3.5" />{quiz.total_marks}</span>
+                              </td>
+                              <td className="px-4 py-3 text-xs text-gray-500">
+                                <span className="flex items-center gap-1"><QuestionMarkCircleIcon className="w-3.5 h-3.5" />{quiz.question_count || 0}</span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${quiz.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                                  {quiz.is_active ? 'Active' : 'Draft'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-1">
+                                  <button onClick={() => viewQuizDetails(quiz)}
+                                    className="p-1.5 text-[#00B4D8] hover:bg-[#00B4D8]/10 rounded-lg transition" title="View / Add Questions">
+                                    <EyeIcon className="w-4 h-4" />
+                                  </button>
+                                  <button onClick={() => openEditQuiz(quiz)}
+                                    className="p-1.5 text-[#006770] hover:bg-[#006770]/10 rounded-lg transition" title="Edit">
+                                    <PencilIcon className="w-4 h-4" />
+                                  </button>
+                                  <button onClick={() => setConfirmDelete({ type: 'quiz', item: quiz, label: quiz.title })}
+                                    className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition" title="Delete">
+                                    <TrashIcon className="w-4 h-4" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </div>
@@ -1041,498 +678,353 @@ const QuizManagement = () => {
         )
       )}
 
-      {/* PAPER PREVIEW SIDE PANEL */}
+      {/* ── QUIZ DETAIL SIDE PANEL ────────────────────────────────────────────── */}
       {selectedQuiz && activeTab !== 'grading' && activeTab !== 'allSubmissions' && (
-        <div className="fixed inset-y-0 right-0 w-full max-w-3xl bg-slate-50 shadow-2xl z-50 transform transition-transform duration-300 border-l border-slate-200 overflow-y-auto">
-          <div 
-            className="sticky top-0 z-10 shadow-sm text-white"
-            style={{ background: 'linear-gradient(90deg, #0A192F 0%, #00B0FF 50%, #0A192F 100%)' }}
-          >
-            <div className="px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="fixed inset-y-0 right-0 w-full max-w-2xl bg-[#F5F2EB] shadow-2xl z-50 border-l border-gray-200 flex flex-col">
+          {/* Panel header */}
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 bg-[#003B46] flex-shrink-0">
+            <div>
+              <p className="text-[10px] text-white/60 uppercase tracking-wider">Exam Paper</p>
+              <h2 className="text-base font-bold text-white">{selectedQuiz.title}</h2>
+              <p className="text-xs text-white/60">{selectedQuiz.subject_name} · {selectedQuiz.exam_year}</p>
+            </div>
+            <button onClick={() => setSelectedQuiz(null)} className="p-1.5 hover:bg-white/10 rounded-lg transition">
+              <XMarkIcon className="w-5 h-5 text-white/70" />
+            </button>
+          </div>
+
+          {/* Meta strip */}
+          <div className="flex gap-4 px-5 py-3 bg-white border-b border-gray-100 text-xs text-gray-500 flex-shrink-0 flex-wrap">
+            <span className="flex items-center gap-1"><ClockIcon className="w-3.5 h-3.5" />{selectedQuiz.duration} min</span>
+            <span className="flex items-center gap-1"><TrophyIcon className="w-3.5 h-3.5" />{selectedQuiz.total_marks} marks</span>
+            <span className="flex items-center gap-1"><QuestionMarkCircleIcon className="w-3.5 h-3.5" />{selectedQuiz.questions?.length || 0} questions</span>
+            <span className="flex items-center gap-1"><AcademicCapIcon className="w-3.5 h-3.5" />{selectedQuiz.target_form}</span>
+          </div>
+
+          {/* Questions */}
+          <div className="flex-1 overflow-y-auto p-5 space-y-4">
+            {/* Section A */}
+            <div className="flex items-center justify-between mb-1">
               <div>
-                <p className="text-xs uppercase tracking-[0.3em] opacity-80">Exam Preview</p>
-                <h2 className="text-2xl font-bold tracking-tight mt-1">{selectedQuiz.title}</h2>
-                <p className="text-sm opacity-80 mt-1">
-                  {selectedQuiz.subject_name || 'General'} • {selectedQuiz.exam_year || new Date().getFullYear()}
-                </p>
+                <h4 className="text-sm font-bold text-[#003B46]">Section A</h4>
+                <p className="text-[10px] text-gray-400">{selectedQuiz.section_a_marks || 75} marks — Answer all</p>
               </div>
-              <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => setPaperPreviewMode(!paperPreviewMode)} 
-                  className="inline-flex items-center gap-2 rounded-lg bg-white/15 px-3 py-2 text-sm font-semibold text-white hover:bg-white/25 transition"
-                >
-                  {paperPreviewMode ? <EyeIcon className="w-4 h-4" /> : <BookOpenIcon className="w-4 h-4" />}
-                  {paperPreviewMode ? 'Admin View' : 'Paper Preview'}
-                </button>
-                <button onClick={() => setSelectedQuiz(null)} className="inline-flex items-center justify-center rounded-full bg-white/15 p-2 hover:bg-white/25 transition">
-                  <XMarkIcon className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-6 space-y-6">
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="space-y-2">
-                  <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Duration</p>
-                  <p className="text-lg font-semibold text-slate-900">{selectedQuiz.duration || 30} minutes</p>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Total marks</p>
-                  <p className="text-lg font-semibold text-slate-900">{selectedQuiz.total_marks || 100}</p>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Target form</p>
-                  <p className="text-lg font-semibold text-slate-900">{selectedQuiz.target_form || 'All'}</p>
-                </div>
-              </div>
-              <div className="mt-5 text-sm text-slate-600">
-                <p className="font-semibold text-slate-800">{selectedQuiz.exam_type || 'SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION'}</p>
-                <p className="mt-1">{selectedQuiz.subject_name?.toUpperCase() || 'GENERAL EXAMINATION'} | Subject Code: {selectedQuiz.subject_code || 'M073/II'}</p>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-azure/10 text-azure">
-                  <DocumentArrowDownIcon className="w-5 h-5" />
-                </span>
-                <h3 className="text-lg font-semibold text-slate-900">Instructions to candidates</h3>
-              </div>
-              <ol className="list-decimal space-y-2 pl-5 text-slate-700">
-                <li>This paper consists of <strong>{selectedQuiz.questions?.length || 0}</strong> questions.</li>
-                <li>Answer ALL questions in Section A and ONE question from Section B.</li>
-                <li>Write your examination number on every page.</li>
-                <li>Marks for each part are indicated in brackets ( ).</li>
-                <li>Use the spaces provided for answers.</li>
-              </ol>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
-                <div>
-                  <h4 className="text-lg font-bold text-slate-900">SECTION A</h4>
-                  <p className="text-sm text-slate-600">Answer all questions in this section.</p>
-                </div>
-                <button 
-                  onClick={() => { resetQuestionForm(); setQuestionForm(prev => ({ ...prev, section: 'A' })); setShowQuestionModal(true); }} 
-                  className="inline-flex items-center gap-2 rounded-lg bg-azure px-3 py-2 text-sm font-semibold text-white hover:bg-azure/90 transition"
-                >
-                  <PlusIcon className="w-4 h-4" /> Add Question
-                </button>
-              </div>
-              <p className="mb-4 text-sm text-slate-500">SECTION A ({selectedQuiz.section_a_marks || 75} marks)</p>
-              <div className="space-y-6">
-                {selectedQuiz.questions?.filter(q => q.section === 'A').map((q, idx) => renderQuestionWithControls(q, idx, 'A'))}
-                {selectedQuiz.questions?.filter(q => q.section === 'A').length === 0 && (
-                  <p className="text-center text-slate-400 py-4">No questions in Section A yet. Click "Add Question" above.</p>
-                )}
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
-                <div>
-                  <h4 className="text-lg font-bold text-slate-900">SECTION B</h4>
-                  <p className="text-sm text-slate-600">Answer one question only from this section.</p>
-                </div>
-                <button 
-                  onClick={() => { resetQuestionForm(); setQuestionForm(prev => ({ ...prev, section: 'B' })); setShowQuestionModal(true); }} 
-                  className="inline-flex items-center gap-2 rounded-lg bg-azure px-3 py-2 text-sm font-semibold text-white hover:bg-azure/90 transition"
-                >
-                  <PlusIcon className="w-4 h-4" /> Add Question
-                </button>
-              </div>
-              <p className="mb-4 text-sm text-slate-500">SECTION B ({selectedQuiz.section_b_marks || 25} marks)</p>
-              <div className="space-y-6">
-                {selectedQuiz.questions?.filter(q => q.section === 'B').map((q, idx) => renderQuestionWithControls(q, idx, 'B'))}
-                {selectedQuiz.questions?.filter(q => q.section === 'B').length === 0 && (
-                  <p className="text-center text-slate-400 py-4">No questions in Section B yet. Click "Add Question" above.</p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* CREATE/EDIT QUIZ MODAL */}
-      {showQuizModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => e.target === e.currentTarget && setShowQuizModal(false)}>
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div className="sticky top-0 z-10 bg-gradient-to-r from-darkblue to-azure px-6 py-4 flex justify-between items-center rounded-t-2xl">
-              <div className="flex items-center gap-3">
-                <div className="bg-white/20 p-2 rounded-xl">
-                  {editingQuiz ? <PencilIcon className="w-5 h-5 text-white" /> : <PlusIcon className="w-5 h-5 text-white" />}
-                </div>
-                <h3 className="text-xl font-bold text-white">
-                  {editingQuiz ? 'Edit Examination Paper' : 'Create New Examination Paper'}
-                </h3>
-              </div>
-              <button onClick={() => setShowQuizModal(false)} className="text-white/80 hover:text-white transition p-1 rounded-full hover:bg-white/10">
-                <XMarkIcon className="w-6 h-6" />
+              <button onClick={() => { resetQForm(); setQForm(p => ({ ...p, section: 'A' })); setShowQModal(true); }}
+                className="flex items-center gap-1 px-3 py-1.5 bg-[#006770] text-white rounded-lg text-xs font-medium hover:bg-[#005a62] transition">
+                <PlusIcon className="w-3.5 h-3.5" /> Add Question
               </button>
             </div>
-            <div className="p-6 space-y-6">
-              <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-                <div className="flex items-center gap-2 mb-4">
-                  <DocumentTextIcon className="w-5 h-5 text-azure" />
-                  <h4 className="font-semibold text-gray-800">Basic Information</h4>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {(selectedQuiz.questions?.filter(q => q.section === 'A') || []).map((q, i) => (
+              <QuestionCard key={q.id} question={q} index={i} onEdit={() => openEditQuestion(q)}
+                onDelete={() => setConfirmDelete({ type: 'question', item: q, label: q.question_text?.slice(0, 60) || 'this question' })} />
+            ))}
+            {!selectedQuiz.questions?.some(q => q.section === 'A') && (
+              <p className="text-xs text-gray-400 text-center py-4 bg-white rounded-lg border border-gray-100">No questions in Section A yet.</p>
+            )}
+
+            {/* Section B */}
+            <div className="flex items-center justify-between mt-5 mb-1">
+              <div>
+                <h4 className="text-sm font-bold text-[#003B46]">Section B</h4>
+                <p className="text-[10px] text-gray-400">{selectedQuiz.section_b_marks || 25} marks — Answer one</p>
+              </div>
+              <button onClick={() => { resetQForm(); setQForm(p => ({ ...p, section: 'B' })); setShowQModal(true); }}
+                className="flex items-center gap-1 px-3 py-1.5 bg-[#006770] text-white rounded-lg text-xs font-medium hover:bg-[#005a62] transition">
+                <PlusIcon className="w-3.5 h-3.5" /> Add Question
+              </button>
+            </div>
+            {(selectedQuiz.questions?.filter(q => q.section === 'B') || []).map((q, i) => (
+              <QuestionCard key={q.id} question={q} index={i} onEdit={() => openEditQuestion(q)}
+                onDelete={() => setConfirmDelete({ type: 'question', item: q, label: q.question_text?.slice(0, 60) || 'this question' })} />
+            ))}
+            {!selectedQuiz.questions?.some(q => q.section === 'B') && (
+              <p className="text-xs text-gray-400 text-center py-4 bg-white rounded-lg border border-gray-100">No questions in Section B yet.</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── CREATE / EDIT QUIZ MODAL ─────────────────────────────────────────── */}
+      {showQuizModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl shadow-xl flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
+              <h3 className="text-sm font-bold text-[#003B46]">{editingQuiz ? 'Edit Quiz' : 'Create New Quiz'}</h3>
+              <button onClick={() => setShowQuizModal(false)} className="p-1 hover:bg-gray-100 rounded-lg transition">
+                <XMarkIcon className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-5 space-y-4">
+              {/* Basic info */}
+              <SectionBlock label="Basic Information" Icon={DocumentTextIcon}>
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Subject *</label>
-                    <select 
-                      value={quizForm.subject_id} 
-                      onChange={(e) => setQuizForm({...quizForm, subject_id: e.target.value})}
-                      className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-azure focus:border-azure bg-white"
-                    >
-                      <option value="">Select a subject</option>
-                      {subjects.map(sub => (
-                        <option key={sub.id} value={sub.id}>{sub.name}</option>
-                      ))}
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Subject *</label>
+                    <select value={quizForm.subject_id} onChange={e => setQuizForm(p => ({ ...p, subject_id: e.target.value }))} className={inp} required>
+                      <option value="">Select subject…</option>
+                      {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Paper Title *</label>
-                    <input 
-                      type="text" 
-                      value={quizForm.title} 
-                      onChange={(e) => setQuizForm({...quizForm, title: e.target.value})}
-                      placeholder="e.g., 2026 Paper II Mock"
-                      className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-azure focus:border-azure"
-                    />
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Paper Title *</label>
+                    <input type="text" value={quizForm.title} onChange={e => setQuizForm(p => ({ ...p, title: e.target.value }))} placeholder="e.g., 2026 Paper II Mock" className={inp} />
                   </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Description</label>
-                    <textarea 
-                      rows="2" 
-                      value={quizForm.description} 
-                      onChange={(e) => setQuizForm({...quizForm, description: e.target.value})}
-                      placeholder="Brief description of the examination paper"
-                      className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-azure"
-                    />
+                  <div className="col-span-2">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Description</label>
+                    <textarea rows={2} value={quizForm.description} onChange={e => setQuizForm(p => ({ ...p, description: e.target.value }))} className={inp} />
                   </div>
                 </div>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-                <div className="flex items-center gap-2 mb-4">
-                  <AcademicCapIcon className="w-5 h-5 text-teal-600" />
-                  <h4 className="font-semibold text-gray-800">Examination Details</h4>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              </SectionBlock>
+
+              {/* Exam details */}
+              <SectionBlock label="Examination Details" Icon={AcademicCapIcon}>
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Target Form</label>
-                    <select 
-                      value={quizForm.target_form} 
-                      onChange={(e) => setQuizForm({...quizForm, target_form: e.target.value})}
-                      className="w-full p-2.5 border border-gray-300 rounded-lg bg-white"
-                    >
-                      <option>All</option>
-                      <option>Form 1</option>
-                      <option>Form 2</option>
-                      <option>Form 3</option>
-                      <option>Form 4</option>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Target Form</label>
+                    <select value={quizForm.target_form} onChange={e => setQuizForm(p => ({ ...p, target_form: e.target.value }))} className={inp}>
+                      {['All', 'Form 1', 'Form 2', 'Form 3', 'Form 4'].map(f => <option key={f}>{f}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Examination Year</label>
-                    <div className="relative">
-                      <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input 
-                        type="number" 
-                        value={quizForm.exam_year} 
-                        onChange={(e) => setQuizForm({...quizForm, exam_year: parseInt(e.target.value) || new Date().getFullYear()})}
-                        min="2000" max="2100"
-                        className="w-full pl-9 p-2.5 border border-gray-300 rounded-lg"
-                      />
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Exam Year</label>
+                    <input type="number" value={quizForm.exam_year} onChange={e => setQuizForm(p => ({ ...p, exam_year: parseInt(e.target.value) || new Date().getFullYear() }))} min="2000" max="2100" className={inp} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Duration (min)</label>
+                    <input type="number" value={quizForm.duration} onChange={e => setQuizForm(p => ({ ...p, duration: parseInt(e.target.value) || 30 }))} min="5" max="180" className={inp} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Exam Type</label>
+                    <select value={quizForm.exam_type} onChange={e => setQuizForm(p => ({ ...p, exam_type: e.target.value }))} className={inp}>
+                      <option value="SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION">School Certificate Mock</option>
+                      <option value="JUNIOR CERTIFICATE OF EXAMINATION">Junior Certificate</option>
+                      <option value="PRIMARY SCHOOL LEAVING EXAMINATION">Primary Leaving</option>
+                    </select>
+                  </div>
+                </div>
+              </SectionBlock>
+
+              {/* Scheduling */}
+              <SectionBlock label="Scheduling (optional)" Icon={CalendarIcon}>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Start</label>
+                    <input type="datetime-local" value={quizForm.scheduled_start} onChange={e => setQuizForm(p => ({ ...p, scheduled_start: e.target.value }))} className={inp} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">End</label>
+                    <input type="datetime-local" value={quizForm.scheduled_end} onChange={e => setQuizForm(p => ({ ...p, scheduled_end: e.target.value }))} className={inp} />
+                  </div>
+                </div>
+              </SectionBlock>
+
+              {/* Marks */}
+              <SectionBlock label="Marks Allocation" Icon={TrophyIcon}>
+                <div className="grid grid-cols-3 gap-3">
+                  {[['Total Marks', 'total_marks'], ['Section A', 'section_a_marks'], ['Section B', 'section_b_marks']].map(([label, key]) => (
+                    <div key={key}>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
+                      <input type="number" value={quizForm[key]} onChange={e => setQuizForm(p => ({ ...p, [key]: parseInt(e.target.value) || 0 }))} min="0" className={inp} />
                     </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Duration (minutes)</label>
-                    <div className="relative">
-                      <ClockIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <input 
-                        type="number" 
-                        value={quizForm.duration} 
-                        onChange={(e) => setQuizForm({...quizForm, duration: parseInt(e.target.value) || 30})}
-                        min="5" max="180"
-                        className="w-full pl-9 p-2.5 border border-gray-300 rounded-lg"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Examination Type</label>
-                    <div className="relative">
-                      <GlobeAltIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                      <select
-                        value={quizForm.exam_type}
-                        onChange={(e) => setQuizForm({...quizForm, exam_type: e.target.value})}
-                        className="w-full pl-9 p-2.5 border border-gray-300 rounded-lg bg-white"
-                      >
-                        <option value="SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION">School Certificate Mock</option>
-                        <option value="JUNIOR CERTIFICATE OF EXAMINATION">Junior Certificate</option>
-                        <option value="PRIMARY SCHOOL LEAVING EXAMINATION">Primary Leaving</option>
-                      </select>
-                    </div>
-                  </div>
+                  ))}
                 </div>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-                <div className="flex items-center gap-2 mb-4">
-                  <CalendarIcon className="w-5 h-5 text-blue-600" />
-                  <h4 className="font-semibold text-gray-800">Scheduling (Optional)</h4>
+              </SectionBlock>
+
+              {/* Status */}
+              <label className={`flex items-center gap-3 px-4 py-3 rounded-lg border cursor-pointer transition ${quizForm.is_active ? 'bg-[#f0faf9] border-[#006770]/30' : 'bg-white border-gray-200'}`}>
+                <input type="checkbox" checked={quizForm.is_active} onChange={e => setQuizForm(p => ({ ...p, is_active: e.target.checked }))} className="w-4 h-4 accent-[#006770]" />
+                <div>
+                  <p className="text-xs font-semibold text-gray-700">Active — visible to candidates</p>
+                  <p className="text-[10px] text-gray-400">Uncheck to keep as a draft</p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Start Date & Time</label>
-                    <input 
-                      type="datetime-local" 
-                      value={quizForm.scheduled_start} 
-                      onChange={(e) => setQuizForm({...quizForm, scheduled_start: e.target.value})}
-                      className="w-full p-2.5 border border-gray-300 rounded-lg"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Leave empty for immediate availability</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">End Date & Time</label>
-                    <input 
-                      type="datetime-local" 
-                      value={quizForm.scheduled_end} 
-                      onChange={(e) => setQuizForm({...quizForm, scheduled_end: e.target.value})}
-                      className="w-full p-2.5 border border-gray-300 rounded-lg"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">Leave empty for no end time</p>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-                <div className="flex items-center gap-2 mb-4">
-                  <TrophyIcon className="w-5 h-5 text-amber-500" />
-                  <h4 className="font-semibold text-gray-800">Marks Allocation</h4>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Total Marks</label>
-                    <input 
-                      type="number" 
-                      value={quizForm.total_marks} 
-                      onChange={(e) => setQuizForm({...quizForm, total_marks: parseInt(e.target.value) || 0})}
-                      min="0" step="5"
-                      className="w-full p-2.5 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Section A Marks</label>
-                    <input 
-                      type="number" 
-                      value={quizForm.section_a_marks} 
-                      onChange={(e) => setQuizForm({...quizForm, section_a_marks: parseInt(e.target.value) || 0})}
-                      min="0"
-                      className="w-full p-2.5 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Section B Marks</label>
-                    <input 
-                      type="number" 
-                      value={quizForm.section_b_marks} 
-                      onChange={(e) => setQuizForm({...quizForm, section_b_marks: parseInt(e.target.value) || 0})}
-                      min="0"
-                      className="w-full p-2.5 border border-gray-300 rounded-lg"
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-                <div className="flex items-center gap-2 mb-4">
-                  <AdjustmentsHorizontalIcon className="w-5 h-5 text-gray-500" />
-                  <h4 className="font-semibold text-gray-800">Paper Status</h4>
-                </div>
-                <div className="flex items-center gap-3">
-                  <input 
-                    type="checkbox" 
-                    checked={quizForm.is_active} 
-                    onChange={(e) => setQuizForm({...quizForm, is_active: e.target.checked})}
-                    className="w-4 h-4 text-azure focus:ring-azure rounded border-gray-300"
-                  />
-                  <label className="text-sm text-gray-700">Active (visible to candidates)</label>
-                </div>
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button 
-                  onClick={() => setShowQuizModal(false)}
-                  className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={editingQuiz ? handleUpdateQuiz : handleCreateQuiz} 
-                  disabled={submitting}
-                  className="flex-1 px-4 py-2.5 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {submitting ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    editingQuiz ? 'Update Paper' : 'Create Paper'
-                  )}
-                </button>
-              </div>
+                <CheckCircleIcon className={`w-4 h-4 ml-auto ${quizForm.is_active ? 'text-[#006770]' : 'text-gray-200'}`} />
+              </label>
+            </div>
+
+            <div className="flex gap-2 px-5 py-4 border-t border-gray-100 flex-shrink-0">
+              <button onClick={() => setShowQuizModal(false)} className="flex-1 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition">Cancel</button>
+              <button onClick={editingQuiz ? handleUpdateQuiz : handleCreateQuiz} disabled={submitting}
+                className="flex-1 py-2 bg-[#006770] text-white rounded-lg text-sm font-semibold hover:bg-[#005a62] transition disabled:opacity-50 flex items-center justify-center gap-2">
+                {submitting && <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {editingQuiz ? 'Update Quiz' : 'Create Quiz'}
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ADD/EDIT QUESTION MODAL */}
-      {showQuestionModal && selectedQuiz && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => e.target === e.currentTarget && setShowQuestionModal(false)}>
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
-            <div className="sticky top-0 bg-white p-5 border-b flex justify-between items-center">
-              <h3 className="text-xl font-bold text-gray-800">{editingQuestion ? 'Edit Question' : 'Add Question'}</h3>
-              <button onClick={() => { setShowQuestionModal(false); setEditingQuestion(null); resetQuestionForm(); }} className="p-1 hover:bg-gray-100 rounded-full"><XMarkIcon className="w-5 h-5" /></button>
+      {/* ── ADD / EDIT QUESTION MODAL ─────────────────────────────────────────── */}
+      {showQModal && selectedQuiz && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl shadow-xl flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
+              <h3 className="text-sm font-bold text-[#003B46]">{editingQ ? 'Edit Question' : 'Add Question'}</h3>
+              <button onClick={() => { setShowQModal(false); setEditingQ(null); resetQForm(); }} className="p-1 hover:bg-gray-100 rounded-lg transition">
+                <XMarkIcon className="w-4 h-4 text-gray-400" />
+              </button>
             </div>
-            <div className="p-6 space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Section</label>
-                <select 
-                  value={questionForm.section} 
-                  onChange={(e) => setQuestionForm({...questionForm, section: e.target.value})}
-                  className="w-full p-2.5 border border-gray-300 rounded-lg"
-                >
-                  <option value="A">Section A</option>
-                  <option value="B">Section B</option>
-                </select>
+            <div className="overflow-y-auto flex-1 p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Section</label>
+                  <select value={qForm.section} onChange={e => setQForm(p => ({ ...p, section: e.target.value }))} className={inp}>
+                    <option value="A">Section A</option>
+                    <option value="B">Section B</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Type</label>
+                  <select value={qForm.question_type} onChange={e => setQForm(p => ({ ...p, question_type: e.target.value, options: ['','','',''], correct_answer: 0 }))} className={inp}>
+                    <option value="multiple_choice">Multiple Choice</option>
+                    <option value="short_answer">Short Answer</option>
+                  </select>
+                </div>
               </div>
+
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Question Text</label>
-                <textarea rows="3" value={questionForm.question_text} onChange={(e) => setQuestionForm({...questionForm, question_text: e.target.value})} className="w-full p-2.5 border border-gray-300 rounded-lg" />
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Question Text</label>
+                <textarea rows={3} value={qForm.question_text} onChange={e => setQForm(p => ({ ...p, question_text: e.target.value }))} className={inp} />
               </div>
-              <ImageUploader label="Question Diagram / Figure" currentImage={questionForm.question_image} onImageUpload={(url) => setQuestionForm({...questionForm, question_image: url})} />
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Question Type</label>
-                <select 
-                  value={questionForm.question_type} 
-                  onChange={(e) => setQuestionForm({...questionForm, question_type: e.target.value, options: e.target.value === 'multiple_choice' ? ['','','',''] : [], correct_answer: 0})}
-                  className="w-full p-2.5 border border-gray-300 rounded-lg"
-                >
-                  <option value="multiple_choice">Multiple Choice</option>
-                  <option value="short_answer">Short Answer</option>
-                </select>
-              </div>
-              {questionForm.question_type === 'multiple_choice' ? (
+
+              <ImageUploader label="Question Diagram (optional)" currentImage={qForm.question_image} onImageUpload={url => setQForm(p => ({ ...p, question_image: url }))} />
+
+              {qForm.question_type === 'multiple_choice' ? (
                 <>
-                  {[0,1,2,3].map(i => (
-                    <div key={i} className="border border-gray-200 p-3 rounded-lg">
-                      <div className="flex gap-2 mb-2">
-                        <span className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center font-bold">{String.fromCharCode(65+i)}</span>
-                        <input type="text" value={questionForm.options[i]} onChange={(e) => { const newOpts = [...questionForm.options]; newOpts[i] = e.target.value; setQuestionForm({...questionForm, options: newOpts}); }} placeholder={`Option ${String.fromCharCode(65+i)}`} className="flex-1 border border-gray-300 rounded-lg p-2" />
-                        {i === questionForm.correct_answer && <span className="text-teal-600">✓ Correct</span>}
+                  {[0, 1, 2, 3].map(i => (
+                    <div key={i} className="border border-gray-200 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="w-7 h-7 bg-[#006770]/10 text-[#006770] rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
+                          {String.fromCharCode(65 + i)}
+                        </span>
+                        <input type="text" value={qForm.options[i]}
+                          onChange={e => { const o = [...qForm.options]; o[i] = e.target.value; setQForm(p => ({ ...p, options: o })); }}
+                          placeholder={`Option ${String.fromCharCode(65 + i)}`} className={inp} />
+                        {i === qForm.correct_answer && <CheckCircleIcon className="w-4 h-4 text-green-500 flex-shrink-0" />}
                       </div>
-                      <ImageUploader label="Option Image" currentImage={questionForm.option_images[i]} onImageUpload={(url) => { const newImgs = [...questionForm.option_images]; newImgs[i] = url; setQuestionForm({...questionForm, option_images: newImgs}); }} />
+                      <ImageUploader label="Option image" currentImage={qForm.option_images[i]} onImageUpload={url => { const imgs = [...qForm.option_images]; imgs[i] = url; setQForm(p => ({ ...p, option_images: imgs })); }} />
                     </div>
                   ))}
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Correct Answer</label>
-                    <select value={questionForm.correct_answer} onChange={(e) => setQuestionForm({...questionForm, correct_answer: parseInt(e.target.value)})} className="w-full p-2.5 border border-gray-300 rounded-lg">
-                      {questionForm.options.map((_,i) => <option key={i} value={i}>Option {String.fromCharCode(65+i)}</option>)}
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Correct Answer</label>
+                    <select value={qForm.correct_answer} onChange={e => setQForm(p => ({ ...p, correct_answer: parseInt(e.target.value) }))} className={inp}>
+                      {qForm.options.map((_, i) => <option key={i} value={i}>Option {String.fromCharCode(65 + i)}</option>)}
                     </select>
                   </div>
                 </>
               ) : (
                 <>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1">Expected Answer (model answer)</label>
-                    <textarea rows="2" value={questionForm.expected_answer} onChange={(e) => setQuestionForm({...questionForm, expected_answer: e.target.value})} className="w-full p-2.5 border border-gray-300 rounded-lg" />
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Expected Answer (model answer)</label>
+                    <textarea rows={2} value={qForm.expected_answer} onChange={e => setQForm(p => ({ ...p, expected_answer: e.target.value }))} className={inp} />
                   </div>
-                  <ImageUploader label="Answer Reference Image" currentImage={questionForm.answer_image} onImageUpload={(url) => setQuestionForm({...questionForm, answer_image: url})} />
+                  <ImageUploader label="Answer Reference Image" currentImage={qForm.answer_image} onImageUpload={url => setQForm(p => ({ ...p, answer_image: url }))} />
                 </>
               )}
+
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Explanation / Examiner Notes</label>
-                <textarea rows="2" value={questionForm.explanation} onChange={(e) => setQuestionForm({...questionForm, explanation: e.target.value})} className="w-full p-2.5 border border-gray-300 rounded-lg" />
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Explanation / Notes</label>
+                <textarea rows={2} value={qForm.explanation} onChange={e => setQForm(p => ({ ...p, explanation: e.target.value }))} className={inp} />
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">Marks Allocated</label>
-                <input type="number" value={questionForm.marks} onChange={(e) => setQuestionForm({...questionForm, marks: parseInt(e.target.value) || 1})} min="1" className="w-full p-2.5 border border-gray-300 rounded-lg" />
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Marks</label>
+                <input type="number" value={qForm.marks} onChange={e => setQForm(p => ({ ...p, marks: parseInt(e.target.value) || 1 }))} min="1" className={`${inp} w-24`} />
               </div>
-              <button onClick={handleAddOrUpdateQuestion} disabled={submitting} className="w-full py-3 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 transition disabled:opacity-50">
-                {submitting ? 'Saving...' : (editingQuestion ? 'Update Question' : 'Add Question')}
+            </div>
+            <div className="flex gap-2 px-5 py-4 border-t border-gray-100 flex-shrink-0">
+              <button onClick={() => { setShowQModal(false); setEditingQ(null); resetQForm(); }} className="flex-1 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition">Cancel</button>
+              <button onClick={handleAddOrUpdateQuestion} disabled={submitting}
+                className="flex-1 py-2 bg-[#006770] text-white rounded-lg text-sm font-semibold hover:bg-[#005a62] transition disabled:opacity-50 flex items-center justify-center gap-2">
+                {submitting && <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {editingQ ? 'Update Question' : 'Add Question'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* GRADING MODAL */}
-      {gradingModal && selectedSubmission && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={(e) => e.target === e.currentTarget && setGradingModal(false)}>
-          <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto shadow-xl" style={{ fontFamily: "'Times New Roman', serif" }}>
-            <div className="sticky top-0 bg-white p-5 border-b flex justify-between items-center">
-              <h3 className="text-xl font-bold text-gray-800">Mark Candidate Script</h3>
-              <button onClick={() => setGradingModal(false)} className="p-1 hover:bg-gray-100 rounded-full"><XMarkIcon className="w-5 h-5" /></button>
-            </div>
-            <div className="p-6 space-y-6">
-              <div className="border-b pb-2">
-                <p className="text-gray-700">Candidate: <span className="font-bold">{selectedSubmission.student_name}</span></p>
-                <p className="text-gray-500 text-sm">Submitted: {new Date(selectedSubmission.submitted_at).toLocaleString()}</p>
+      {/* ── GRADING MODAL ─────────────────────────────────────────────────────── */}
+      {gradingModal && selectedSub && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-3xl shadow-xl flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
+              <div>
+                <h3 className="text-sm font-bold text-[#003B46]">Mark Candidate Script</h3>
+                <p className="text-xs text-gray-400 mt-0.5">{selectedSub.student_name} · Submitted {new Date(selectedSub.submitted_at).toLocaleString()}</p>
               </div>
-              {selectedSubmission.answers.map((ans, idx) => (
-                <div key={idx} className="border-b pb-5 last:border-0">
-                  <p className="font-bold text-lg text-gray-800">{idx+1}. {ans.question_text}</p>
-                  <div className="mt-2 p-3 bg-gray-50 rounded-lg border-l-4 border-azure">
-                    <p className="text-sm font-semibold text-gray-700">Candidate's answer:</p>
-                    <p className="font-mono whitespace-pre-wrap bg-white p-2 rounded border mt-1">
-                      {ans.answer && ans.answer !== '' ? ans.answer : '(No answer provided)'}
-                    </p>
+              <button onClick={() => setGradingModal(false)} className="p-1 hover:bg-gray-100 rounded-lg transition">
+                <XMarkIcon className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 p-5 space-y-5">
+              {selectedSub.answers.map((ans, idx) => (
+                <div key={idx} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
+                    <span className="text-xs font-bold text-[#003B46]">Q{idx + 1}. {ans.question_text}</span>
+                    <span className="text-xs text-gray-400">/{ans.max_marks} marks</span>
                   </div>
-                  <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700">Awarded Marks (out of {ans.max_marks})</label>
-                      <input 
-                        type="number" 
-                        min="0" 
-                        max={ans.max_marks} 
-                        value={ans.given_marks ?? 0} 
-                        onChange={(e) => { 
-                          const newAnswers = [...selectedSubmission.answers]; 
-                          newAnswers[idx].given_marks = parseInt(e.target.value) || 0; 
-                          setSelectedSubmission({ ...selectedSubmission, answers: newAnswers }); 
-                        }} 
-                        className="p-2 border border-gray-300 rounded-lg w-32 mt-1"
-                      />
+                  <div className="p-4 space-y-3">
+                    <div className="px-3 py-2 bg-[#f0faf9] border-l-4 border-[#006770] rounded text-sm text-gray-700">
+                      <p className="text-[10px] text-[#006770] font-semibold mb-1">Candidate's answer</p>
+                      <p className="font-mono whitespace-pre-wrap">{ans.answer || '(No answer provided)'}</p>
                     </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700">Feedback / Examiner Comment</label>
-                      <textarea 
-                        value={ans.feedback || ''} 
-                        onChange={(e) => { 
-                          const newAnswers = [...selectedSubmission.answers]; 
-                          newAnswers[idx].feedback = e.target.value; 
-                          setSelectedSubmission({ ...selectedSubmission, answers: newAnswers }); 
-                        }} 
-                        rows="2" 
-                        className="p-2 border border-gray-300 rounded-lg w-full mt-1" 
-                        placeholder="Write feedback for the candidate..."
-                      />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Marks awarded (max {ans.max_marks})</label>
+                        <input type="number" min={0} max={ans.max_marks} value={ans.given_marks ?? 0}
+                          onChange={e => {
+                            const a = [...selectedSub.answers];
+                            a[idx].given_marks = parseInt(e.target.value) || 0;
+                            setSelectedSub({ ...selectedSub, answers: a });
+                          }}
+                          className={`${inp} w-24`} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Feedback</label>
+                        <textarea rows={2} value={ans.feedback || ''} placeholder="Examiner comment…"
+                          onChange={e => {
+                            const a = [...selectedSub.answers];
+                            a[idx].feedback = e.target.value;
+                            setSelectedSub({ ...selectedSub, answers: a });
+                          }}
+                          className={inp} />
+                      </div>
                     </div>
                   </div>
                 </div>
               ))}
-              <div className="flex justify-between items-center gap-3 pt-4">
-                <button
-                  onClick={handleResetAttempt}
-                  className="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
-                >
-                  Reset Attempt (Allow Retake)
-                </button>
-                <div className="flex gap-3">
-                  <button onClick={() => setGradingModal(false)} className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition">Cancel</button>
-                  <button onClick={saveGrades} className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition">Submit Marks</button>
-                </div>
+            </div>
+            <div className="flex items-center justify-between gap-3 px-5 py-4 border-t border-gray-100 flex-shrink-0">
+              <button onClick={handleResetAttempt} className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-100 transition">
+                Reset — Allow Retake
+              </button>
+              <div className="flex gap-2">
+                <button onClick={() => setGradingModal(false)} className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition">Cancel</button>
+                <button onClick={saveGrades} className="px-5 py-2 bg-[#006770] text-white rounded-lg text-sm font-semibold hover:bg-[#005a62] transition">Submit Marks</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── CONFIRM DELETE MODAL ──────────────────────────────────────────────── */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4">
+          <div className="bg-white rounded-xl w-full max-w-sm shadow-xl p-5">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-9 h-9 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <ExclamationTriangleIcon className="w-5 h-5 text-red-500" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-800">Confirm Delete</h3>
+                <p className="text-xs text-gray-500 mt-1">You are about to delete:</p>
+                <p className="text-sm font-semibold text-[#003B46] mt-1 break-words">"{confirmDelete.label}"</p>
+                <p className="text-xs text-red-500 mt-2">This action cannot be undone.</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => setConfirmDelete(null)} className="flex-1 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition">Cancel</button>
+              <button onClick={executeConfirmedDelete} className="flex-1 py-2 bg-red-500 text-white rounded-lg text-sm font-semibold hover:bg-red-600 transition">Delete</button>
             </div>
           </div>
         </div>
@@ -1540,5 +1032,57 @@ const QuizManagement = () => {
     </div>
   );
 };
+
+// ── small reusable sub-components ─────────────────────────────────────────────
+
+const SectionBlock = ({ label, Icon, children }) => (
+  <div className="border border-gray-200 rounded-xl overflow-hidden">
+    <div className="flex items-center gap-2 px-4 py-2.5 bg-[#f0faf9] border-b border-gray-100">
+      <Icon className="w-3.5 h-3.5 text-[#006770]" />
+      <span className="text-xs font-bold text-[#003B46] uppercase tracking-wide">{label}</span>
+    </div>
+    <div className="p-4">{children}</div>
+  </div>
+);
+
+const QuestionCard = ({ question, index, onEdit, onDelete }) => (
+  <div className="bg-white border border-gray-200 rounded-xl overflow-hidden group hover:shadow-sm transition">
+    <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-100">
+      <div className="flex items-center gap-2">
+        <span className="px-2 py-0.5 bg-[#006770]/10 text-[#006770] text-[10px] font-bold rounded">Q{index + 1}</span>
+        <span className="text-[10px] text-gray-400">{question.marks} mark{question.marks !== 1 ? 's' : ''}</span>
+        <span className="text-[10px] text-gray-400">· {question.question_type === 'multiple_choice' ? 'MCQ' : 'Short Answer'}</span>
+      </div>
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+        <button onClick={onEdit} className="p-1 text-[#006770] hover:bg-[#006770]/10 rounded transition">
+          <PencilIcon className="w-3.5 h-3.5" />
+        </button>
+        <button onClick={onDelete} className="p-1 text-red-400 hover:bg-red-50 rounded transition">
+          <TrashIcon className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+    <div className="p-4">
+      {question.question_text && <p className="text-sm text-[#003B46] font-medium mb-3">{question.question_text}</p>}
+      {question.question_image && <img src={question.question_image} alt="Diagram" className="max-h-40 rounded-lg mb-3 border border-gray-100" />}
+      {question.question_type === 'multiple_choice' ? (
+        <div className="grid grid-cols-2 gap-1.5">
+          {(question.options || []).map((opt, i) => (
+            <div key={i} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs border ${
+              i === question.correct_answer ? 'bg-green-50 border-green-200 text-green-700' : 'bg-gray-50 border-gray-200 text-gray-600'
+            }`}>
+              <span className="font-bold">{String.fromCharCode(65 + i)}.</span> {opt}
+              {i === question.correct_answer && <CheckCircleIcon className="w-3 h-3 ml-auto text-green-500 flex-shrink-0" />}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="px-3 py-2 bg-[#f0faf9] border border-[#006770]/20 rounded-lg text-xs text-gray-500 italic">
+          Model answer: {question.expected_answer || '(not set)'}
+        </div>
+      )}
+    </div>
+  </div>
+);
 
 export default QuizManagement;
