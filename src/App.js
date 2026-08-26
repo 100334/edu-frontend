@@ -130,7 +130,7 @@ const AdminRoute = ({ children }) => {
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'admin')) {
-      navigate('/');
+      navigate('/admin/login');
     }
   }, [user, loading, navigate]);
 
