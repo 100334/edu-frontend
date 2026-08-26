@@ -3,6 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import {
+  UserPlusIcon,
+  AcademicCapIcon,
+  BookOpenIcon,
+  ClipboardDocumentListIcon,
+  RectangleGroupIcon,
+  BookmarkSquareIcon,
+  ShieldCheckIcon,
+  UserGroupIcon,
+  UsersIcon,
+  BellIcon,
+  ArrowRightOnRectangleIcon,
+  Bars3Icon,
+  XMarkIcon,
+  ClipboardDocumentCheckIcon,
+  BuildingLibraryIcon,
+} from '@heroicons/react/24/outline';
 
 // Import Admin Components
 import TeachersList from '../../components/Admin/TeachersList';
@@ -25,12 +42,12 @@ const PAPER = '#F5F2EB';
 const ICE_WHITE = '#F8FAFC';
 
 // Stat Card Component - Mobile Responsive
-const StatCard = ({ emoji, value, label, subtitle }) => (
-  <div className="bg-white rounded-xl border border-[#d4cfc6] p-3 sm:p-4 lg:p-6 shadow-sm hover:shadow-md transition">
-    <div className="text-xl sm:text-2xl lg:text-3xl mb-1 sm:mb-2 lg:mb-3">{emoji}</div>
-    <div className="text-base sm:text-xl lg:text-3xl font-bold text-[#003B46] mb-0.5 sm:mb-1">{value}</div>
-    <div className="text-[8px] sm:text-[10px] lg:text-xs text-gray-500 font-semibold uppercase">{label}</div>
-    {subtitle && <div className="text-[8px] sm:text-[10px] text-gray-400 mt-1">{subtitle}</div>}
+const StatCard = ({ icon: Icon, value, label, subtitle }) => (
+  <div className="bg-white/10 backdrop-blur rounded-xl p-2 sm:p-3 lg:p-4">
+    <Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white/70 mb-0.5 sm:mb-1" />
+    <div className="text-lg sm:text-xl lg:text-2xl font-bold text-white">{value}</div>
+    <div className="text-[8px] sm:text-[10px] lg:text-xs text-white/60">{label}</div>
+    {subtitle && <div className="text-[8px] sm:text-[10px] text-white/40 mt-0.5">{subtitle}</div>}
   </div>
 );
 
@@ -49,18 +66,15 @@ const MobileMenuButton = ({ isOpen, onClick }) => (
     className="lg:hidden p-2 rounded-lg bg-white/10 hover:bg-white/20 transition"
     aria-label="Toggle menu"
   >
-    <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      {isOpen ? (
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-      ) : (
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-      )}
-    </svg>
+    {isOpen
+      ? <XMarkIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+      : <Bars3Icon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+    }
   </button>
 );
 
 // Horizontal Nav Item Component - Mobile Responsive
-const NavItem = ({ icon, label, isActive, onClick }) => (
+const NavItem = ({ icon: Icon, label, isActive, onClick }) => (
   <button
     onClick={onClick}
     className={`flex flex-col items-center gap-1 sm:gap-2 px-2 sm:px-3 lg:px-4 py-2 sm:py-3 rounded-xl transition-all duration-200 whitespace-nowrap ${
@@ -69,7 +83,7 @@ const NavItem = ({ icon, label, isActive, onClick }) => (
         : 'text-gray-600 hover:bg-[#e8f4f5] hover:text-[#006770]'
     }`}
   >
-    <span className="text-lg sm:text-2xl">{icon}</span>
+    <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
     <span className="text-[10px] sm:text-xs font-medium">{label}</span>
   </button>
 );
@@ -103,9 +117,7 @@ const MobileNavDrawer = ({ isOpen, onClose, activeNav, onNavClick, navItems }) =
               onClick={onClose}
               className="p-1 hover:bg-gray-100 rounded-lg"
             >
-              <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <XMarkIcon className="w-5 h-5 text-gray-500" />
             </button>
           </div>
         </div>
@@ -123,7 +135,7 @@ const MobileNavDrawer = ({ isOpen, onClose, activeNav, onNavClick, navItems }) =
                   : 'text-gray-700 hover:bg-[#e8f4f5]'
               }`}
             >
-              <span className="text-xl">{item.icon}</span>
+              <item.icon className="w-5 h-5 flex-shrink-0" />
               <span className="text-sm font-medium">{item.label}</span>
             </button>
           ))}
@@ -146,9 +158,7 @@ const RegisterLearnerModal = ({ isOpen, onClose }) => {
             onClick={onClose}
             className="w-7 h-7 sm:w-8 sm:h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition"
           >
-            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <XMarkIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
           </button>
         </div>
         <div className="p-3 sm:p-6">
@@ -172,9 +182,7 @@ const RegisterTeacherModal = ({ isOpen, onClose }) => {
             onClick={onClose}
             className="w-7 h-7 sm:w-8 sm:h-8 rounded-full hover:bg-gray-100 flex items-center justify-center transition"
           >
-            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <XMarkIcon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-500" />
           </button>
         </div>
         <div className="p-3 sm:p-6">
@@ -192,7 +200,7 @@ const NotificationsPanel = ({ notifications, onMarkAsRead, onClose }) => {
   if (!notifications.length) {
     return (
       <div className="px-4 py-8 text-center text-gray-500">
-        <div className="text-2xl mb-2">🔔</div>
+        <BellIcon className="w-8 h-8 mx-auto mb-2 text-gray-300" />
         <p className="text-sm">No new notifications</p>
       </div>
     );
@@ -207,8 +215,8 @@ const NotificationsPanel = ({ notifications, onMarkAsRead, onClose }) => {
           onClick={() => onMarkAsRead(notif.id)}
         >
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-sm">
-              📋
+            <div className="w-8 h-8 rounded-full bg-teal-50 text-[#006770] flex items-center justify-center flex-shrink-0">
+              <ClipboardDocumentCheckIcon className="w-4 h-4" />
             </div>
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-800">{notif.title}</p>
@@ -248,17 +256,17 @@ export default function AdminDashboard() {
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef(null);
 
-  // Navigation items for mobile drawer - ADDED Lesson Management
+  // Navigation items
   const navItems = [
-    { id: 'register-learner', icon: '📝', label: 'Register Learner' },
-    { id: 'register-teacher', icon: '👨‍🏫', label: 'Register Teacher' },
-    { id: 'lesson-management', icon: '📖', label: 'Lesson Management' },
-    { id: 'quiz-management', icon: '📋', label: 'Quiz Management' },
-    { id: 'class-management', icon: '📚', label: 'Class Management' },
-    { id: 'subject-management', icon: '📖', label: 'Subject Management' },
-    { id: 'security-logs', icon: '🔒', label: 'Security Logs' },
-    { id: 'teachers-list', icon: '👥', label: 'Teachers List' },
-    { id: 'learners-list', icon: '👨‍🎓', label: 'Learners List' }
+    { id: 'register-learner',  icon: UserPlusIcon,               label: 'Register Learner' },
+    { id: 'register-teacher',  icon: AcademicCapIcon,            label: 'Register Teacher' },
+    { id: 'lesson-management', icon: BookOpenIcon,               label: 'Lesson Management' },
+    { id: 'quiz-management',   icon: ClipboardDocumentListIcon,  label: 'Quiz Management' },
+    { id: 'class-management',  icon: RectangleGroupIcon,         label: 'Class Management' },
+    { id: 'subject-management',icon: BookmarkSquareIcon,         label: 'Subject Management' },
+    { id: 'security-logs',     icon: ShieldCheckIcon,            label: 'Security Logs' },
+    { id: 'teachers-list',     icon: UserGroupIcon,              label: 'Teachers List' },
+    { id: 'learners-list',     icon: UsersIcon,                  label: 'Learners List' },
   ];
 
   // Save active nav to sessionStorage
@@ -476,9 +484,7 @@ export default function AdminDashboard() {
                     onClick={() => setShowNotifications(!showNotifications)}
                     className="relative w-8 h-8 sm:w-10 sm:h-10 lg:w-11 lg:h-11 bg-white/10 backdrop-blur rounded-xl flex items-center justify-center transition-all hover:bg-white/20"
                   >
-                    <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                    </svg>
+                    <BellIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                     {unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-red-500 text-white text-[10px] sm:text-xs rounded-full flex items-center justify-center font-bold">
                         {unreadCount > 9 ? '9+' : unreadCount}
@@ -510,30 +516,16 @@ export default function AdminDashboard() {
                   onClick={handleLogout}
                   className="w-8 h-8 sm:w-10 sm:h-10 lg:w-11 lg:h-11 bg-white/10 backdrop-blur rounded-xl flex items-center justify-center transition-all hover:bg-white/20"
                 >
-                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                  </svg>
+                  <ArrowRightOnRectangleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                 </button>
               </div>
             </div>
 
             {/* Stats Cards - Mobile Responsive Grid */}
             <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:gap-4 mt-4 sm:mt-6">
-              <div className="bg-white/10 backdrop-blur rounded-xl p-2 sm:p-3 lg:p-4">
-                <div className="text-lg sm:text-2xl mb-0.5 sm:mb-1">👨‍🎓</div>
-                <div className="text-lg sm:text-xl lg:text-2xl font-bold text-white">{stats.totalLearners}</div>
-                <div className="text-[8px] sm:text-[10px] lg:text-xs text-white/60">Learners</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur rounded-xl p-2 sm:p-3 lg:p-4">
-                <div className="text-lg sm:text-2xl mb-0.5 sm:mb-1">👨‍🏫</div>
-                <div className="text-lg sm:text-xl lg:text-2xl font-bold text-white">{stats.totalTeachers}</div>
-                <div className="text-[8px] sm:text-[10px] lg:text-xs text-white/60">Teachers</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur rounded-xl p-2 sm:p-3 lg:p-4">
-                <div className="text-lg sm:text-2xl mb-0.5 sm:mb-1">📚</div>
-                <div className="text-lg sm:text-xl lg:text-2xl font-bold text-white">{stats.totalClasses}</div>
-                <div className="text-[8px] sm:text-[10px] lg:text-xs text-white/60">Classes</div>
-              </div>
+              <StatCard icon={UsersIcon}      value={stats.totalLearners} label="Learners" />
+              <StatCard icon={UserGroupIcon}  value={stats.totalTeachers} label="Teachers" />
+              <StatCard icon={BuildingLibraryIcon} value={stats.totalClasses} label="Classes" />
             </div>
           </div>
         </div>
@@ -543,18 +535,13 @@ export default function AdminDashboard() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <div className="flex overflow-x-auto scrollbar-hide gap-1 py-2">
               {navItems.map((item) => (
-                <button
+                <NavItem
                   key={item.id}
+                  icon={item.icon}
+                  label={item.label}
+                  isActive={activeNav === item.id}
                   onClick={() => handleNavClick(item.id)}
-                  className={`flex flex-col items-center gap-1 px-3 lg:px-4 py-2 rounded-xl transition-all duration-200 whitespace-nowrap ${
-                    activeNav === item.id
-                      ? 'bg-white/20 text-white font-semibold'
-                      : 'text-white/70 hover:bg-white/10 hover:text-white'
-                  }`}
-                >
-                  <span className="text-lg">{item.icon}</span>
-                  <span className="text-[10px] sm:text-xs font-medium">{item.label}</span>
-                </button>
+                />
               ))}
             </div>
           </div>

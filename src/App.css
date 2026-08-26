@@ -235,3 +235,12 @@ tr:hover td {
   background: rgba(0, 127, 255, 0.1);
   color: var(--azure);
 }
+
+/* Slide-in animation for UpperFormDashboard panels */
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+.animate-slide-in-right {
+  animation: slideInRight 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
+}

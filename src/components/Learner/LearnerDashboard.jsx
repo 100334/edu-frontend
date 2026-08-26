@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import LearningSpace from './LearningSpace';
 import QuizTaking from './QuizTaking';
+import UpperFormDashboard from './UpperFormDashboard';
 import {
   DocumentTextIcon,
   CalendarIcon,
@@ -165,7 +166,7 @@ const MobileMenuButton = ({ isOpen, onClick }) => (
   </button>
 );
 
-export default function LearnerDashboard() {
+function LowerFormDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(() => {
@@ -1313,4 +1314,11 @@ export default function LearnerDashboard() {
       )}
     </div>
   );
+}
+
+// Router: Form 3/4 → UpperFormDashboard, Form 1/2 → LowerFormDashboard
+export default function LearnerDashboard() {
+  const { user } = useAuth();
+  const isUpperForm = user?.form === 'Form 3' || user?.form === 'Form 4';
+  return isUpperForm ? <UpperFormDashboard /> : <LowerFormDashboard />;
 }
