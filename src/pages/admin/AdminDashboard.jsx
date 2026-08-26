@@ -79,8 +79,8 @@ const NavItem = ({ icon: Icon, label, isActive, onClick }) => (
     onClick={onClick}
     className={`flex flex-col items-center gap-1 sm:gap-2 px-2 sm:px-3 lg:px-4 py-2 sm:py-3 rounded-xl transition-all duration-200 whitespace-nowrap ${
       isActive
-        ? 'bg-[#006770] text-white shadow-md'
-        : 'text-gray-600 hover:bg-[#e8f4f5] hover:text-[#006770]'
+        ? 'bg-white/20 text-white shadow-md'
+        : 'text-white/70 hover:bg-white/10 hover:text-white'
     }`}
   >
     <Icon className="w-5 h-5 sm:w-6 sm:h-6" />
