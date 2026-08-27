@@ -928,9 +928,11 @@ function LowerFormDashboard() {
         <div className="container mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#2A9D8F] rounded-xl flex items-center justify-center shadow-md">
-                <span className="text-xl font-bold text-white">P</span>
-              </div>
+              <img
+                src="/schoologo.png"
+                alt="Progress Secondary School logo"
+                className="w-16 h-16 object-contain rounded-xl bg-white p-1 shadow-md"
+              />
               <div>
                 <h1 className="text-lg font-bold text-white tracking-wide">PROGRESS</h1>
                 <p className="text-[10px] text-white/70 hidden sm:block">Secondary School</p>
