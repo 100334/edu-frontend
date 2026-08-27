@@ -193,6 +193,7 @@ export default function TeacherDashboard() {
   const [reportTerm, setReportTerm] = useState('Term 1 – 2024');
   const [reportForm, setReportForm] = useState('Form 1');
   const [subjectScores, setSubjectScores] = useState({});
+  const [savedSubjectScores, setSavedSubjectScores] = useState({});
   const [teacherComment, setTeacherComment] = useState('');
   const [loadingSubjects, setLoadingSubjects] = useState(false);
   
@@ -320,6 +321,7 @@ export default function TeacherDashboard() {
         newScores[subject.name] = '';
       });
       setSubjectScores(newScores);
+      setSavedSubjectScores({});
     } catch (error) {
       console.error('Error fetching subjects:', error);
       setSubjects([]);
@@ -407,9 +409,23 @@ export default function TeacherDashboard() {
         scores[subject.name] = found ? found.score : '';
       });
       setSubjectScores(scores);
+      setSavedSubjectScores(scores);
     }
     
     document.getElementById('report-form')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleSaveSubject = (subject) => {
+    const rawScore = subjectScores[subject.name];
+    const score = parseInt(rawScore, 10);
+
+    if (rawScore === '' || rawScore === undefined || isNaN(score) || score < 0 || score > 100) {
+      toast.error(`Please enter a valid score (0-100) for ${subject.name}`);
+      return;
+    }
+
+    setSavedSubjectScores(previous => ({ ...previous, [subject.name]: score }));
+    toast.success(`${subject.name} saved`);
   };
 
   const handleSaveReport = async () => {
@@ -419,8 +435,8 @@ export default function TeacherDashboard() {
     }
     
     const subjectsWithScores = subjects.filter(subject => {
-      const score = subjectScores[subject.name];
-      return score && score !== '' && score !== null && !isNaN(parseInt(score));
+      const score = savedSubjectScores[subject.name];
+      return score !== undefined && score !== '' && score !== null && !isNaN(parseInt(score));
     });
     
     if (subjectsWithScores.length === 0) {
@@ -429,7 +445,7 @@ export default function TeacherDashboard() {
     }
     
     const invalidScores = subjectsWithScores.filter(subject => {
-      const score = parseInt(subjectScores[subject.name]);
+      const score = parseInt(savedSubjectScores[subject.name]);
       return isNaN(score) || score < 0 || score > 100;
     });
     
@@ -443,7 +459,7 @@ export default function TeacherDashboard() {
     
     const subjectsData = subjectsWithScores.map(s => ({
       name: s.name,
-      score: parseInt(subjectScores[s.name]) || 0
+      score: parseInt(savedSubjectScores[s.name]) || 0
     }));
     
     const isUpperForm = reportForm === 'Form 3' || reportForm === 'Form 4';
@@ -517,6 +533,7 @@ export default function TeacherDashboard() {
       
       if (response.data.success) {
         setSubjectScores({});
+        setSavedSubjectScores({});
         setTeacherComment('');
         setSelectedLearnerId('');
         setSelectedLearner(null);
@@ -1183,8 +1200,9 @@ export default function TeacherDashboard() {
                     <div className="mb-4">
                       <div className="flex justify-between items-center mb-2">
                         <label className="block text-xs font-semibold text-gray-500 uppercase">Subject Scores</label>
-                        <span className="text-xs text-gray-400">{subjects.length} subject(s)</span>
+                        <span className="text-xs text-gray-400">{Object.keys(savedSubjectScores).length}/{subjects.length} saved</span>
                       </div>
+                      <p className="text-xs text-gray-500 mb-2">Save each subject score first. Nothing is sent to the learner until you submit the grades below.</p>
                       <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
                         {subjects.map(subject => (
                           <div key={subject.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-2 bg-gray-50 rounded-lg">
@@ -1215,6 +1233,18 @@ export default function TeacherDashboard() {
                                   : getGradeFromScore(parseInt(subjectScores[subject.name]), reportForm).letter}
                               </span>
                             )}
+                            <button
+                              type="button"
+                              onClick={() => handleSaveSubject(subject)}
+                              disabled={isSubmitting || subjectScores[subject.name] === ''}
+                              className={`px-3 py-2 rounded-lg text-xs font-semibold transition disabled:opacity-50 ${
+                                savedSubjectScores[subject.name] !== undefined
+                                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                  : 'bg-[#0f1923] text-white hover:bg-[#263849]'
+                              }`}
+                            >
+                              {savedSubjectScores[subject.name] !== undefined ? 'Saved' : 'Save'}
+                            </button>
                           </div>
                         ))}
                       </div>
@@ -1241,11 +1271,11 @@ export default function TeacherDashboard() {
                   
                   <div className="flex gap-3">
                     <button 
-                      onClick={handleSaveReport} 
-                      disabled={isSubmitting || !selectedLearnerId || subjects.length === 0 || loadingSubjects}
+                      onClick={handleSaveReport}
+                      disabled={isSubmitting || !selectedLearnerId || Object.keys(savedSubjectScores).length === 0 || loadingSubjects}
                       className="flex-1 px-4 py-2 bg-[#c9933a] text-[#0f1923] rounded-lg hover:bg-[#e8b96a] transition font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {isSubmitting ? 'Saving...' : (isEditing ? '✏️ Update Report Card' : '💾 Save Report Card')}
+                      {isSubmitting ? 'Submitting...' : (isEditing ? '✏️ Submit Updated Report' : '📤 Submit Grades to Learner')}
                     </button>
                     
                     {isEditing && (
@@ -1254,6 +1284,7 @@ export default function TeacherDashboard() {
                           setEditingReportId(null);
                           setIsEditing(false);
                           setSubjectScores({});
+                          setSavedSubjectScores({});
                           setTeacherComment('');
                           setSelectedLearnerId('');
                           setSelectedLearner(null);

@@ -367,7 +367,7 @@ export default function UpperFormDashboard() {
     // Load school logo
     let logoDataUrl = null;
     try {
-      const res = await fetch('/school-logo.jpeg');
+      const res = await fetch('/schoologo.png');
       const blob = await res.blob();
       logoDataUrl = await new Promise((resolve) => {
         const reader = new FileReader();
@@ -390,7 +390,7 @@ export default function UpperFormDashboard() {
       doc.setFillColor(...teal);     doc.rect(0, 48, pw, 2, 'F');
       // Logo
       if (logoDataUrl) {
-        try { doc.addImage(logoDataUrl, 'JPEG', 8, 5, 38, 38); } catch { /* skip */ }
+        try { doc.addImage(logoDataUrl, 'PNG', 8, 5, 38, 38); } catch { /* skip */ }
       }
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(15); doc.setFont('helvetica', 'bold');
@@ -820,16 +820,18 @@ export default function UpperFormDashboard() {
       {/* ── HEADER ── */}
       <div className="w-full sticky top-0 z-30 flex-shrink-0" style={{ backgroundColor: HEADER_BG }}>
         <div className="container mx-auto px-4 py-3">
-          <div className="flex justify-between items-center">
+          <div className="relative flex min-h-[64px] items-center justify-between">
             {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 bg-[#2A9D8F] rounded-xl flex items-center justify-center shadow-md">
-                <span className="text-base font-black text-white">P</span>
-              </div>
-              <div>
-                <h1 className="text-base font-bold text-white tracking-wide leading-none">PROGRESS</h1>
-                <p className="text-[10px] text-white/60 hidden sm:block">{user?.form || 'Upper Form'} — Secondary School</p>
-              </div>
+            <div className="flex items-center">
+              <img
+                src="/schoologo.png"
+                alt="Progress Secondary School logo"
+                className="w-16 h-16 object-contain rounded-xl bg-white p-1 shadow-md"
+              />
+            </div>
+            <div className="absolute left-1/2 -translate-x-1/2 text-center">
+              <h1 className="text-base font-bold text-white tracking-wide leading-none">PROGRESS</h1>
+              <p className="text-[10px] text-white/60">{user?.form || 'Upper Form'} — Secondary School</p>
             </div>
 
             {/* Right: user pill + bell + logout */}
@@ -953,9 +955,11 @@ export default function UpperFormDashboard() {
           <div className="absolute top-0 right-0 h-full w-60 bg-white shadow-xl flex flex-col">
             <div className="p-4 border-b border-gray-100">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-[#2A9D8F] rounded-xl flex items-center justify-center">
-                  <span className="text-sm font-bold text-white">P</span>
-                </div>
+                <img
+                  src="/schoologo.png"
+                  alt="Progress Secondary School logo"
+                  className="w-10 h-10 object-contain rounded-xl bg-white p-1"
+                />
                 <div>
                   <p className="font-bold text-[#003B46] text-sm">PROGRESS</p>
                   <p className="text-[10px] text-gray-400">{user?.form || 'Upper Form'}</p>
