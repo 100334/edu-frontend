@@ -632,6 +632,7 @@ function LowerFormDashboard() {
       const avgScore      = calculateAverage(validSubjects);
       const avgGrade      = getGradeFromScore(avgScore, report.form);
       const passedSubjects = !isUpperForm ? validSubjects.filter(s => s.score >= 40).length : 0;
+      const classPosition = currentUserRank ? `#${currentUserRank}` : 'N/A';
       const darkBlue = [10, 37, 64];
       const teal = [42, 157, 143];
       const lightGray = [248, 250, 252];
@@ -669,6 +670,7 @@ function LowerFormDashboard() {
       doc.text(`Name: ${user?.name || user?.full_name || 'N/A'}`, 20, currentY + 8);
       doc.text(`Registration: ${user?.reg_number || user?.registration_number || 'N/A'}`, 20, currentY + 15);
       doc.text(`Form: ${report?.form || user?.form || 'N/A'}`, 20, currentY + 22);
+      doc.text(`Class Position: ${classPosition}`, pageWidth - 90, currentY + 8);
       doc.text(`Term: ${report?.term || 'N/A'}  Year: ${report?.academic_year || new Date().getFullYear()}`, pageWidth - 70, currentY + 15);
       currentY += 35;
       // Summary cards
@@ -855,6 +857,7 @@ function LowerFormDashboard() {
 
     const avg     = calculateAverage(validSubjects);
     const avgGrade = getGradeFromScore(avg, report.form);
+    const classPosition = currentUserRank ? `#${currentUserRank}` : 'N/A';
 
     // Lower form
     const passedSubjectsCount = !isUpperForm ? validSubjects.filter(s => s.score >= 40).length : 0;
@@ -868,6 +871,7 @@ function LowerFormDashboard() {
           <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
             <div style="font-weight: 600; font-size: 14px;">${user?.name || user?.full_name || 'Unknown'}</div>
             <div style="font-family: monospace; font-size: 10px; opacity: 0.7; margin-top: 2px;">${user?.reg_number || user?.registration_number || 'N/A'}</div>
+            <div style="font-size: 10px; opacity: 0.8; margin-top: 4px;">Class Position: <strong>${classPosition}</strong></div>
           </div>
         </div>
         <div style="padding: 20px;">
