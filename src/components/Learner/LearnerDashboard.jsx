@@ -44,53 +44,78 @@ const HEADER_BG = '#003B46';
 const NAVBAR_BG = '#006770';
 
 // --- Helper functions (unchanged) ---
+const normalizeScore = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const numericValue = Number(String(value).replace(/%/g, '').trim());
+  return Number.isFinite(numericValue) ? numericValue : null;
+};
+
+const normalizeForm = (form) => String(form ?? '').trim().toLowerCase();
+
+const isUpperForm = (form) => {
+  const normalizedForm = normalizeForm(form);
+  return normalizedForm === 'form 3' || normalizedForm === 'form 4' || normalizedForm.includes('upper');
+};
+
 const getGradeFromScore = (score, form = 'Form 1') => {
-  const isUpperForm = form === 'Form 3' || form === 'Form 4';
-  if (isUpperForm) {
-    if (score >= 85) return { letter: 'A*', points: 1, description: 'Distinction', color: '#1e7e4a', bgColor: '#e8f5e9' };
-    else if (score >= 75) return { letter: 'A', points: 2, description: 'Distinction', color: '#2a6e2a', bgColor: '#e8f5e9' };
-    else if (score >= 65) return { letter: 'B', points: 3, description: 'Credit', color: '#2a9090', bgColor: '#e0f2f1' };
-    else if (score >= 56) return { letter: 'C', points: 4, description: 'Credit', color: TEAL_ACCENT, bgColor: '#e0f2f1' };
-    else if (score >= 50) return { letter: 'D', points: 5, description: 'Credit', color: AZURE_ACCENT, bgColor: '#e0f7fa' };
-    else if (score >= 45) return { letter: 'E', points: 6, description: 'Pass', color: AZURE_ACCENT, bgColor: '#e0f7fa' };
-    else if (score >= 40) return { letter: 'F', points: 7, description: 'Pass', color: AZURE_ACCENT, bgColor: '#e0f7fa' };
-    else if (score >= 35) return { letter: 'G', points: 8, description: 'Pass', color: AZURE_ACCENT, bgColor: '#e0f7fa' };
+  const numericScore = normalizeScore(score);
+  const upperForm = isUpperForm(form);
+
+  if (numericScore === null) {
+    return { letter: 'N/A', points: null, description: 'No score', color: '#64748b', bgColor: '#f8fafc' };
+  }
+
+  if (upperForm) {
+    if (numericScore >= 85) return { letter: 'A*', points: 1, description: 'Distinction', color: '#1e7e4a', bgColor: '#e8f5e9' };
+    else if (numericScore >= 75) return { letter: 'A', points: 2, description: 'Distinction', color: '#2a6e2a', bgColor: '#e8f5e9' };
+    else if (numericScore >= 65) return { letter: 'B', points: 3, description: 'Credit', color: '#2a9090', bgColor: '#e0f2f1' };
+    else if (numericScore >= 56) return { letter: 'C', points: 4, description: 'Credit', color: TEAL_ACCENT, bgColor: '#e0f2f1' };
+    else if (numericScore >= 50) return { letter: 'D', points: 5, description: 'Credit', color: AZURE_ACCENT, bgColor: '#e0f7fa' };
+    else if (numericScore >= 45) return { letter: 'E', points: 6, description: 'Pass', color: AZURE_ACCENT, bgColor: '#e0f7fa' };
+    else if (numericScore >= 40) return { letter: 'F', points: 7, description: 'Pass', color: AZURE_ACCENT, bgColor: '#e0f7fa' };
+    else if (numericScore >= 35) return { letter: 'G', points: 8, description: 'Pass', color: AZURE_ACCENT, bgColor: '#e0f7fa' };
     else return { letter: 'U', points: 9, description: 'Fail', color: '#c0392b', bgColor: '#ffebee' };
   } else {
-    if (score >= 75) return { letter: 'A', description: 'Excellent', points: null, color: '#1e7e4a', bgColor: '#e8f5e9' };
-    else if (score >= 65) return { letter: 'B', description: 'Very good', points: null, color: '#2a9090', bgColor: '#e0f2f1' };
-    else if (score >= 55) return { letter: 'C', description: 'Good', points: null, color: TEAL_ACCENT, bgColor: '#e0f2f1' };
-    else if (score >= 40) return { letter: 'D', description: 'Pass', points: null, color: AZURE_ACCENT, bgColor: '#e0f7fa' };
+    if (numericScore >= 75) return { letter: 'A', description: 'Excellent', points: null, color: '#1e7e4a', bgColor: '#e8f5e9' };
+    else if (numericScore >= 65) return { letter: 'B', description: 'Very good', points: null, color: '#2a9090', bgColor: '#e0f2f1' };
+    else if (numericScore >= 55) return { letter: 'C', description: 'Good', points: null, color: TEAL_ACCENT, bgColor: '#e0f2f1' };
+    else if (numericScore >= 40) return { letter: 'D', description: 'Pass', points: null, color: AZURE_ACCENT, bgColor: '#e0f7fa' };
     else return { letter: 'F', description: 'Need improvement', points: null, color: '#c0392b', bgColor: '#ffebee' };
   }
 };
 
 const calculateAverage = (subjects) => {
   if (!subjects || subjects.length === 0) return 0;
-  const validSubjects = subjects.filter(s => s && s.score !== undefined && s.score !== null);
+  const validSubjects = subjects.filter(s => {
+    const normalizedScore = normalizeScore(s?.score);
+    return s && normalizedScore !== null;
+  });
   if (validSubjects.length === 0) return 0;
-  const sum = validSubjects.reduce((acc, subj) => acc + (subj.score || 0), 0);
+  const sum = validSubjects.reduce((acc, subj) => acc + (normalizeScore(subj.score) || 0), 0);
   return Math.round(sum / validSubjects.length);
 };
 
 const calculateTotalPoints = (subjects, form) => {
   if (!subjects || subjects.length === 0) return 0;
-  const isUpperForm = form === 'Form 3' || form === 'Form 4';
-  if (!isUpperForm) return null;
+  const upperForm = isUpperForm(form);
+  if (!upperForm) return null;
   const totalPoints = subjects.reduce((sum, subject) => {
-    const grade = getGradeFromScore(subject.score, form);
+    const normalizedScore = normalizeScore(subject?.score);
+    if (normalizedScore === null) return sum;
+    const grade = getGradeFromScore(normalizedScore, form);
     return sum + (grade.points || 0);
   }, 0);
   return totalPoints;
 };
 
 const calculateBestSubjects = (subjects, form) => {
-  const isUpperForm = form === 'Form 3' || form === 'Form 4';
-  if (!isUpperForm) return subjects;
+  const upperForm = isUpperForm(form);
+  if (!upperForm) return subjects;
 
   const subjectsWithPoints = subjects.map(subject => ({
     ...subject,
-    points: getGradeFromScore(subject.score, form).points
+    score: normalizeScore(subject?.score) ?? 0,
+    points: getGradeFromScore(subject?.score, form).points
   }));
 
   // English must be included if present — find it first
@@ -129,10 +154,16 @@ const calculateUpperFormResult = (subjects) => {
   if (!subjects || subjects.length === 0)
     return { status: 'FAIL', aggregate: null, grade: 'Fail', message: 'No subjects assessed', color: '#c0392b', bestSix: [] };
 
-  const withPoints = subjects.map(s => ({
-    ...s,
-    points: getGradeFromScore(s.score, 'Form 3').points,
-  }));
+  const withPoints = subjects
+    .map(s => {
+      const numericScore = normalizeScore(s?.score);
+      return {
+        ...s,
+        score: numericScore ?? 0,
+        points: getGradeFromScore(numericScore ?? 0, 'Form 3').points,
+      };
+    })
+    .filter(s => s.score !== 0 || normalizeScore(s?.score) !== null);
 
   const english = withPoints.find(s => s.name?.toLowerCase().includes('english'));
   const others  = withPoints.filter(s => !s.name?.toLowerCase().includes('english'));
@@ -182,7 +213,10 @@ const getFinalStatus = (englishPassed, totalPoints) => {
 const calculateStatusByPassedSubjects = (subjects) => {
   if (!subjects || subjects.length === 0)
     return { status: 'FAIL', message: 'No subjects assessed', color: '#c0392b' };
-  const passedCount = subjects.filter(s => s.score >= 40).length;
+  const passedCount = subjects.filter(s => {
+    const score = normalizeScore(s?.score);
+    return score !== null && score >= 40;
+  }).length;
   if (passedCount >= 6)
     return { status: 'PASS', message: `Passed ${passedCount} subject${passedCount !== 1 ? 's' : ''} (A–D) — Overall: PASS`, color: '#10b981' };
   return { status: 'FAIL', message: `Passed only ${passedCount} subject${passedCount !== 1 ? 's' : ''} (need 6) — Overall: FAIL`, color: '#c0392b' };
@@ -923,47 +957,67 @@ function LowerFormDashboard() {
   // --- Main Render ---
   return (
     <div className="min-h-screen bg-[#F5F2EB] font-roboto">
-      {/* Header with darker teal (#003B46) */}
-      <div className="w-full sticky top-0 z-30" style={{ background: HEADER_BG }}>
-        <div className="container mx-auto px-4 py-3">
-          <div className="relative flex min-h-[64px] items-center justify-between">
-            <div className="flex items-center">
-              <img
-                src="/schoologo.png"
-                alt="Progress Secondary School logo"
-                className="w-16 h-16 object-contain rounded-xl bg-white p-1 shadow-md"
-              />
+      {/* Header with darker teal (#003B46) - REDESIGNED */}
+      <div
+        className="w-full sticky top-0 z-30 shadow-[0_10px_30px_rgba(10,37,64,0.18)]"
+        style={{
+          background: `linear-gradient(135deg, ${HEADER_BG} 0%, #0b4a59 42%, ${NAVBAR_BG} 100%)`
+        }}
+      >
+        <div className="absolute inset-0 opacity-80" style={{ background: 'radial-gradient(circle at top left, rgba(0,180,216,0.22), transparent 30%)' }} />
+        <div className="relative container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between min-h-[68px]">
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <div className="relative">
+                <img
+                  src="/schoologo.png"
+                  alt="Progress Secondary School logo"
+                  className="w-14 h-14 object-contain rounded-2xl bg-white p-1.5 shadow-lg ring-2 ring-white/10"
+                />
+                <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-[#003B46] bg-[#2A9D8F] text-[9px] font-bold text-white shadow-sm">
+                  ✓
+                </span>
+              </div>
+              <div className="hidden sm:block">
+                <div className="flex items-center gap-2 text-white/80">
+                  <span className="text-[9px] font-bold tracking-[0.24em] uppercase">Learner portal</span>
+                </div>
+                <h1 className="text-base font-black text-white tracking-[0.16em] leading-tight">PROGRESS</h1>
+                <p className="text-[9px] text-white/70 leading-tight">Secondary School</p>
+              </div>
             </div>
-            <div className="absolute left-1/2 -translate-x-1/2 text-center">
-              <h1 className="text-lg font-bold text-white tracking-wide">PROGRESS</h1>
-              <p className="text-[10px] text-white/70">Secondary School</p>
+
+            <div className="sm:hidden text-center flex-1">
+              <h1 className="text-sm font-black text-white tracking-[0.14em]">PROGRESS</h1>
+              <p className="text-[8px] text-white/70">Secondary School</p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
-                <div className="w-8 h-8 bg-[#2A9D8F] rounded-full flex items-center justify-center text-sm text-white">
-                  <UserCircleIcon className="w-5 h-5" />
+
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="hidden md:flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 px-3 py-1.5 backdrop-blur-sm shadow-sm">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#2A9D8F] to-[#00B4D8] shadow-inner">
+                  <UserCircleIcon className="h-4 w-4 text-white" />
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-white truncate max-w-[120px]">{getUserName()}</div>
-                  <div className="text-[10px] text-white/70">Student</div>
+                  <div className="text-[11px] font-semibold text-white truncate max-w-[120px]">{getUserName()}</div>
+                  <div className="text-[9px] text-white/70">Student · {user?.form || 'Form 1'}</div>
                 </div>
               </div>
-              {/* Notification Bell */}
+
               <div className="relative" ref={notificationRef}>
                 <button
                   onClick={() => setShowNotifications(!showNotifications)}
-                  className="relative w-10 h-10 bg-white/10 backdrop-blur rounded-xl flex items-center justify-center hover:bg-white/20 transition"
+                  className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/10 text-white shadow-sm transition hover:bg-white/20"
                 >
-                  <BellIcon className="w-5 h-5 text-white" />
+                  <BellIcon className="h-4 w-4" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white ring-2 ring-[#003B46]">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
                 </button>
                 {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
-                    <div className="px-4 py-2 border-b border-gray-200 font-semibold text-gray-700">Notifications</div>
+                  <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-gray-200 bg-white shadow-2xl z-50 overflow-hidden">
+                    <div className="border-b border-gray-200 bg-gray-50 px-4 py-3 font-semibold text-gray-700 text-sm">Notifications</div>
                     <div className="max-h-96 overflow-y-auto">
                       {notifications.length === 0 ? (
                         <div className="px-4 py-6 text-center text-gray-500 text-sm">No notifications</div>
@@ -971,15 +1025,15 @@ function LowerFormDashboard() {
                         notifications.map(notif => (
                           <div
                             key={notif.id}
-                            className={`px-4 py-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${!notif.is_read ? 'bg-blue-50' : ''}`}
+                            className={`cursor-pointer border-b border-gray-100 px-4 py-3 transition hover:bg-gray-50 ${!notif.is_read ? 'bg-blue-50/60' : ''}`}
                             onClick={() => {
                               markAsRead(notif.id);
                               setShowNotifications(false);
                             }}
                           >
                             <div className="font-medium text-gray-800 text-sm">{notif.title}</div>
-                            <div className="text-xs text-gray-500 mt-0.5">{notif.message}</div>
-                            <div className="text-xs text-gray-400 mt-1">{new Date(notif.created_at).toLocaleString()}</div>
+                            <div className="mt-0.5 text-xs text-gray-500">{notif.message}</div>
+                            <div className="mt-1 text-[11px] text-gray-400">{new Date(notif.created_at).toLocaleString()}</div>
                           </div>
                         ))
                       )}
@@ -987,20 +1041,37 @@ function LowerFormDashboard() {
                   </div>
                 )}
               </div>
+
               <MobileMenuButton isOpen={mobileMenuOpen} onClick={() => setMobileMenuOpen(!mobileMenuOpen)} />
               <button
                 onClick={handleLogout}
-                className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm flex items-center gap-1.5"
+                className="hidden sm:flex items-center gap-1.5 rounded-xl bg-red-600/95 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-red-700"
               >
-                <ArrowRightOnRectangleIcon className="w-4 h-4" />
+                <ArrowRightOnRectangleIcon className="h-3.5 w-3.5" />
                 <span>Logout</span>
               </button>
             </div>
           </div>
-          <div className="mt-2">
-            <p className="text-xs font-extrabold tracking-wider" style={{ color: '#00B4D8' }}>LEARNER PORTAL</p>
-            <h1 className="text-xl font-bold text-white">Hello, {getUserName()}</h1>
-            <p className="text-sm text-white/70">{getGreeting()}! Welcome back</p>
+
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="inline-flex items-center rounded-full border border-[#7DE3FF]/30 bg-white/5 px-2.5 py-1 text-[10px] font-bold tracking-[0.2em] text-[#7DE3FF]">
+                LEARNER PORTAL
+              </div>
+              <h2 className="mt-2 text-xl font-bold text-white sm:text-2xl">Hello, {getUserName()} <span className="text-[#7DE3FF]">👋</span></h2>
+              <p className="text-sm text-white/75">{getGreeting()}! Welcome back to your dashboard.</p>
+            </div>
+
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-right backdrop-blur-sm">
+                <div className="text-[9px] uppercase tracking-[0.18em] text-white/70">Form</div>
+                <div className="text-sm font-bold text-white">{user?.form || 'Form 1'}</div>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-right backdrop-blur-sm">
+                <div className="text-[9px] uppercase tracking-[0.18em] text-white/70">Status</div>
+                <div className="text-sm font-bold text-[#7DE3FF]">Active</div>
+              </div>
+            </div>
           </div>
         </div>
         {/* Desktop Navigation - lighter teal (#006770) */}
