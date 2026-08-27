@@ -633,6 +633,7 @@ function LowerFormDashboard() {
       const avgGrade      = getGradeFromScore(avgScore, report.form);
       const passedSubjects = !isUpperForm ? validSubjects.filter(s => s.score >= 40).length : 0;
       const classPosition = currentUserRank ? `#${currentUserRank}` : 'N/A';
+      const reportRemarks = report.remarks || report.comment || report.teacher_comment || report.principal_comment || '';
       const darkBlue = [10, 37, 64];
       const teal = [42, 157, 143];
       const lightGray = [248, 250, 252];
@@ -754,6 +755,25 @@ function LowerFormDashboard() {
         columnStyles: { 0: { cellWidth: 70, fontStyle: 'bold' }, 1: { halign: 'center', cellWidth: 30 }, 2: { halign: 'center', cellWidth: 30 }, 3: { halign: 'center' } },
       });
       const finalY = doc.lastAutoTable.finalY + 8;
+      if (reportRemarks) {
+        const wrappedRemarks = doc.splitTextToSize(reportRemarks, pageWidth - 40);
+        const remarkHeight = wrappedRemarks.length * 5 + 16;
+        const remarkY = finalY + 10;
+        if (remarkY + remarkHeight < pageHeight - 18) {
+          doc.setFillColor(255, 249, 230);
+          doc.roundedRect(15, remarkY, pageWidth - 30, remarkHeight, 3, 3, 'F');
+          doc.setDrawColor(42, 157, 143);
+          doc.roundedRect(15, remarkY, pageWidth - 30, remarkHeight, 3, 3, 'S');
+          doc.setTextColor(42, 157, 143);
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'bold');
+          doc.text('REMARKS', 20, remarkY + 8);
+          doc.setTextColor(15, 25, 35);
+          doc.setFontSize(7);
+          doc.setFont('helvetica', 'normal');
+          doc.text(wrappedRemarks, 20, remarkY + 16);
+        }
+      }
       // Footer
       doc.setDrawColor(teal[0], teal[1], teal[2]);
       doc.setLineWidth(0.2);
@@ -858,6 +878,7 @@ function LowerFormDashboard() {
     const avg     = calculateAverage(validSubjects);
     const avgGrade = getGradeFromScore(avg, report.form);
     const classPosition = currentUserRank ? `#${currentUserRank}` : 'N/A';
+    const reportRemarks = report.remarks || report.comment || report.teacher_comment || report.principal_comment || 'No remarks provided';
 
     // Lower form
     const passedSubjectsCount = !isUpperForm ? validSubjects.filter(s => s.score >= 40).length : 0;
@@ -925,12 +946,10 @@ function LowerFormDashboard() {
               }).join('')}
             </tbody>
           </table>
-          ${report.comment ? `
-            <div style="margin-top: 20px; padding: 14px; background: #FEF9E6; border-radius: 12px; border-left: 4px solid #2A9D8F;">
-              <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: #2A9D8F; margin-bottom: 4px;">Teacher's Comment</div>
-              <div style="font-size: 12px; color: #334155;">${report.comment}</div>
-            </div>
-          ` : ''}
+          <div style="margin-top: 20px; padding: 14px; background: #FEF9E6; border-radius: 12px; border-left: 4px solid #2A9D8F;">
+            <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: #2A9D8F; margin-bottom: 4px;">Remarks</div>
+            <div style="font-size: 12px; color: #334155;">${reportRemarks}</div>
+          </div>
         </div>
       </div>
     `;
