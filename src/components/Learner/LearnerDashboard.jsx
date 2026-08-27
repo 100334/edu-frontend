@@ -110,12 +110,12 @@ const calculateBestSubjects = (subjects, form) => {
   return best.slice(0, 6); // Always max 6
 };
 
-// ── Points-to-grade boundary (corrected) ─────────────────────────────────────
+// ── Points-to-grade boundary ────────────────────────────────────────────────
 // Points: A*(1), A(2), B(3), C(4), D(5), E(6), F(7), G(8), U(9)
-// Distinction: 1–2 | Credit: 3–6 | Pass: 7–8 | Fail: 9+
+// Distinction: 1–2 | Credit: 3–5 | Pass: 6–8 | Fail: 9
 const getOverallGradeFromPoints = (totalPoints) => {
   if (totalPoints <= 2)  return { description: 'Distinction', color: '#1e7e4a' };
-  if (totalPoints <= 6)  return { description: 'Credit',      color: '#2a9090' };
+  if (totalPoints <= 5)  return { description: 'Credit',      color: '#2a9090' };
   if (totalPoints <= 8)  return { description: 'Pass',        color: '#f39c12' };
   return                        { description: 'Fail',        color: '#c0392b' };
 };
@@ -123,10 +123,8 @@ const getOverallGradeFromPoints = (totalPoints) => {
 // ── Full upper-form result calculation ───────────────────────────────────────
 // Rules:
 //   • Select best 6 subjects — English is compulsory in the six
-//   • Aggregate the 6 points → Distinction/Credit/Pass/Fail by boundary above
-//   • Pass requires English + at least 5 subjects (incl. English) with grade ≤ U
-//   • 5 subjects incl. English (but <6 best) → "Pass" regardless of aggregate
-//   • < 5 subjects → Complete Fail
+//   • Pass requires Pass or Distinction grades in at least 5 of the best 6 subjects
+//   • No assessed subjects → Complete Fail
 const calculateUpperFormResult = (subjects) => {
   if (!subjects || subjects.length === 0)
     return { status: 'FAIL', aggregate: null, grade: 'Fail', message: 'No subjects assessed', color: '#c0392b', bestSix: [] };
@@ -146,55 +144,30 @@ const calculateUpperFormResult = (subjects) => {
     : sortedOthers.slice(0, 6);
   bestSix = bestSix.slice(0, 6);
 
-  const englishPresent = !!english;
-  const englishPassed  = english ? english.points <= 8 : false; // U(9) = fail
+  // Only Pass (E–G) and Distinction (A*/A) count toward the overall result.
+  const passedInBestSix = bestSix.filter(s => s.points <= 2 || (s.points >= 6 && s.points <= 8)).length;
 
-  // Count subjects with grade A*–G (points 1–8) in the best six
-  const passedInBestSix = bestSix.filter(s => s.points <= 8).length;
-
-  // < 5 passed subjects → complete fail
-  if (passedInBestSix < 5 || !englishPresent) {
-    const agg = bestSix.reduce((t, s) => t + s.points, 0);
+  if (passedInBestSix < 5) {
+    const aggregate = bestSix.reduce((t, s) => t + s.points, 0);
     return {
       status: 'FAIL',
-      aggregate: agg,
+      aggregate,
       grade: 'Fail',
-      message: !englishPresent
-        ? 'English not assessed — Overall: FAIL'
-        : `Only ${passedInBestSix} subject${passedInBestSix !== 1 ? 's' : ''} passed (need 5 incl. English) — Overall: FAIL`,
+      message: `Only ${passedInBestSix} subject${passedInBestSix !== 1 ? 's' : ''} passed (need 5 Pass or Distinction grades) — Overall: FAIL`,
       color: '#c0392b',
       bestSix,
     };
   }
 
-  // English failed (U) → fail
-  if (!englishPassed) {
-    const agg = bestSix.reduce((t, s) => t + s.points, 0);
-    return {
-      status: 'FAIL',
-      aggregate: agg,
-      grade: 'Fail',
-      message: 'Failed English — Overall: FAIL',
-      color: '#c0392b',
-      bestSix,
-    };
-  }
-
-  // Calculate aggregate of best six
+  // Aggregate is retained for report display, but does not determine pass/fail.
   const aggregate = bestSix.reduce((t, s) => t + s.points, 0);
-  const overallGrade = getOverallGradeFromPoints(aggregate);
-
-  // 5 subjects passed (incl. English) but only 5 available → "Pass" regardless of aggregate
-  const forcedPass = passedInBestSix === 5 && bestSix.length < 6;
-  const finalGrade  = forcedPass ? 'Pass' : overallGrade.description;
-  const finalColor  = forcedPass ? '#f39c12' : overallGrade.color;
 
   return {
-    status: finalGrade === 'Fail' ? 'FAIL' : 'PASS',
+    status: 'PASS',
     aggregate,
-    grade: finalGrade,
-    message: `Aggregate ${aggregate} pts (best 6) — ${finalGrade}`,
-    color: finalColor,
+    grade: 'Pass',
+    message: `${passedInBestSix} subjects achieved Pass or Distinction — Overall: PASS`,
+    color: '#f39c12',
     bestSix,
   };
 };
