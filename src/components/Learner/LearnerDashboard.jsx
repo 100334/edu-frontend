@@ -573,7 +573,7 @@ function LowerFormDashboard() {
       // Load school logo as base64 for embedding in PDF
       let logoDataUrl = null;
       try {
-        const res = await fetch('/school-logo.jpeg');
+        const res = await fetch('/schoologo.png');
         const blob = await res.blob();
         logoDataUrl = await new Promise((resolve) => {
           const reader = new FileReader();
@@ -611,7 +611,7 @@ function LowerFormDashboard() {
       // Logo (left side of header)
       if (logoDataUrl) {
         try {
-          doc.addImage(logoDataUrl, 'JPEG', 8, 5, 38, 38);
+          doc.addImage(logoDataUrl, 'PNG', 8, 5, 38, 38);
         } catch { /* skip if image format unsupported */ }
       }
       // School name (centred in remaining space)
