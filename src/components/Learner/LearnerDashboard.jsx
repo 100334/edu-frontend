@@ -87,39 +87,132 @@ const calculateTotalPoints = (subjects, form) => {
 const calculateBestSubjects = (subjects, form) => {
   const isUpperForm = form === 'Form 3' || form === 'Form 4';
   if (!isUpperForm) return subjects;
+
   const subjectsWithPoints = subjects.map(subject => ({
     ...subject,
     points: getGradeFromScore(subject.score, form).points
   }));
-  const sortedSubjects = [...subjectsWithPoints].sort((a, b) => a.points - b.points);
-  return sortedSubjects.slice(0, Math.min(6, sortedSubjects.length));
+
+  // English must be included if present — find it first
+  const english = subjectsWithPoints.find(s =>
+    s.name?.toLowerCase().includes('english')
+  );
+  const others = subjectsWithPoints.filter(s =>
+    !s.name?.toLowerCase().includes('english')
+  );
+
+  // Sort others by points ascending (lower = better) and take best 5 to fill up to 6
+  const sortedOthers = [...others].sort((a, b) => a.points - b.points);
+  const best = english
+    ? [english, ...sortedOthers.slice(0, 5)]   // English + best 5 others
+    : sortedOthers.slice(0, 6);                  // No English — just best 6
+
+  return best.slice(0, 6); // Always max 6
 };
 
+// ── Points-to-grade boundary (corrected) ─────────────────────────────────────
+// Points: A*(1), A(2), B(3), C(4), D(5), E(6), F(7), G(8), U(9)
+// Distinction: 1–2 | Credit: 3–6 | Pass: 7–8 | Fail: 9+
 const getOverallGradeFromPoints = (totalPoints) => {
-  if (totalPoints <= 2) return { description: 'Distinction' };
-  if (totalPoints <= 6) return { description: 'Credit' };
-  if (totalPoints <= 12) return { description: 'Pass' };
-  return { description: 'Fail' };
+  if (totalPoints <= 2)  return { description: 'Distinction', color: '#1e7e4a' };
+  if (totalPoints <= 6)  return { description: 'Credit',      color: '#2a9090' };
+  if (totalPoints <= 8)  return { description: 'Pass',        color: '#f39c12' };
+  return                        { description: 'Fail',        color: '#c0392b' };
 };
 
-const calculateStatusByPassedSubjects = (subjects) => {
-  if (!subjects || subjects.length === 0) {
-    return { status: 'FAIL', message: 'No subjects assessed', color: '#c0392b' };
+// ── Full upper-form result calculation ───────────────────────────────────────
+// Rules:
+//   • Select best 6 subjects — English is compulsory in the six
+//   • Aggregate the 6 points → Distinction/Credit/Pass/Fail by boundary above
+//   • Pass requires English + at least 5 subjects (incl. English) with grade ≤ U
+//   • 5 subjects incl. English (but <6 best) → "Pass" regardless of aggregate
+//   • < 5 subjects → Complete Fail
+const calculateUpperFormResult = (subjects) => {
+  if (!subjects || subjects.length === 0)
+    return { status: 'FAIL', aggregate: null, grade: 'Fail', message: 'No subjects assessed', color: '#c0392b', bestSix: [] };
+
+  const withPoints = subjects.map(s => ({
+    ...s,
+    points: getGradeFromScore(s.score, 'Form 3').points,
+  }));
+
+  const english = withPoints.find(s => s.name?.toLowerCase().includes('english'));
+  const others  = withPoints.filter(s => !s.name?.toLowerCase().includes('english'));
+  const sortedOthers = [...others].sort((a, b) => a.points - b.points);
+
+  // Build best six (English mandatory if present)
+  let bestSix = english
+    ? [english, ...sortedOthers.slice(0, 5)]
+    : sortedOthers.slice(0, 6);
+  bestSix = bestSix.slice(0, 6);
+
+  const englishPresent = !!english;
+  const englishPassed  = english ? english.points <= 8 : false; // U(9) = fail
+
+  // Count subjects with grade A*–G (points 1–8) in the best six
+  const passedInBestSix = bestSix.filter(s => s.points <= 8).length;
+
+  // < 5 passed subjects → complete fail
+  if (passedInBestSix < 5 || !englishPresent) {
+    const agg = bestSix.reduce((t, s) => t + s.points, 0);
+    return {
+      status: 'FAIL',
+      aggregate: agg,
+      grade: 'Fail',
+      message: !englishPresent
+        ? 'English not assessed — Overall: FAIL'
+        : `Only ${passedInBestSix} subject${passedInBestSix !== 1 ? 's' : ''} passed (need 5 incl. English) — Overall: FAIL`,
+      color: '#c0392b',
+      bestSix,
+    };
   }
-  const passedCount = subjects.filter(s => s.score >= 40).length;
-  if (passedCount >= 6) {
-    return { status: 'PASS', message: `Passed ${passedCount} subjects - Overall Result: PASS`, color: '#10b981' };
-  } else {
-    return { status: 'FAIL', message: `Passed only ${passedCount} subject(s) - Overall Result: FAIL`, color: '#c0392b' };
+
+  // English failed (U) → fail
+  if (!englishPassed) {
+    const agg = bestSix.reduce((t, s) => t + s.points, 0);
+    return {
+      status: 'FAIL',
+      aggregate: agg,
+      grade: 'Fail',
+      message: 'Failed English — Overall: FAIL',
+      color: '#c0392b',
+      bestSix,
+    };
   }
+
+  // Calculate aggregate of best six
+  const aggregate = bestSix.reduce((t, s) => t + s.points, 0);
+  const overallGrade = getOverallGradeFromPoints(aggregate);
+
+  // 5 subjects passed (incl. English) but only 5 available → "Pass" regardless of aggregate
+  const forcedPass = passedInBestSix === 5 && bestSix.length < 6;
+  const finalGrade  = forcedPass ? 'Pass' : overallGrade.description;
+  const finalColor  = forcedPass ? '#f39c12' : overallGrade.color;
+
+  return {
+    status: finalGrade === 'Fail' ? 'FAIL' : 'PASS',
+    aggregate,
+    grade: finalGrade,
+    message: `Aggregate ${aggregate} pts (best 6) — ${finalGrade}`,
+    color: finalColor,
+    bestSix,
+  };
 };
 
 const getFinalStatus = (englishPassed, totalPoints) => {
-  if (!englishPassed) return { status: 'FAIL', message: 'Failed English - Overall Result: FAIL', color: '#c0392b' };
-  if (totalPoints <= 2) return { status: 'DISTINCTION', message: 'Distinction - Excellent Performance!', color: '#1e7e4a' };
-  if (totalPoints <= 6) return { status: 'CREDIT', message: 'Credit - Good Performance!', color: '#2a9090' };
-  if (totalPoints <= 12) return { status: 'PASS', message: 'Pass - Satisfactory Performance', color: '#f39c12' };
-  return { status: 'FAIL', message: 'Fail - Needs Improvement', color: '#c0392b' };
+  if (!englishPassed) return { status: 'FAIL', message: 'Failed English — Overall: FAIL', color: '#c0392b' };
+  const g = getOverallGradeFromPoints(totalPoints);
+  return { status: g.description === 'Fail' ? 'FAIL' : 'PASS', message: `${g.description} (${totalPoints} pts)`, color: g.color };
+};
+
+// ── Lower form: PASS = A/B/C/D (score ≥ 40) in at least 6 subjects ───────────
+const calculateStatusByPassedSubjects = (subjects) => {
+  if (!subjects || subjects.length === 0)
+    return { status: 'FAIL', message: 'No subjects assessed', color: '#c0392b' };
+  const passedCount = subjects.filter(s => s.score >= 40).length;
+  if (passedCount >= 6)
+    return { status: 'PASS', message: `Passed ${passedCount} subject${passedCount !== 1 ? 's' : ''} (A–D) — Overall: PASS`, color: '#10b981' };
+  return { status: 'FAIL', message: `Passed only ${passedCount} subject${passedCount !== 1 ? 's' : ''} (need 6) — Overall: FAIL`, color: '#c0392b' };
 };
 
 // --- Stat Card ---
@@ -498,40 +591,66 @@ function LowerFormDashboard() {
   };
 
   // --- PDF generation (simplified) ---
-  const downloadReportPDF = (report) => {
+  const downloadReportPDF = async (report) => {
     if (!report) {
       toast.error('No report data available');
       return;
     }
     try {
+      // Load school logo as base64 for embedding in PDF
+      let logoDataUrl = null;
+      try {
+        const res = await fetch('/school-logo.jpeg');
+        const blob = await res.blob();
+        logoDataUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+      } catch {
+        // Logo fetch failed — continue without it
+      }
       const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       const validSubjects = (report.subjects || []).filter(s => s && s.score !== undefined && s.score !== null);
       const isUpperForm = report.form === 'Form 3' || report.form === 'Form 4';
-      const totalPoints = isUpperForm ? calculateTotalPoints(validSubjects, report.form) : null;
-      const bestSubjects = isUpperForm ? calculateBestSubjects(validSubjects, report.form) : validSubjects;
-      const avgScore = calculateAverage(validSubjects);
-      const avgGrade = getGradeFromScore(avgScore, report.form);
+
+      // ── Upper form: use new comprehensive result calculation ─────────────────
+      const upperResult  = isUpperForm ? calculateUpperFormResult(validSubjects) : null;
+      const bestSubjects = isUpperForm ? upperResult.bestSix : validSubjects;
+      const totalPoints  = isUpperForm ? upperResult.aggregate : null;
+
+      // ── Lower form helpers ───────────────────────────────────────────────────
+      const avgScore      = calculateAverage(validSubjects);
+      const avgGrade      = getGradeFromScore(avgScore, report.form);
+      const passedSubjects = !isUpperForm ? validSubjects.filter(s => s.score >= 40).length : 0;
       const darkBlue = [10, 37, 64];
       const teal = [42, 157, 143];
       const lightGray = [248, 250, 252];
       const darkGray = [15, 25, 35];
       let currentY = 10;
-      // Header
+      // Header background
       doc.setFillColor(darkBlue[0], darkBlue[1], darkBlue[2]);
-      doc.rect(0, 0, pageWidth, 45, 'F');
+      doc.rect(0, 0, pageWidth, 50, 'F');
       doc.setFillColor(teal[0], teal[1], teal[2]);
-      doc.rect(0, 43, pageWidth, 2, 'F');
+      doc.rect(0, 48, pageWidth, 2, 'F');
+      // Logo (left side of header)
+      if (logoDataUrl) {
+        try {
+          doc.addImage(logoDataUrl, 'JPEG', 8, 5, 38, 38);
+        } catch { /* skip if image format unsupported */ }
+      }
+      // School name (centred in remaining space)
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(16);
+      doc.setFontSize(15);
       doc.setFont('helvetica', 'bold');
-      doc.text('PROGRESS SECONDARY SCHOOL', pageWidth / 2, 20, { align: 'center' });
-      doc.setFontSize(10);
+      doc.text('PROGRESS SECONDARY SCHOOL', pageWidth / 2 + (logoDataUrl ? 8 : 0), 20, { align: 'center' });
+      doc.setFontSize(9);
       doc.setFont('helvetica', 'italic');
       doc.setTextColor(220, 220, 220);
-      doc.text('Academic Report Card', pageWidth / 2, 30, { align: 'center' });
-      currentY = 55;
+      doc.text('Academic Report Card', pageWidth / 2 + (logoDataUrl ? 8 : 0), 30, { align: 'center' });
+      currentY = 60;
       // Student info
       doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
       doc.roundedRect(15, currentY, pageWidth - 30, 28, 3, 3, 'F');
@@ -552,8 +671,16 @@ function LowerFormDashboard() {
       const cardHeight = 30;
       const cards = [
         { label: 'Average', value: `${avgScore}%` },
-        { label: 'Grade', value: avgGrade.letter },
-        { label: 'Status', value: avgScore >= 50 ? 'PASS' : 'FAIL', color: avgScore >= 50 ? [30, 126, 74] : [192, 57, 43] }
+        { label: 'Grade',   value: avgGrade.letter },
+        {
+          label: 'Status',
+          value: isUpperForm
+            ? (upperResult.grade || '—').toUpperCase()
+            : (passedSubjects >= 6 ? 'PASS' : 'FAIL'),
+          color: isUpperForm
+            ? (upperResult.color === '#c0392b' ? [192, 57, 43] : upperResult.color === '#f39c12' ? [243, 156, 18] : [30, 126, 74])
+            : (passedSubjects >= 6 ? [30, 126, 74] : [192, 57, 43]),
+        }
       ];
       cards.forEach((card, i) => {
         const x = 15 + i * (cardWidth + cardSpacing);
@@ -579,9 +706,32 @@ function LowerFormDashboard() {
         else return [subject.name, `${subject.score}%`, grade.letter, grade.description];
       });
       if (isUpperForm && totalPoints !== null) {
-        tableRows.push([{ content: 'BEST 6 TOTAL', styles: { fontStyle: 'bold', fillColor: [255, 248, 225] } }, '', { content: totalPoints + ' pts', styles: { fontStyle: 'bold', textColor: teal } }, { content: getOverallGradeFromPoints(totalPoints).description, styles: { fontStyle: 'bold', textColor: teal } }]);
+        const resultColor = upperResult.color === '#c0392b' ? [192,57,43] : upperResult.color === '#f39c12' ? [243,156,18] : [42,157,143];
+        tableRows.push([
+          { content: `BEST 6 AGGREGATE`, styles: { fontStyle: 'bold', fillColor: [255, 248, 225] } },
+          '',
+          { content: `${totalPoints} pts`, styles: { fontStyle: 'bold', textColor: resultColor } },
+          { content: upperResult.grade, styles: { fontStyle: 'bold', textColor: resultColor } }
+        ]);
+        tableRows.push([{
+          content: upperResult.message,
+          colSpan: 4,
+          styles: {
+            fontStyle: 'bold',
+            fillColor: upperResult.status === 'PASS' ? [232,245,233] : [255,235,238],
+            textColor: resultColor,
+            halign: 'center'
+          }
+        }]);
       } else {
         tableRows.push([{ content: 'OVERALL AVERAGE', styles: { fontStyle: 'bold', fillColor: [255, 248, 225] } }, { content: `${avgScore}%`, styles: { fontStyle: 'bold', textColor: teal } }, { content: avgGrade.letter, styles: { fontStyle: 'bold', textColor: teal } }, { content: avgGrade.description, styles: { fontStyle: 'bold' } }]);
+        // Lower form pass rule row
+        const passColor = passedSubjects >= 6 ? [30, 126, 74] : [192, 57, 43];
+        tableRows.push([{
+          content: `OVERALL RESULT: ${passedSubjects >= 6 ? 'PASS' : 'FAIL'} (${passedSubjects} of ${validSubjects.length} subjects passed with A–D)`,
+          colSpan: 4,
+          styles: { fontStyle: 'bold', fillColor: passedSubjects >= 6 ? [232, 245, 233] : [255, 235, 238], textColor: passColor, halign: 'center' }
+        }]);
       }
       autoTable(doc, {
         startY: currentY,
@@ -690,11 +840,18 @@ function LowerFormDashboard() {
     if (!report || !report.subjects) return '<div>No report data</div>';
     const validSubjects = (report.subjects || []).filter(s => s && s.score !== undefined && s.score !== null);
     const isUpperForm = report.form === 'Form 3' || report.form === 'Form 4';
-    const bestSubjects = isUpperForm ? calculateBestSubjects(validSubjects, report.form) : validSubjects;
-    const avg = calculateAverage(validSubjects);
+
+    // ── Upper form: use the comprehensive result calculator ─────────────────
+    const upperResult  = isUpperForm ? calculateUpperFormResult(validSubjects) : null;
+    const bestSubjects = isUpperForm ? upperResult.bestSix : validSubjects;
+    const totalPoints  = isUpperForm ? upperResult.aggregate : null;
+
+    const avg     = calculateAverage(validSubjects);
     const avgGrade = getGradeFromScore(avg, report.form);
-    const totalPoints = isUpperForm ? calculateTotalPoints(validSubjects, report.form) : null;
-    const pointsGrade = isUpperForm && totalPoints ? getOverallGradeFromPoints(totalPoints) : null;
+
+    // Lower form
+    const passedSubjectsCount = !isUpperForm ? validSubjects.filter(s => s.score >= 40).length : 0;
+    const lowerFormPassed = !isUpperForm && passedSubjectsCount >= 6;
     return `
       <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(10,37,64,0.1);">
         <div style="background: #0A2540; color: white; padding: 20px;">
@@ -716,9 +873,17 @@ function LowerFormDashboard() {
               <div style="font-size: 10px; color: #64748b; font-weight: 600;">GRADE</div>
               <div style="font-size: 32px; font-weight: bold; color: #2A9D8F;">${avgGrade.letter}</div>
             </div>
-            <div style="background: #F8FAFC; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0;">
+              <div style="background: #F8FAFC; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0;">
               <div style="font-size: 10px; color: #64748b; font-weight: 600;">STATUS</div>
-              <div style="font-size: 16px; font-weight: bold; color: ${avg >= 50 ? '#1e7e4a' : '#c0392b'};">${avg >= 50 ? 'PASS' : 'FAIL'}</div>
+              <div style="font-size: 16px; font-weight: bold; color: ${
+                isUpperForm ? upperResult.color : (lowerFormPassed ? '#1e7e4a' : '#c0392b')
+              };">
+                ${isUpperForm ? upperResult.grade.toUpperCase() : (lowerFormPassed ? 'PASS' : 'FAIL')}
+              </div>
+              ${isUpperForm
+                ? `<div style="font-size: 9px; color: #64748b; margin-top: 3px;">${totalPoints} pts · ${upperResult.bestSix.length} subjects</div>`
+                : `<div style="font-size: 9px; color: #64748b; margin-top: 3px;">${passedSubjectsCount}/6 subjects passed</div>`
+              }
             </div>
           </div>
           <table style="width: 100%; border-collapse: collapse;">

@@ -362,8 +362,19 @@ export default function UpperFormDashboard() {
   };
 
   // ── PDF: Report ──────────────────────────────────────────────────────────────
-  const downloadReportPDF = (report) => {
+  const downloadReportPDF = async (report) => {
     if (!report) return;
+    // Load school logo
+    let logoDataUrl = null;
+    try {
+      const res = await fetch('/school-logo.jpeg');
+      const blob = await res.blob();
+      logoDataUrl = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+    } catch { /* continue without logo */ }
     try {
       const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
       const pw = doc.internal.pageSize.getWidth();
@@ -375,16 +386,20 @@ export default function UpperFormDashboard() {
       const avgGrade      = getGradeFromScore(avgScore);
       const darkBlue = [10, 37, 64], teal = [42, 157, 143], lightGray = [248, 250, 252], darkGray = [15, 25, 35];
 
-      doc.setFillColor(...darkBlue); doc.rect(0, 0, pw, 45, 'F');
-      doc.setFillColor(...teal);     doc.rect(0, 43, pw, 2, 'F');
+      doc.setFillColor(...darkBlue); doc.rect(0, 0, pw, 50, 'F');
+      doc.setFillColor(...teal);     doc.rect(0, 48, pw, 2, 'F');
+      // Logo
+      if (logoDataUrl) {
+        try { doc.addImage(logoDataUrl, 'JPEG', 8, 5, 38, 38); } catch { /* skip */ }
+      }
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-      doc.text('PROGRESS SECONDARY SCHOOL', pw / 2, 20, { align: 'center' });
-      doc.setFontSize(10); doc.setFont('helvetica', 'italic');
+      doc.setFontSize(15); doc.setFont('helvetica', 'bold');
+      doc.text('PROGRESS SECONDARY SCHOOL', pw / 2 + (logoDataUrl ? 8 : 0), 20, { align: 'center' });
+      doc.setFontSize(9); doc.setFont('helvetica', 'italic');
       doc.setTextColor(220, 220, 220);
-      doc.text('Academic Report Card — ' + (report.form || user?.form || 'Form 3'), pw / 2, 30, { align: 'center' });
+      doc.text('Academic Report Card — ' + (report.form || user?.form || 'Form 3'), pw / 2 + (logoDataUrl ? 8 : 0), 30, { align: 'center' });
 
-      let y = 55;
+      let y = 60;
       doc.setFillColor(...lightGray); doc.roundedRect(15, y, pw - 30, 28, 3, 3, 'F');
       doc.setDrawColor(...teal);      doc.roundedRect(15, y, pw - 30, 28, 3, 3, 'S');
       doc.setTextColor(...darkGray);  doc.setFontSize(8); doc.setFont('helvetica', 'bold');
