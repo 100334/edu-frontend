@@ -670,8 +670,8 @@ function LowerFormDashboard() {
       doc.text(`Name: ${user?.name || user?.full_name || 'N/A'}`, 20, currentY + 8);
       doc.text(`Registration: ${user?.reg_number || user?.registration_number || 'N/A'}`, 20, currentY + 15);
       doc.text(`Form: ${report?.form || user?.form || 'N/A'}`, 20, currentY + 22);
-      doc.text(`Class Position: ${classPosition}`, pageWidth - 90, currentY + 8);
-      doc.text(`Term: ${report?.term || 'N/A'}  Year: ${report?.academic_year || new Date().getFullYear()}`, pageWidth - 70, currentY + 15);
+      doc.text(`Class Position: ${classPosition}`, pageWidth - 20, currentY + 8, { align: 'right' });
+      doc.text(`Term: ${report?.term || 'N/A'}  |  Year: ${report?.academic_year || new Date().getFullYear()}`, pageWidth - 20, currentY + 15, { align: 'right' });
       currentY += 35;
       // Summary cards
       const cardWidth = (pageWidth - 45) / 3;
@@ -868,10 +868,15 @@ function LowerFormDashboard() {
           <div style="font-size: 18px; font-weight: 700; color: #2A9D8F;">PROGRESS SECONDARY SCHOOL</div>
           <div style="font-size: 11px; opacity: 0.7;">Scholastica, Excellentia et Disciplina</div>
           <div style="font-size: 10px; opacity: 0.6; margin-top: 4px;">${report.term || 'Report'} · ${report.academic_year || new Date().getFullYear()}</div>
-          <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1);">
-            <div style="font-weight: 600; font-size: 14px;">${user?.name || user?.full_name || 'Unknown'}</div>
-            <div style="font-family: monospace; font-size: 10px; opacity: 0.7; margin-top: 2px;">${user?.reg_number || user?.registration_number || 'N/A'}</div>
-            <div style="font-size: 10px; opacity: 0.8; margin-top: 4px;">Class Position: <strong>${classPosition}</strong></div>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); gap: 24px;">
+            <div>
+              <div style="font-weight: 600; font-size: 14px;">${user?.name || user?.full_name || 'Unknown'}</div>
+              <div style="font-family: monospace; font-size: 10px; opacity: 0.7; margin-top: 2px;">${user?.reg_number || user?.registration_number || 'N/A'}</div>
+            </div>
+            <div style="text-align: right; font-size: 10px; opacity: 0.85; line-height: 1.5;">
+              <div>Class Position: <strong>${classPosition}</strong></div>
+              <div>Term: ${report.term || 'N/A'} · Year: ${report.academic_year || new Date().getFullYear()}</div>
+            </div>
           </div>
         </div>
         <div style="padding: 20px;">
