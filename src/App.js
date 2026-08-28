@@ -218,6 +218,7 @@ function AppContent() {
       <Routes>
         {/* Learner Login as Default Home Page */}
         <Route path="/" element={<LearnerLogin serverStatus={serverStatus} />} />
+        <Route path="/teacher" element={<Navigate to="/teacher/login" replace />} />
         <Route path="/teacher/login" element={<TeacherLogin serverStatus={serverStatus} />} />
         <Route path="/admin/login" element={<AdminLogin serverStatus={serverStatus} />} />
         <Route path="/debug" element={<DebugAuth />} />
