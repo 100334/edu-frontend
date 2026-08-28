@@ -52,14 +52,14 @@ const getGrade = (score, form) => {
 const DashboardCard = ({ icon: Icon, title, color, onClick, className = '' }) => (
   <button 
     onClick={onClick}
-    className={`w-full min-h-36 rounded-2xl border border-[#005F7B] bg-[#005F7B] p-5 shadow-sm transition-all hover:bg-[#005F7B] hover:shadow-md active:scale-[0.98] ${className}`}
+    className={`w-full min-h-36 rounded-2xl border-2 border-[#005F7B] bg-white p-5 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md active:scale-[0.98] ${className}`}
   >
     <div className="flex items-start justify-between">
-      <div className="rounded-xl bg-white/15 p-2">
-        <Icon className="h-6 w-6" style={{ color: ICE_WHITE }} />
+      <div className="rounded-xl bg-[#005F7B]/10 p-2">
+        <Icon className="h-6 w-6 text-[#005F7B]" />
       </div>
     </div>
-    <h3 className="mt-3 text-left text-sm font-semibold text-[#F8FAFC]">{title}</h3>
+    <h3 className="mt-3 text-left text-sm font-semibold text-[#005F7B]">{title}</h3>
   </button>
 );
 
