@@ -18,7 +18,7 @@ import {
   ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline';
 
-const HEADER_BG = '#005F7B';
+const HEADER_BG = '#8BBB92';
 const TEAL = '#005F7B';
 const CYAN = '#00B4D8';
 const ICE_WHITE = '#F8FAFC';
@@ -274,7 +274,7 @@ export default function MobileLearnerDashboard() {
   return (
     <div className="min-h-screen bg-[#F5F2EB] pb-20">
       {/* Header Section */}
-      <header className="sticky top-0 z-30 bg-[#005F7B] px-5 pb-6 pt-5 shadow-xl">
+      <header className="sticky top-0 z-30 bg-[#8BBB92] px-5 pb-6 pt-5 shadow-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
