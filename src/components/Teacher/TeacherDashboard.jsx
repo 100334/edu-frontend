@@ -6,10 +6,14 @@ import toast from 'react-hot-toast';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 
 // Theme constants
-const NAVY_DARK = '#0A192F';
-const NAVY_PRIMARY = '#1A237E';
-const AZURE_ACCENT = '#00B0FF';
+const NAVY_DARK = '#0A2540';
+const NAVY_PRIMARY = '#1E3A5F';
+const AZURE_ACCENT = '#00B4D8';
+const TEAL_ACCENT = '#2A9D8F';
 const ICE_WHITE = '#F8FAFC';
+const PAPER = '#F5F2EB';
+const HEADER_BG = '#003B46';
+const NAVBAR_BG = '#006770';
 
 // Grade classification function with points system for Forms 3-4
 const getGradeFromScore = (score, form = 'Form 1') => {
@@ -114,9 +118,9 @@ const getPointsInterpretation = (totalPoints) => {
 
 // Stat Card Component
 const StatCard = ({ emoji, value, label, subtitle }) => (
-  <div className="bg-white rounded-xl border border-[#d4cfc6] p-3 sm:p-4 lg:p-6 shadow-sm hover:shadow-md transition">
+  <div className="bg-white rounded-xl border border-[#e2e8f0] p-3 sm:p-4 lg:p-6 shadow-sm hover:shadow-md transition">
     <div className="text-2xl lg:text-3xl mb-2 lg:mb-3">{emoji}</div>
-    <div className="text-xl lg:text-3xl font-bold text-[#0f1923] mb-1">{value}</div>
+    <div className="text-xl lg:text-3xl font-bold text-[#0A2540] mb-1">{value}</div>
     <div className="text-[10px] lg:text-xs text-gray-500 font-semibold uppercase">{label}</div>
     {subtitle && <div className="text-[10px] text-gray-400 mt-1">{subtitle}</div>}
   </div>
@@ -128,8 +132,8 @@ const NavItem = ({ icon, label, isActive, onClick }) => (
     onClick={onClick}
     className={`flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-lg font-medium transition-all duration-200 text-sm ${
       isActive
-        ? 'bg-[#1A237E] text-white shadow-md'
-        : 'text-gray-600 hover:bg-gray-100 hover:text-[#1A237E]'
+      ? 'bg-white text-[#006770] shadow-md'
+      : 'text-white/85 hover:bg-white/10 hover:text-white'
     }`}
   >
     <span className="text-lg">{icon}</span>
@@ -784,33 +788,41 @@ export default function TeacherDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f7f4ef]">
+    <div className="min-h-screen bg-[#F5F2EB]">
       {/* Header Section */}
       <div 
-        className="w-full sticky top-0 z-30"
+        className="w-full sticky top-0 z-30 shadow-[0_10px_30px_rgba(10,37,64,0.18)]"
         style={{
-          background: `linear-gradient(135deg, ${NAVY_DARK}, #1E3A8A)`,
+          background: `linear-gradient(135deg, ${HEADER_BG} 0%, #0b4a59 42%, ${NAVBAR_BG} 100%)`,
         }}
       >
-        <div className="container mx-auto px-4 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#c9933a] rounded-xl flex items-center justify-center">
-                <span className="text-xl font-bold text-[#0f1923]">P</span>
+        <div className="relative container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between min-h-[68px]">
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <div className="relative">
+                <img
+                  src="/schoologo.png"
+                  alt="Progress Secondary School logo"
+                  className="w-14 h-14 object-contain rounded-2xl bg-white p-1.5 shadow-lg ring-2 ring-white/10"
+                />
+                <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-[#003B46] bg-[#2A9D8F] text-[9px] font-bold text-white shadow-sm">
+                  ✓
+                </span>
               </div>
-              <div>
-                <h1 className="text-xl font-serif font-bold text-white">Progress Secondary School</h1>
-                <p className="text-xs text-white/70 hidden sm:block">Scholastica, Excellentia et Disciplina</p>
+              <div className="hidden sm:block">
+                <div className="text-[9px] font-bold tracking-[0.24em] uppercase text-white/80">Teacher portal</div>
+                <h1 className="text-base font-black text-white tracking-[0.16em] leading-tight">PROGRESS</h1>
+                <p className="text-[9px] text-white/70 leading-tight">Secondary School</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              <div className="hidden sm:flex items-center gap-3 bg-white/10 rounded-lg px-3 py-1.5">
-                <div className="w-8 h-8 bg-[#c9933a] rounded-full flex items-center justify-center text-sm">
-                  👨‍🏫
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <div className="hidden md:flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 px-3 py-1.5 backdrop-blur-sm shadow-sm">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#2A9D8F] to-[#00B4D8] shadow-inner">
+                  <span className="text-sm">👨‍🏫</span>
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-white">{getUserName()}</div>
-                  <div className="text-xs text-white/70">
+                  <div className="text-[11px] font-semibold text-white truncate max-w-[120px]">{getUserName()}</div>
+                  <div className="text-[9px] text-white/70">
                     {teacherClass ? teacherClass.name : 'Class Teacher'}
                   </div>
                 </div>
@@ -818,27 +830,32 @@ export default function TeacherDashboard() {
               <MobileMenuButton isOpen={mobileMenuOpen} onClick={() => setMobileMenuOpen(!mobileMenuOpen)} />
               <button
                 onClick={handleLogout}
-                className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm"
+                className="hidden sm:flex items-center gap-1.5 rounded-xl bg-red-600/95 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-red-700"
               >
                 Logout
               </button>
             </div>
           </div>
-          <div className="mt-4">
-            <p className="text-xs font-extrabold tracking-wider mb-1" style={{ color: AZURE_ACCENT }}>
-              TEACHER PORTAL
-            </p>
-            <h1 className="text-xl lg:text-2xl font-bold text-white">
-              Hello, {getUserName()}
-            </h1>
-            <p className="text-sm text-white/70 mt-1">
-              {getGreeting()}! Welcome back
-              {teacherClass && (
-                <span className="ml-2 inline-block px-2 py-0.5 bg-[#c9933a]/20 rounded-full text-xs">
-                  {teacherClass.name}
-                </span>
-              )}
-            </p>
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="inline-flex items-center rounded-full border border-[#7DE3FF]/30 bg-white/5 px-2.5 py-1 text-[10px] font-bold tracking-[0.2em] text-[#7DE3FF]">
+                TEACHER PORTAL
+              </div>
+              <h2 className="mt-2 text-xl font-bold text-white sm:text-2xl">
+                Hello, {getUserName()} <span className="text-[#7DE3FF]">👋</span>
+              </h2>
+              <p className="text-sm text-white/75">{getGreeting()}! Welcome back to your dashboard.</p>
+            </div>
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-right backdrop-blur-sm">
+                <div className="text-[9px] uppercase tracking-[0.18em] text-white/70">Class</div>
+                <div className="text-sm font-bold text-white">{teacherClass?.name || 'Unassigned'}</div>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-right backdrop-blur-sm">
+                <div className="text-[9px] uppercase tracking-[0.18em] text-white/70">Status</div>
+                <div className="text-sm font-bold text-[#7DE3FF]">Active</div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -850,11 +867,11 @@ export default function TeacherDashboard() {
           <div className="fixed top-0 right-0 h-full w-64 bg-white shadow-xl">
             <div className="p-4 border-b border-gray-200">
               <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-[#c9933a] rounded-xl flex items-center justify-center">
-                  <span className="text-lg font-bold text-[#0f1923]">P</span>
+                <div className="w-10 h-10 bg-[#2A9D8F] rounded-xl flex items-center justify-center">
+                  <span className="text-lg font-bold text-white">P</span>
                 </div>
                 <div>
-                  <div className="font-bold text-[#0f1923]">Progress</div>
+                  <div className="font-bold text-[#0A2540]">Progress</div>
                   <div className="text-xs text-gray-500">Secondary School</div>
                 </div>
               </div>
@@ -868,7 +885,7 @@ export default function TeacherDashboard() {
                     setMobileMenuOpen(false);
                   }}
                   className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${
-                    activeTab === tab ? 'bg-[#1A237E] text-white' : 'text-gray-700 hover:bg-gray-100'
+                    activeTab === tab ? 'bg-[#2A9D8F] text-white' : 'text-gray-700 hover:bg-[#2A9D8F]/10'
                   }`}
                 >
                   <span className="mr-2">
@@ -889,7 +906,7 @@ export default function TeacherDashboard() {
       )}
 
       {/* Navigation Bar - Desktop */}
-      <div className="hidden lg:block sticky top-[72px] sm:top-[88px] z-20 bg-white border-b border-gray-200 shadow-sm overflow-x-auto">
+      <div className="hidden lg:block sticky top-[72px] sm:top-[88px] z-20 bg-[#006770] border-b border-white/10 shadow-sm overflow-x-auto">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="flex gap-1 py-3 min-w-max">
             <NavItem
@@ -936,12 +953,12 @@ export default function TeacherDashboard() {
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* My Learners */}
-              <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
-                <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-[#d4cfc6] flex justify-between items-center">
-                  <h2 className="font-semibold text-[#0f1923] text-sm lg:text-base">My Learners</h2>
+              <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm overflow-hidden">
+                <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-[#e2e8f0] flex justify-between items-center">
+                  <h2 className="font-semibold text-[#0A2540] text-sm lg:text-base">My Learners</h2>
                   <button
                     onClick={() => setShowAddLearnersModal(true)}
-                    className="text-xs text-[#c9933a] hover:underline"
+                    className="text-xs text-[#2A9D8F] hover:underline"
                   >
                     + Add Learners
                   </button>
@@ -952,13 +969,13 @@ export default function TeacherDashboard() {
                       {displayedLearners.map(learner => (
                         <div key={learner.id} className="flex items-center justify-between py-2 lg:py-3 border-b border-[#ede9e1] last:border-0">
                           <div className="flex-1 min-w-0">
-                            <div className="font-semibold text-[#0f1923] text-sm lg:text-base truncate">{learner.name}</div>
-                            <div className="font-mono text-[10px] lg:text-xs bg-[#0f1923] text-[#c9933a] px-2 py-1 rounded mt-1 inline-block">
+                            <div className="font-semibold text-[#0A2540] text-sm lg:text-base truncate">{learner.name}</div>
+                            <div className="font-mono text-[10px] lg:text-xs bg-[#0A2540] text-[#7DE3FF] px-2 py-1 rounded mt-1 inline-block">
                               {learner.reg_number || learner.reg}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="px-2 py-1 rounded-full text-[10px] lg:text-xs font-semibold bg-[#c9933a]/10 text-[#c9933a]">
+                            <span className="px-2 py-1 rounded-full text-[10px] lg:text-xs font-semibold bg-[#2A9D8F]/10 text-[#2A9D8F]">
                               {learner.form}
                             </span>
                           </div>
@@ -968,7 +985,7 @@ export default function TeacherDashboard() {
                       {myLearners.length > 3 && (
                         <button
                           onClick={() => setShowAllLearners(!showAllLearners)}
-                          className="mt-3 w-full text-center text-xs text-[#c9933a] hover:text-[#0f1923] transition font-medium py-2 border-t border-[#ede9e1]"
+                          className="mt-3 w-full text-center text-xs text-[#2A9D8F] hover:text-[#0A2540] transition font-medium py-2 border-t border-[#e2e8f0]"
                         >
                           {showAllLearners ? '▲ Show Less' : `▼ View All (${myLearners.length} learners)`}
                         </button>
@@ -980,7 +997,7 @@ export default function TeacherDashboard() {
                       <div className="text-sm">No learners added yet</div>
                       <button
                         onClick={() => setShowAddLearnersModal(true)}
-                        className="mt-3 text-sm text-[#c9933a] hover:underline"
+                        className="mt-3 text-sm text-[#2A9D8F] hover:underline"
                       >
                         Add learners to your class
                       </button>
@@ -990,18 +1007,18 @@ export default function TeacherDashboard() {
               </div>
               
               {/* Quick Actions */}
-              <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
-                <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-[#d4cfc6]">
-                  <h2 className="font-semibold text-[#0f1923] text-sm lg:text-base">Quick Actions</h2>
+              <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm overflow-hidden">
+                <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-[#e2e8f0]">
+                  <h2 className="font-semibold text-[#0A2540] text-sm lg:text-base">Quick Actions</h2>
                 </div>
                 <div className="p-4 lg:p-6 flex flex-col gap-2 lg:gap-3">
-                  <button onClick={() => setShowAddLearnersModal(true)} className="px-3 lg:px-4 py-2 lg:py-2.5 bg-[#0f1923] text-white rounded-lg hover:bg-[#1a2d3f] transition text-sm font-medium">
+                  <button onClick={() => setShowAddLearnersModal(true)}                   className="px-3 lg:px-4 py-2 lg:py-2.5 bg-[#0A2540] text-white rounded-lg hover:bg-[#1E3A5F] transition text-sm font-medium">
                     ➕ Add Learners to Class
                   </button>
-                  <button onClick={() => setActiveTab('reports')} className="px-3 lg:px-4 py-2 lg:py-2.5 bg-[#c9933a] text-[#0f1923] rounded-lg hover:bg-[#e8b96a] transition text-sm font-medium">
+                  <button onClick={() => setActiveTab('reports')} className="px-3 lg:px-4 py-2 lg:py-2.5 bg-[#2A9D8F] text-white rounded-lg hover:bg-[#238579] transition text-sm font-medium">
                     📋 Generate Report Card
                   </button>
-                  <button onClick={() => setActiveTab('attendance')} className="px-3 lg:px-4 py-2 lg:py-2.5 bg-[#1a6b6b] text-white rounded-lg hover:bg-[#2a9090] transition text-sm font-medium">
+                  <button onClick={() => setActiveTab('attendance')} className="px-3 lg:px-4 py-2 lg:py-2.5 bg-[#00B4D8] text-white rounded-lg hover:bg-[#009fbe] transition text-sm font-medium">
                     📅 Record Attendance
                   </button>
                 </div>
@@ -1015,20 +1032,20 @@ export default function TeacherDashboard() {
           <>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
               <div>
-                <h1 className="font-serif text-2xl lg:text-3xl font-bold text-[#0f1923] mb-1">My Learners</h1>
+                <h1 className="font-serif text-2xl lg:text-3xl font-bold text-[#0A2540] mb-1">My Learners</h1>
                 <p className="text-sm text-gray-500">
                   Students assigned to your class
                   {teacherClass && (
-                    <span className="ml-2 text-[#c9933a]">({teacherClass.name})</span>
+                    <span className="ml-2 text-[#2A9D8F]">({teacherClass.name})</span>
                   )}
                 </p>
               </div>
-              <button onClick={() => setShowAddLearnersModal(true)} className="w-full sm:w-auto px-4 py-2 bg-[#0f1923] text-white rounded-lg hover:bg-[#1a2d3f] transition font-semibold text-sm">
+              <button onClick={() => setShowAddLearnersModal(true)} className="w-full sm:w-auto px-4 py-2 bg-[#0A2540] text-white rounded-lg hover:bg-[#1E3A5F] transition font-semibold text-sm">
                 ➕ Add Learners
               </button>
             </div>
             
-            <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
+            <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[500px]">
                   <thead className="bg-gray-50">
@@ -1081,7 +1098,7 @@ export default function TeacherDashboard() {
         {activeTab === 'reports' && (
           <>
             <div className="mb-6">
-              <h1 className="font-serif text-2xl lg:text-3xl font-bold text-[#0f1923] mb-1">Report Cards</h1>
+              <h1 className="font-serif text-2xl lg:text-3xl font-bold text-[#0A2540] mb-1">Report Cards</h1>
               <p className="text-sm text-gray-500">Create and manage academic reports for your learners</p>
               <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
                 <p className="text-xs text-blue-700">
@@ -1098,9 +1115,9 @@ export default function TeacherDashboard() {
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Generate Report Card Form */}
-              <div id="report-form" className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
-                <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-[#d4cfc6]">
-                  <h2 className="font-semibold text-[#0f1923] text-sm lg:text-base">
+              <div id="report-form" className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm overflow-hidden">
+                <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-[#e2e8f0]">
+                  <h2 className="font-semibold text-[#0A2540] text-sm lg:text-base">
                     {isEditing ? '✏️ Edit Report Card' : '📝 Generate Report Card'}
                   </h2>
                 </div>

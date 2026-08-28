@@ -1,164 +1,161 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { 
-  LockClosedIcon, 
-  UserIcon, 
-  AcademicCapIcon,
-  ChevronRightIcon 
-} from '@heroicons/react/24/outline';
-import toast from 'react-hot-toast';
+import { toast } from 'react-hot-toast';
+import { UserIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
-export default function TeacherLogin() {
+const InputField = ({ icon: Icon, label, value, onChange, placeholder, type = 'text', disabled, rightElement }) => (
+  <div className="space-y-1.5">
+    <label className="block text-slate-700 text-xs font-bold uppercase tracking-wider ml-1">
+      {label}
+    </label>
+    <div className="relative">
+      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+        <Icon className="w-5 h-5 text-slate-400" />
+      </div>
+      <input
+        type={type}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        className="w-full pl-11 pr-10 py-2.5 bg-[#F4F9F9] border border-slate-200 rounded-md text-slate-800 text-sm placeholder-slate-400 placeholder:font-sans focus:outline-none focus:bg-white focus:border-[#006770] focus:ring-1 focus:ring-[#006770] transition-all duration-200"
+        placeholder={placeholder}
+      />
+      {rightElement && (
+        <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+          {rightElement}
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+export default function TeacherLogin({ serverStatus }) {
   const navigate = useNavigate();
   const { teacherLogin } = useAuth();
-  const [formData, setFormData] = useState({
-    username: '',
-    password: ''
-  });
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [error, setError] = useState('');
 
-  const validateForm = () => {
-    const newErrors = {};
-    if (!formData.username.trim()) {
-      newErrors.username = 'Username is required';
-    }
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!username || !password) {
+      setError('Please enter your username and password');
+      return;
+    }
 
     setLoading(true);
+    setError('');
+
     try {
-      const result = await teacherLogin({
-        username: formData.username,
-        password: formData.password
-      });
+      const result = await teacherLogin({ username, password });
 
       if (result.success) {
-        toast.success(`Welcome back, ${result.user?.name || 'Educator'}!`, {
-          style: { background: '#0D1B2A', color: '#fff', borderRadius: '10px' }
+        toast.success(`Welcome, ${result.user?.name || 'Teacher'}!`, {
+          icon: '🎓',
+          duration: 4000
         });
         navigate('/teacher/dashboard');
       } else {
+        setError(result.message || 'Invalid teacher credentials');
         toast.error(result.message || 'Login failed');
       }
-    } catch (error) {
-      toast.error('Connection error. Please try again.');
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || 'Connection failed';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-[340px]">
-        
-        {/* Header: Enlarged Logo & Teacher Branding */}
-        <div className="text-center mb-10">
-          <div className="relative inline-block mb-6">
-            <img 
-              src="/school-logo.jpeg" 
-              alt="Progress Schools" 
-              className="w-32 h-32 mx-auto object-contain transition-transform duration-500 hover:scale-105" 
-            />
-            {/* Educator Badge */}
-            <div className="absolute bottom-2 right-2 bg-[#00B0FF] p-1.5 rounded-full border-4 border-white shadow-lg">
-              <AcademicCapIcon className="w-4 h-4 text-white" />
-            </div>
-          </div>
-          
-          <h1 className="text-2xl font-black text-[#0D1B2A] tracking-tight uppercase">
-            Teacher <span className="text-[#00B0FF]">Login</span>
-          </h1>
-          <div className="w-10 h-1 bg-[#f6de94] mx-auto mt-2 rounded-full" />
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          
-          {/* Username Field */}
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">
-              Staff Username
-            </label>
-            <div className={`flex items-center bg-white border rounded-lg px-4 py-3.5 transition-all
-              ${errors.username ? 'border-red-500' : 'border-[#00B0FF]/40 focus-within:border-[#00B0FF] focus-within:ring-4 focus-within:ring-[#00B0FF]/5'}`}>
-              <UserIcon className="w-5 h-5 text-[#00B0FF] mr-3 opacity-60" />
-              <input
-                type="text"
-                placeholder="Enter username"
-                value={formData.username}
-                onChange={(e) => {
-                  setFormData({...formData, username: e.target.value});
-                  if (errors.username) setErrors({...errors, username: null});
-                }}
-                className="w-full bg-transparent outline-none text-[#0D1B2A] font-semibold text-sm placeholder:text-slate-300"
+    <div className="min-h-screen bg-[#F4F9F9] flex items-center justify-center p-3">
+      <div className="w-full max-w-md">
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden">
+          <div className="pt-5 pb-4 px-6 text-center border-b border-slate-100">
+            <div className="mb-4 flex justify-center">
+              <img
+                src="/school-logo.jpeg"
+                alt="Progress Secondary School logo"
+                className="w-20 h-20 sm:w-24 sm:h-24 object-contain"
               />
             </div>
-          </div>
-
-          {/* Password Field */}
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">
-              Password
-            </label>
-            <div className={`flex items-center bg-white border rounded-lg px-4 py-3.5 transition-all
-              ${errors.password ? 'border-red-500' : 'border-[#00B0FF]/40 focus-within:border-[#00B0FF] focus-within:ring-4 focus-within:ring-[#00B0FF]/5'}`}>
-              <LockClosedIcon className="w-5 h-5 text-[#00B0FF] mr-3 opacity-60" />
-              <input
-                type="password"
-                placeholder="••••••••"
-                value={formData.password}
-                onChange={(e) => {
-                  setFormData({...formData, password: e.target.value});
-                  if (errors.password) setErrors({...errors, password: null});
-                }}
-                className="w-full bg-transparent outline-none text-[#0D1B2A] font-semibold text-sm placeholder:text-slate-300"
-              />
+            <h1 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">
+              PROGRESS SECONDARY SCHOOL
+            </h1>
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <span className="w-2 h-2 bg-[#006770] rounded-full"></span>
+              <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Teacher Portal</span>
             </div>
           </div>
 
-          {errors.username || errors.password ? (
-            <p className="text-red-500 text-[10px] font-bold text-center uppercase py-1">
-              {errors.username || errors.password}
-            </p>
-          ) : null}
+          <div className="p-4 sm:p-5">
+            <form onSubmit={handleLogin} className="space-y-3.5">
+              <InputField
+                icon={UserIcon}
+                label="Staff Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username"
+                disabled={loading}
+              />
 
-          {/* Button: Midnight Navy */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-4 bg-[#0D1B2A] text-white rounded-lg font-bold text-[11px] uppercase tracking-[0.2em] shadow-lg shadow-[#0D1B2A]/15 hover:bg-[#162a3f] active:transform active:scale-[0.98] transition-all disabled:opacity-40 flex items-center justify-center gap-2"
-          >
-            {loading ? (
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <>
-                Access Dashboard
-                <ChevronRightIcon className="w-3 h-3 stroke-[3px]" />
-              </>
+              <InputField
+                icon={LockClosedIcon}
+                label="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                type={showPassword ? 'text' : 'password'}
+                disabled={loading}
+                rightElement={
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-slate-400 hover:text-slate-600 transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword
+                      ? <EyeSlashIcon className="w-5 h-5" />
+                      : <EyeIcon className="w-5 h-5" />
+                    }
+                  </button>
+                }
+              />
+
+              <button
+                type="submit"
+                disabled={loading || serverStatus?.status === 'offline'}
+                className="w-full mt-1 py-2.5 bg-[#006770] hover:bg-[#005a62] text-white font-semibold rounded-md transition-colors duration-200 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
+              >
+                {loading ? (
+                  <>
+                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Verifying credentials...</span>
+                  </>
+                ) : (
+                  <span>Sign in</span>
+                )}
+              </button>
+            </form>
+
+            {error && (
+              <div className="mt-4 p-3.5 bg-red-50 border border-red-200 rounded-xl">
+                <div className="flex items-center gap-2.5 text-red-700 text-sm">
+                  <svg className="w-5 h-5 flex-shrink-0 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="font-medium">{error}</span>
+                </div>
+              </div>
             )}
-          </button>
-        </form>
-
-        {/* Footer Security Note */}
-        <div className="mt-16 text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
-            <div className="w-1.5 h-1.5 bg-[#00B0FF] rounded-full animate-pulse" />
-            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-              Educator Portal Active
-            </span>
           </div>
-          <p className="text-[9px] font-bold text-slate-300 uppercase tracking-[0.3em]">
-            Progress Secondary School
-          </p>
         </div>
       </div>
     </div>
