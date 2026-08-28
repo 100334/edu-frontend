@@ -12,6 +12,7 @@ import LearnerLogin from './components/Auth/LearnerLogin';
 import AdminLogin from './components/Auth/AdminLogin';
 import TeacherDashboard from './components/Teacher/TeacherDashboard';
 import LearnerDashboard from './components/Learner/LearnerDashboard';
+import MobileLearnerDashboard from './components/Learner/MobileLearnerDashboard';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
 // Import Admin Components
@@ -121,6 +122,35 @@ const ProtectedRoute = ({ children, allowedRole }) => {
   }
 
   return children;
+};
+
+const isMobilePhone = () => {
+  if (typeof window === 'undefined') return false;
+  const phoneUserAgent = /Android.*Mobile|iPhone|iPod|Windows Phone|webOS/i.test(window.navigator.userAgent);
+  const narrowViewport = window.matchMedia?.('(max-width: 767px)').matches ?? window.innerWidth < 768;
+  return phoneUserAgent || narrowViewport;
+};
+
+const LearnerDashboardRoute = () => {
+  const [isMobile, setIsMobile] = useState(isMobilePhone);
+
+  useEffect(() => {
+    const updateDeviceType = () => setIsMobile(isMobilePhone());
+    const mediaQuery = window.matchMedia?.('(max-width: 767px)');
+
+    updateDeviceType();
+    window.addEventListener('resize', updateDeviceType);
+    window.addEventListener('orientationchange', updateDeviceType);
+    mediaQuery?.addEventListener?.('change', updateDeviceType);
+
+    return () => {
+      window.removeEventListener('resize', updateDeviceType);
+      window.removeEventListener('orientationchange', updateDeviceType);
+      mediaQuery?.removeEventListener?.('change', updateDeviceType);
+    };
+  }, []);
+
+  return isMobile ? <MobileLearnerDashboard /> : <LearnerDashboard />;
 };
 
 // Admin Route Component
@@ -238,7 +268,7 @@ function AppContent() {
           path="/learner/dashboard" 
           element={
             <ProtectedRoute allowedRole="learner">
-              <ErrorBoundary><LearnerDashboard /></ErrorBoundary>
+              <ErrorBoundary><LearnerDashboardRoute /></ErrorBoundary>
             </ProtectedRoute>
           } 
         />
