@@ -18,8 +18,8 @@ import {
   ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline';
 
-const HEADER_BG = '#2A9D8F';
-const TEAL = '#2A9D8F';
+const HEADER_BG = '#005F7B';
+const TEAL = '#005F7B';
 const CYAN = '#00B4D8';
 const ICE_WHITE = '#F8FAFC';
 
@@ -52,7 +52,7 @@ const getGrade = (score, form) => {
 const DashboardCard = ({ icon: Icon, title, color, onClick, className = '' }) => (
   <button 
     onClick={onClick}
-    className={`w-full rounded-2xl border border-[#238579] bg-[#2A9D8F] p-4 shadow-sm transition-all hover:bg-[#238579] hover:shadow-md active:scale-[0.98] ${className}`}
+    className={`w-full min-h-36 rounded-2xl border border-[#005F7B] bg-[#005F7B] p-5 shadow-sm transition-all hover:bg-[#005F7B] hover:shadow-md active:scale-[0.98] ${className}`}
   >
     <div className="flex items-start justify-between">
       <div className="rounded-xl bg-white/15 p-2">
@@ -143,7 +143,7 @@ export default function MobileLearnerDashboard() {
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
       const darkBlue = [10, 37, 64];
-      const teal = [42, 157, 143];
+      const teal = [0, 95, 123];
       const lightGray = [248, 250, 252];
       const darkGray = [15, 25, 35];
       doc.setFillColor(...darkBlue);
@@ -250,7 +250,7 @@ export default function MobileLearnerDashboard() {
   if (showQuiz) {
     return (
       <div className="min-h-screen bg-[#F5F2EB] px-4 py-5">
-        <button onClick={() => setShowQuiz(null)} className="mb-4 text-sm font-semibold text-[#006770]">
+        <button onClick={() => setShowQuiz(null)} className="mb-4 text-sm font-semibold text-[#005F7B]">
           ← Back
         </button>
         <QuizTaking
@@ -264,7 +264,7 @@ export default function MobileLearnerDashboard() {
   return (
     <div className="min-h-screen bg-[#F5F2EB] pb-20">
       {/* Header Section */}
-      <header className="sticky top-0 z-30 bg-[#2A9D8F] px-5 pb-6 pt-5 shadow-xl">
+      <header className="sticky top-0 z-30 bg-[#005F7B] px-5 pb-6 pt-5 shadow-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
@@ -296,10 +296,6 @@ export default function MobileLearnerDashboard() {
         <div className="mt-5 border-t border-white/20 pt-4">
           <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-light text-[#7DE3FF]">Welcome back,</span>
-                <span className="text-sm font-bold text-white">👋</span>
-              </div>
               <h2 className="mt-0.5 text-2xl font-bold text-white">
                 {user?.name || 'Learner'}
               </h2>
@@ -367,7 +363,7 @@ export default function MobileLearnerDashboard() {
           <section className="space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-[#0A2540]">Report Cards</h2>
-              <button onClick={() => setActiveTab('overview')} className="text-sm font-semibold text-[#006770]">
+              <button onClick={() => setActiveTab('overview')} className="text-sm font-semibold text-[#005F7B]">
                 ← Back
               </button>
             </div>
@@ -378,7 +374,7 @@ export default function MobileLearnerDashboard() {
                     <div className="font-bold text-[#0A2540]">{report.term || 'Report card'}</div>
                     <div className="text-xs text-slate-500">{report.form || user?.form} · {report.academic_year || ''}</div>
                   </div>
-                  <div className="text-lg font-bold text-[#2A9D8F]">{getAverage(report.subjects)}%</div>
+                  <div className="text-lg font-bold text-[#005F7B]">{getAverage(report.subjects)}%</div>
                 </div>
                 <div className="mt-3 space-y-2">
                   {(report.subjects || []).slice(0, 4).map(subject => (
@@ -388,7 +384,7 @@ export default function MobileLearnerDashboard() {
                     </div>
                   ))}
                 </div>
-                <button onClick={() => downloadReportPDF(report)} className="mt-4 w-full rounded-xl bg-[#006770] py-3 text-sm font-semibold text-white">
+                <button onClick={() => downloadReportPDF(report)} className="mt-4 w-full rounded-xl bg-[#005F7B] py-3 text-sm font-semibold text-white">
                   Download PDF
                 </button>
               </article>
@@ -400,7 +396,7 @@ export default function MobileLearnerDashboard() {
           <section>
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-xl font-bold text-[#0A2540]">Learning Space</h2>
-              <button onClick={() => setActiveTab('overview')} className="text-sm font-semibold text-[#006770]">
+              <button onClick={() => setActiveTab('overview')} className="text-sm font-semibold text-[#005F7B]">
                 ← Back
               </button>
             </div>
@@ -412,12 +408,12 @@ export default function MobileLearnerDashboard() {
           <section className="space-y-3">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-[#0A2540]">Attendance Records</h2>
-              <button onClick={() => setActiveTab('overview')} className="text-sm font-semibold text-[#006770]">
+              <button onClick={() => setActiveTab('overview')} className="text-sm font-semibold text-[#005F7B]">
                 ← Back
               </button>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm">
-              <div className="text-4xl font-bold text-[#2A9D8F]">{attendanceRate === '—' ? '—' : `${attendanceRate}%`}</div>
+              <div className="text-4xl font-bold text-[#005F7B]">{attendanceRate === '—' ? '—' : `${attendanceRate}%`}</div>
               <div className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-500">Overall Attendance Rate</div>
             </div>
             {attendance.records.length ? attendance.records.slice(0, 12).map(record => (
