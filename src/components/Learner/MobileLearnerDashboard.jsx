@@ -13,7 +13,9 @@ import {
   DocumentTextIcon,
   HomeIcon,
   UserCircleIcon,
-  AcademicCapIcon
+  AcademicCapIcon,
+  BookOpenIcon,
+  ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline';
 
 const NAVBAR_BG = '#006770';
@@ -47,12 +49,29 @@ const getGrade = (score, form) => {
   return { letter: 'F', description: 'Need improvement' };
 };
 
-const MobileStat = ({ icon: Icon, label, value, color }) => (
-  <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-    <Icon className="mb-2 h-5 w-5" style={{ color }} />
-    <div className="text-xl font-bold text-[#0A2540]">{value}</div>
-    <div className="mt-1 text-[10px] font-bold uppercase tracking-wide text-slate-500">{label}</div>
-  </div>
+const DashboardCard = ({ icon: Icon, title, value, subtitle, color, onClick, className = '' }) => (
+  <button 
+    onClick={onClick}
+    className={`w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md active:scale-[0.98] ${className}`}
+  >
+    <div className="flex items-start justify-between">
+      <div className="rounded-xl p-2" style={{ backgroundColor: color + '15' }}>
+        <Icon className="h-6 w-6" style={{ color }} />
+      </div>
+      {value && (
+        <span className="text-sm font-bold" style={{ color }}>
+          {value}
+        </span>
+      )}
+    </div>
+    <div className="mt-3 text-left">
+      <h3 className="text-sm font-semibold text-[#0A2540]">{title}</h3>
+      <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>
+    </div>
+    <div className="mt-3 flex items-center text-xs font-medium" style={{ color }}>
+      Tap to view →
+    </div>
+  </button>
 );
 
 export default function MobileLearnerDashboard() {
@@ -100,6 +119,7 @@ export default function MobileLearnerDashboard() {
 
   const attendanceRate = attendance.stats?.rate ?? attendance.stats?.percentage ?? '—';
   const latestReport = reports[0];
+  const averageScore = latestReport ? `${getAverage(latestReport.subjects)}%` : '—';
 
   const downloadReportPDF = async (report) => {
     if (!report?.subjects?.length) {
@@ -320,63 +340,97 @@ export default function MobileLearnerDashboard() {
       <main className="space-y-5 px-4 py-5">
         {activeTab === 'overview' && (
           <>
+            {/* Quick Stats */}
             <div className="grid grid-cols-2 gap-3">
               <MobileStat icon={DocumentTextIcon} label="Reports" value={reports.length} color={TEAL} />
               <MobileStat icon={CalendarIcon} label="Attendance" value={attendanceRate === '—' ? '—' : `${attendanceRate}%`} color={CYAN} />
-              <MobileStat icon={ChartBarIcon} label="Average" value={latestReport ? `${getAverage(latestReport.subjects)}%` : '—'} color={TEAL} />
+              <MobileStat icon={ChartBarIcon} label="Average" value={averageScore} color={TEAL} />
               <MobileStat icon={UserCircleIcon} label="Form" value={user?.form || '—'} color="#6C63FF" />
             </div>
-            <button
-              onClick={() => setActiveTab('learning')}
-              className="flex w-full items-center justify-between rounded-2xl bg-[#006770] p-4 text-left text-white shadow-sm"
-            >
-              <span>
-                <span className="block text-sm font-bold">Learning Space</span>
-                <span className="mt-1 block text-xs text-white/70">Lessons and quizzes</span>
-              </span>
-              <span className="text-xl">→</span>
-            </button>
 
-            <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="border-b border-slate-200 px-4 py-3">
-                <h2 className="flex items-center gap-2 font-bold text-[#0A2540]">
-                  <DocumentTextIcon className="h-5 w-5 text-[#2A9D8F]" />
-                  Latest Report Card
-                </h2>
-              </div>
-              <div className="p-4">
-                {latestReport ? (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="font-bold text-[#0A2540]">{latestReport.term || 'Report card'}</div>
-                        <div className="text-xs text-slate-500">{latestReport.form || user?.form || 'Form'}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-[#2A9D8F]">{getAverage(latestReport.subjects)}%</div>
-                        <div className="text-[10px] uppercase text-slate-500">Average</div>
-                      </div>
+            {/* Four Main Cards */}
+            <div className="grid grid-cols-2 gap-3">
+              {/* Results Card */}
+              <DashboardCard
+                icon={DocumentTextIcon}
+                title="Results"
+                subtitle={`${reports.length} report${reports.length !== 1 ? 's' : ''} available`}
+                value={averageScore !== '—' ? averageScore : null}
+                color={TEAL}
+                onClick={() => setActiveTab('reports')}
+              />
+
+              {/* Learn Card */}
+              <DashboardCard
+                icon={BookOpenIcon}
+                title="Learn"
+                subtitle="Lessons & quizzes"
+                color={CYAN}
+                onClick={() => setActiveTab('learning')}
+              />
+
+              {/* Attendance Card */}
+              <DashboardCard
+                icon={CalendarIcon}
+                title="Attendance"
+                subtitle={`${attendanceRate !== '—' ? attendanceRate + '% rate' : 'No records yet'}`}
+                value={attendanceRate !== '—' ? `${attendanceRate}%` : null}
+                color="#6C63FF"
+                onClick={() => setActiveTab('attendance')}
+              />
+
+              {/* Profile Card */}
+              <DashboardCard
+                icon={UserCircleIcon}
+                title="Profile"
+                subtitle={user?.email || user?.username || 'View details'}
+                color="#F59E0B"
+                onClick={() => toast.info('Profile details coming soon')}
+              />
+            </div>
+
+            {/* Latest Report Preview */}
+            {latestReport && (
+              <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <div className="border-b border-slate-200 px-4 py-3">
+                  <h2 className="flex items-center gap-2 font-bold text-[#0A2540]">
+                    <DocumentTextIcon className="h-5 w-5 text-[#2A9D8F]" />
+                    Latest Report Card
+                  </h2>
+                </div>
+                <div className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-[#0A2540]">{latestReport.term || 'Report card'}</div>
+                      <div className="text-xs text-slate-500">{latestReport.form || user?.form || 'Form'}</div>
                     </div>
-                    <div className="mt-4 grid grid-cols-2 gap-2">
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-[#2A9D8F]">{getAverage(latestReport.subjects)}%</div>
+                      <div className="text-[10px] uppercase text-slate-500">Average</div>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-2">
                     <button onClick={() => setActiveTab('reports')} className="rounded-xl bg-[#2A9D8F]/10 py-3 text-sm font-semibold text-[#006770]">
                        All Reports
                     </button>
                     <button onClick={() => downloadReportPDF(latestReport)} className="rounded-xl bg-[#006770] py-3 text-sm font-semibold text-white">
                        PDF
                     </button>
-                    </div>
-                  </>
-                ) : (
-                  <p className="py-4 text-center text-sm text-slate-500">No reports yet.</p>
-                )}
-              </div>
-            </section>
+                  </div>
+                </div>
+              </section>
+            )}
           </>
         )}
 
         {activeTab === 'reports' && (
           <section className="space-y-3">
-            <h2 className="text-xl font-bold text-[#0A2540]">Report Cards</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-[#0A2540]">Report Cards</h2>
+              <button onClick={() => setActiveTab('overview')} className="text-sm font-semibold text-[#006770]">
+                ← Back
+              </button>
+            </div>
             {reports.length ? reports.map(report => (
               <article key={report.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between">
@@ -404,14 +458,24 @@ export default function MobileLearnerDashboard() {
 
         {activeTab === 'learning' && (
           <section>
-            <h2 className="mb-3 text-xl font-bold text-[#0A2540]">Learning Space</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xl font-bold text-[#0A2540]">Learning Space</h2>
+              <button onClick={() => setActiveTab('overview')} className="text-sm font-semibold text-[#006770]">
+                ← Back
+              </button>
+            </div>
             <LearningSpace onStartQuiz={(quizId) => setShowQuiz(quizId)} />
           </section>
         )}
 
         {activeTab === 'attendance' && (
           <section className="space-y-3">
-            <h2 className="text-xl font-bold text-[#0A2540]">Attendance Records</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-[#0A2540]">Attendance Records</h2>
+              <button onClick={() => setActiveTab('overview')} className="text-sm font-semibold text-[#006770]">
+                ← Back
+              </button>
+            </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm">
               <div className="text-4xl font-bold text-[#2A9D8F]">{attendanceRate === '—' ? '—' : `${attendanceRate}%`}</div>
               <div className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-500">Overall Attendance Rate</div>
@@ -433,7 +497,7 @@ export default function MobileLearnerDashboard() {
         <div className="mx-auto flex max-w-md justify-around">
           {[
             { id: 'overview', label: 'Home', icon: HomeIcon },
-            { id: 'learning', label: 'Learn', icon: AcademicCapIcon },
+            { id: 'learning', label: 'Learn', icon: BookOpenIcon },
             { id: 'reports', label: 'Reports', icon: DocumentTextIcon },
             { id: 'attendance', label: 'Attendance', icon: CalendarIcon }
           ].map(({ id, label, icon: Icon }) => (
