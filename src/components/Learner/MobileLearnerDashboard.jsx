@@ -63,6 +63,14 @@ const DashboardCard = ({ icon: Icon, title, color, onClick, className = '' }) =>
   </button>
 );
 
+const MobileStat = ({ icon: Icon, value, label }) => (
+  <div className="rounded-2xl border border-[#005F7B] bg-[#005F7B] px-3 py-3 text-center text-white">
+    <Icon className="mx-auto mb-1 h-5 w-5 text-[#F8FAFC]" />
+    <div className="text-lg font-bold">{value}</div>
+    <div className="text-[10px] font-semibold uppercase tracking-wide text-white/75">{label}</div>
+  </div>
+);
+
 export default function MobileLearnerDashboard() {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
@@ -107,6 +115,8 @@ export default function MobileLearnerDashboard() {
   };
 
   const attendanceRate = attendance.stats?.rate ?? attendance.stats?.percentage ?? '—';
+  const latestReport = reports[0];
+  const latestAverage = latestReport ? `${getAverage(latestReport.subjects)}%` : '—';
   const downloadReportPDF = async (report) => {
     if (!report?.subjects?.length) {
       toast.error('No report data');
@@ -322,6 +332,11 @@ export default function MobileLearnerDashboard() {
         {activeTab === 'overview' && (
           <>
             {/* Four Main Cards */}
+            <div className="grid grid-cols-3 gap-2">
+              <MobileStat icon={ChartBarIcon} value={latestAverage} label="Average" />
+              <MobileStat icon={DocumentTextIcon} value={reports.length} label="Reports" />
+              <MobileStat icon={CalendarIcon} value={attendanceRate === '—' ? '—' : `${attendanceRate}%`} label="Attendance" />
+            </div>
             <div className="grid grid-cols-2 gap-3">
               {/* Results Card */}
               <DashboardCard
