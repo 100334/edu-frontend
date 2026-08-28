@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -78,6 +78,8 @@ export default function MobileLearnerDashboard() {
   const [reports, setReports] = useState([]);
   const [attendance, setAttendance] = useState({ stats: {}, records: [] });
   const [showQuiz, setShowQuiz] = useState(null);
+  const [selectedYear, setSelectedYear] = useState('');
+  const [selectedAssessment, setSelectedAssessment] = useState('');
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -115,7 +117,20 @@ export default function MobileLearnerDashboard() {
   };
 
   const attendanceRate = attendance.stats?.rate ?? attendance.stats?.percentage ?? '—';
-  const latestReport = reports[0];
+  const availableYears = useMemo(
+    () => [...new Set(reports.map(report => report.academic_year || (report.created_at ? new Date(report.created_at).getFullYear() : null)).filter(Boolean))].sort((a, b) => b - a),
+    [reports]
+  );
+  const availableAssessments = useMemo(
+    () => [...new Set(reports.map(report => report.term).filter(Boolean))].sort(),
+    [reports]
+  );
+  const filteredReports = useMemo(() => reports.filter(report => {
+    const reportYear = report.academic_year || (report.created_at ? new Date(report.created_at).getFullYear() : null);
+    return (!selectedYear || String(reportYear) === String(selectedYear))
+      && (!selectedAssessment || report.term === selectedAssessment);
+  }), [reports, selectedYear, selectedAssessment]);
+  const latestReport = filteredReports[0];
   const latestAverage = latestReport ? `${getAverage(latestReport.subjects)}%` : '—';
   const downloadReportPDF = async (report) => {
     if (!report?.subjects?.length) {
@@ -334,7 +349,7 @@ export default function MobileLearnerDashboard() {
             {/* Four Main Cards */}
             <div className="grid grid-cols-3 gap-2">
               <MobileStat icon={ChartBarIcon} value={latestAverage} label="Average" />
-              <MobileStat icon={DocumentTextIcon} value={reports.length} label="Reports" />
+              <MobileStat icon={DocumentTextIcon} value={filteredReports.length} label="Reports" />
               <MobileStat icon={CalendarIcon} value={attendanceRate === '—' ? '—' : `${attendanceRate}%`} label="Attendance" />
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -382,7 +397,25 @@ export default function MobileLearnerDashboard() {
                 ← Back
               </button>
             </div>
-            {reports.length ? reports.map(report => (
+            <div className="grid grid-cols-2 gap-2">
+              <select
+                value={selectedYear}
+                onChange={(event) => setSelectedYear(event.target.value)}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+              >
+                <option value="">All Years</option>
+                {availableYears.map(year => <option key={year} value={year}>{year}</option>)}
+              </select>
+              <select
+                value={selectedAssessment}
+                onChange={(event) => setSelectedAssessment(event.target.value)}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+              >
+                <option value="">All Exams</option>
+                {availableAssessments.map(assessment => <option key={assessment} value={assessment}>{assessment}</option>)}
+              </select>
+            </div>
+            {filteredReports.length ? filteredReports.map(report => (
               <article key={report.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div>
@@ -403,7 +436,7 @@ export default function MobileLearnerDashboard() {
                   Download PDF
                 </button>
               </article>
-            )) : <p className="rounded-2xl bg-white p-6 text-center text-sm text-slate-500">No reports yet.</p>}
+            )) : <p className="rounded-2xl bg-white p-6 text-center text-sm text-slate-500">No reports match your selection.</p>}
           </section>
         )}
 
