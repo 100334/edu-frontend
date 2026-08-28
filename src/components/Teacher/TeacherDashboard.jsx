@@ -844,49 +844,62 @@ export default function TeacherDashboard() {
       <div 
         className="w-full sticky top-0 z-30 shadow-[0_10px_30px_rgba(10,37,64,0.18)]"
         style={{
-          background: `linear-gradient(135deg, ${HEADER_BG} 0%, #0b4a59 42%, ${NAVBAR_BG} 100%)`,
+          background: HEADER_BG,
         }}
       >
         <div className="relative container mx-auto px-4 py-3">
           <div className="flex items-center justify-between min-h-[68px]">
+            {/* Logo and School Name - Left Side */}
             <div className="flex items-center gap-3 flex-shrink-0">
               <div className="relative">
                 <img
                   src="/schoologo.png"
                   alt="Progress Secondary School logo"
-                  className="w-14 h-14 object-contain rounded-2xl bg-white p-1.5 shadow-lg ring-2 ring-white/10"
+                  className="w-12 h-12 sm:w-14 sm:h-14 object-contain rounded-2xl bg-white p-1.5 shadow-lg ring-2 ring-white/10"
                 />
-                <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-[#003B46] bg-[#2A9D8F] text-[9px] font-bold text-white shadow-sm">
+                <span className="absolute -bottom-1 -right-1 flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full border-2 border-[#003B46] bg-[#2A9D8F] text-[7px] sm:text-[9px] font-bold text-white shadow-sm">
                   ✓
                 </span>
               </div>
-              <div className="hidden sm:block">
-                <div className="text-[9px] font-bold tracking-[0.24em] uppercase text-white/80">Teacher portal</div>
-                <h1 className="text-base font-black text-white tracking-[0.16em] leading-tight">PROGRESS</h1>
-                <p className="text-[9px] text-white/70 leading-tight">Secondary School</p>
+              <div className="flex flex-col">
+                <div className="text-[8px] sm:text-[9px] font-bold tracking-[0.24em] uppercase text-white/80">Teacher portal</div>
+                <h1 className="text-sm sm:text-base font-black text-white tracking-[0.16em] leading-tight">PROGRESS</h1>
+                <p className="text-[7px] sm:text-[9px] text-white/70 leading-tight">Secondary School</p>
               </div>
             </div>
+
+            {/* Right Side - User Info & Actions */}
             <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Teacher Info - Desktop */}
               <div className="hidden md:flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 px-3 py-1.5 backdrop-blur-sm shadow-sm">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#2A9D8F] to-[#00B4D8] shadow-inner">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2A9D8F] shadow-inner">
                   <span className="text-sm">👨‍🏫</span>
                 </div>
-                <div>
+                <div className="flex flex-col">
                   <div className="text-[11px] font-semibold text-white truncate max-w-[120px]">{getUserName()}</div>
                   <div className="text-[9px] text-white/70">
                     {teacherClass ? teacherClass.name : 'Class Teacher'}
                   </div>
                 </div>
               </div>
+
+              {/* Mobile Menu Button */}
               <MobileMenuButton isOpen={mobileMenuOpen} onClick={() => setMobileMenuOpen(!mobileMenuOpen)} />
+
+              {/* Logout Button - Desktop */}
               <button
                 onClick={handleLogout}
                 className="hidden sm:flex items-center gap-1.5 rounded-xl bg-red-600/95 px-3 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-red-700"
               >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
                 Logout
               </button>
             </div>
           </div>
+
+          {/* Welcome Section Below Header */}
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <div className="inline-flex items-center rounded-full border border-[#7DE3FF]/30 bg-white/5 px-2.5 py-1 text-[10px] font-bold tracking-[0.2em] text-[#7DE3FF]">
@@ -897,6 +910,8 @@ export default function TeacherDashboard() {
               </h2>
               <p className="text-sm text-white/75">{getGreeting()}! Welcome back to your dashboard.</p>
             </div>
+
+            {/* Class & Status Badges */}
             <div className="flex items-center gap-2 sm:gap-3">
               <div className="rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-right backdrop-blur-sm">
                 <div className="text-[9px] uppercase tracking-[0.18em] text-white/70">Class</div>
