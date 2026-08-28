@@ -214,6 +214,50 @@ export default function TeacherDashboard() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
 
+  const getDraftKey = useCallback(() => {
+    if (!selectedLearnerId) return null;
+    return `teacher-report-draft:${selectedLearnerId}:${selectedAssessmentType || 'custom'}:${selectedYear}:${reportTerm}:${reportForm}`;
+  }, [selectedLearnerId, selectedAssessmentType, selectedYear, reportTerm, reportForm]);
+
+  // Restore a saved draft when the report context and subjects are ready.
+  useEffect(() => {
+    if (isEditing || !selectedLearnerId || subjects.length === 0) return;
+
+    const draftKey = getDraftKey();
+    if (!draftKey) return;
+
+    try {
+      const draft = JSON.parse(localStorage.getItem(draftKey) || 'null');
+      if (draft?.savedSubjectScores) {
+        setSavedSubjectScores(draft.savedSubjectScores);
+        setSubjectScores(previous => ({ ...previous, ...draft.savedSubjectScores }));
+      }
+      if (draft?.teacherComment) {
+        setTeacherComment(draft.teacherComment);
+      }
+    } catch (error) {
+      console.error('Error restoring report draft:', error);
+    }
+  }, [getDraftKey, isEditing, selectedLearnerId, subjects.length]);
+
+  // Keep saved scores and comments available if the teacher leaves and returns.
+  useEffect(() => {
+    if (isEditing || !selectedLearnerId || Object.keys(savedSubjectScores).length === 0) return;
+
+    const draftKey = getDraftKey();
+    if (!draftKey) return;
+
+    try {
+      localStorage.setItem(draftKey, JSON.stringify({
+        savedSubjectScores,
+        teacherComment,
+        updatedAt: new Date().toISOString()
+      }));
+    } catch (error) {
+      console.error('Error saving report draft:', error);
+    }
+  }, [getDraftKey, isEditing, selectedLearnerId, savedSubjectScores, teacherComment]);
+
   // Save active tab to sessionStorage
   useEffect(() => {
     sessionStorage.setItem('teacherActiveTab', activeTab);
@@ -386,6 +430,9 @@ export default function TeacherDashboard() {
     const learner = myLearners.find(l => l.id === parseInt(learnerId));
     setSelectedLearnerId(learnerId);
     setSelectedLearner(learner);
+    setSubjectScores({});
+    setSavedSubjectScores({});
+    setTeacherComment('');
     if (learner) {
       setReportForm(learner.form || 'Form 1');
     }
@@ -536,6 +583,10 @@ export default function TeacherDashboard() {
       }
       
       if (response.data.success) {
+        const draftKey = getDraftKey();
+        if (draftKey) {
+          localStorage.removeItem(draftKey);
+        }
         setSubjectScores({});
         setSavedSubjectScores({});
         setTeacherComment('');
@@ -1219,7 +1270,7 @@ export default function TeacherDashboard() {
                         <label className="block text-xs font-semibold text-gray-500 uppercase">Subject Scores</label>
                         <span className="text-xs text-gray-400">{Object.keys(savedSubjectScores).length}/{subjects.length} saved</span>
                       </div>
-                      <p className="text-xs text-gray-500 mb-2">Save each subject score first. Nothing is sent to the learner until you submit the grades below.</p>
+                      <p className="text-xs text-gray-500 mb-2">Save each subject as you enter it. Your draft is kept automatically, and nothing is sent to the learner until you submit all grades below.</p>
                       <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
                         {subjects.map(subject => (
                           <div key={subject.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-2 p-2 bg-gray-50 rounded-lg">
@@ -1243,7 +1294,7 @@ export default function TeacherDashboard() {
                               }}
                               className="w-full sm:flex-1 px-3 lg:px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#c9933a] focus:border-transparent"
                             />
-                            {subjectScores[subject.name] && (
+                            {subjectScores[subject.name] !== '' && subjectScores[subject.name] !== undefined && (
                               <span className="text-xs font-semibold px-2 py-1 rounded-full bg-[#c9933a]/10 text-[#c9933a]">
                                 {reportForm === 'Form 3' || reportForm === 'Form 4' 
                                   ? getGradeFromScore(parseInt(subjectScores[subject.name]), reportForm).points + ' pts'
@@ -1253,7 +1304,7 @@ export default function TeacherDashboard() {
                             <button
                               type="button"
                               onClick={() => handleSaveSubject(subject)}
-                              disabled={isSubmitting || subjectScores[subject.name] === ''}
+                              disabled={isSubmitting || subjectScores[subject.name] === '' || subjectScores[subject.name] === undefined}
                               className={`px-3 py-2 rounded-lg text-xs font-semibold transition disabled:opacity-50 ${
                                 savedSubjectScores[subject.name] !== undefined
                                   ? 'bg-green-100 text-green-700 hover:bg-green-200'
