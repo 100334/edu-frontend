@@ -18,7 +18,7 @@ import {
   ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline';
 
-const HEADER_BG = '#8BBB92';
+const HEADER_BG = '#224248';
 const TEAL = '#005F7B';
 const CYAN = '#00B4D8';
 const ICE_WHITE = '#F8FAFC';
@@ -52,14 +52,14 @@ const getGrade = (score, form) => {
 const DashboardCard = ({ icon: Icon, title, color, onClick, className = '' }) => (
   <button 
     onClick={onClick}
-    className={`w-full min-h-36 rounded-2xl border-2 border-[#005F7B] bg-[#8BBB92] p-5 shadow-sm transition-all hover:bg-[#8BBB92] hover:shadow-md active:scale-[0.98] ${className}`}
+    className={`w-full min-h-36 rounded-2xl border-2 border-[#224248] bg-[#224248] p-5 shadow-sm transition-all hover:bg-[#224248] hover:shadow-md active:scale-[0.98] ${className}`}
   >
     <div className="flex justify-center">
-      <div className="rounded-xl bg-[#005F7B]/10 p-2">
-        <Icon className="h-6 w-6 text-[#005F7B]" />
+      <div className="rounded-xl bg-white/15 p-2">
+        <Icon className="h-6 w-6 text-white" />
       </div>
     </div>
-    <h3 className="mt-3 text-center text-sm font-semibold text-[#005F7B]">{title}</h3>
+    <h3 className="mt-3 text-center text-sm font-semibold text-white">{title}</h3>
   </button>
 );
 
@@ -274,7 +274,7 @@ export default function MobileLearnerDashboard() {
   return (
     <div className="min-h-screen bg-[#F5F2EB] pb-20">
       {/* Header Section */}
-      <header className="sticky top-0 z-30 bg-[#8BBB92] px-5 pb-6 pt-5 shadow-xl">
+      <header className="sticky top-0 z-30 bg-[#224248] px-5 pb-6 pt-5 shadow-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
