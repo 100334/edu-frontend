@@ -2,6 +2,10 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import LearningSpace from './LearningSpace';
+import QuizTaking from './QuizTaking';
 import {
   ArrowRightOnRectangleIcon,
   CalendarIcon,
@@ -38,6 +42,7 @@ export default function MobileLearnerDashboard() {
   const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState([]);
   const [attendance, setAttendance] = useState({ stats: {}, records: [] });
+  const [showQuiz, setShowQuiz] = useState(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -77,6 +82,44 @@ export default function MobileLearnerDashboard() {
   const attendanceRate = attendance.stats?.rate ?? attendance.stats?.percentage ?? '—';
   const latestReport = reports[0];
 
+  const downloadReportPDF = (report) => {
+    if (!report?.subjects?.length) {
+      toast.error('No report data');
+      return;
+    }
+
+    try {
+      const doc = new jsPDF();
+      const average = getAverage(report.subjects);
+      doc.setFillColor(0, 59, 70);
+      doc.rect(0, 0, 210, 35, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.text('PROGRESS SECONDARY SCHOOL', 105, 15, { align: 'center' });
+      doc.setFontSize(10);
+      doc.text('Report Card', 105, 25, { align: 'center' });
+      doc.setTextColor(10, 37, 64);
+      doc.setFontSize(11);
+      doc.text(`Learner: ${user?.name || 'Learner'}`, 15, 48);
+      doc.text(`Form: ${report.form || user?.form || '—'}`, 15, 55);
+      doc.text(`Term: ${report.term || '—'}`, 120, 48);
+      doc.text(`Average: ${average}%`, 120, 55);
+      autoTable(doc, {
+        startY: 65,
+        head: [['Subject', 'Score']],
+        body: report.subjects.map(subject => [subject.name || 'Subject', `${subject.score}%`]),
+        theme: 'grid',
+        headStyles: { fillColor: [42, 157, 143], textColor: 255 },
+        styles: { fontSize: 9 }
+      });
+      doc.save(`${user?.name?.replace(/\s+/g, '_') || 'learner'}_report.pdf`);
+      toast.success('Report downloaded');
+    } catch (error) {
+      console.error('Mobile report PDF error:', error);
+      toast.error('Could not create PDF');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#F5F2EB]">
@@ -84,6 +127,20 @@ export default function MobileLearnerDashboard() {
           <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-4 border-[#00B4D8] border-t-transparent" />
           <p className="text-sm text-slate-500">Loading dashboard...</p>
         </div>
+      </div>
+    );
+  }
+
+  if (showQuiz) {
+    return (
+      <div className="min-h-screen bg-[#F5F2EB] px-4 py-5">
+        <button onClick={() => setShowQuiz(null)} className="mb-4 text-sm font-semibold text-[#006770]">
+          ← Back
+        </button>
+        <QuizTaking
+          quizId={showQuiz}
+          onComplete={() => setShowQuiz(null)}
+        />
       </div>
     );
   }
@@ -159,6 +216,16 @@ export default function MobileLearnerDashboard() {
               <MobileStat icon={ChartBarIcon} label="Average" value={latestReport ? `${getAverage(latestReport.subjects)}%` : '—'} color={TEAL} />
               <MobileStat icon={UserCircleIcon} label="Form" value={user?.form || '—'} color="#6C63FF" />
             </div>
+            <button
+              onClick={() => setActiveTab('learning')}
+              className="flex w-full items-center justify-between rounded-2xl bg-[#006770] p-4 text-left text-white shadow-sm"
+            >
+              <span>
+                <span className="block text-sm font-bold">Learning Space</span>
+                <span className="mt-1 block text-xs text-white/70">Lessons and quizzes</span>
+              </span>
+              <span className="text-xl">→</span>
+            </button>
 
             <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
               <div className="border-b border-slate-200 px-4 py-3">
@@ -180,9 +247,14 @@ export default function MobileLearnerDashboard() {
                         <div className="text-[10px] uppercase text-slate-500">Average</div>
                       </div>
                     </div>
-                    <button onClick={() => setActiveTab('reports')} className="mt-4 w-full rounded-xl bg-[#2A9D8F]/10 py-3 text-sm font-semibold text-[#006770] transition-all hover:bg-[#2A9D8F]/20">
-                      View All Reports →
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button onClick={() => setActiveTab('reports')} className="rounded-xl bg-[#2A9D8F]/10 py-3 text-sm font-semibold text-[#006770]">
+                       All Reports
                     </button>
+                    <button onClick={() => downloadReportPDF(latestReport)} className="rounded-xl bg-[#006770] py-3 text-sm font-semibold text-white">
+                       PDF
+                    </button>
+                    </div>
                   </>
                 ) : (
                   <p className="py-4 text-center text-sm text-slate-500">No reports yet.</p>
@@ -212,8 +284,18 @@ export default function MobileLearnerDashboard() {
                     </div>
                   ))}
                 </div>
+                <button onClick={() => downloadReportPDF(report)} className="mt-4 w-full rounded-xl bg-[#006770] py-3 text-sm font-semibold text-white">
+                  Download PDF
+                </button>
               </article>
             )) : <p className="rounded-2xl bg-white p-6 text-center text-sm text-slate-500">No reports yet.</p>}
+          </section>
+        )}
+
+        {activeTab === 'learning' && (
+          <section>
+            <h2 className="mb-3 text-xl font-bold text-[#0A2540]">Learning Space</h2>
+            <LearningSpace onStartQuiz={(quizId) => setShowQuiz(quizId)} />
           </section>
         )}
 
@@ -241,6 +323,7 @@ export default function MobileLearnerDashboard() {
         <div className="mx-auto flex max-w-md justify-around">
           {[
             { id: 'overview', label: 'Home', icon: HomeIcon },
+            { id: 'learning', label: 'Learn', icon: AcademicCapIcon },
             { id: 'reports', label: 'Reports', icon: DocumentTextIcon },
             { id: 'attendance', label: 'Attendance', icon: CalendarIcon }
           ].map(({ id, label, icon: Icon }) => (
