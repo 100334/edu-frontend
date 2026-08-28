@@ -8,7 +8,8 @@ import {
   ChartBarIcon,
   DocumentTextIcon,
   HomeIcon,
-  UserCircleIcon
+  UserCircleIcon,
+  AcademicCapIcon
 } from '@heroicons/react/24/outline';
 
 const NAVBAR_BG = '#006770';
@@ -89,32 +90,63 @@ export default function MobileLearnerDashboard() {
 
   return (
     <div className="min-h-screen bg-[#F5F2EB] pb-20">
-      <header className="sticky top-0 z-30 bg-[#003B46] px-4 pb-5 pt-4 text-white shadow-lg">
+      {/* Header Section */}
+      <header className="sticky top-0 z-30 bg-gradient-to-br from-[#003B46] to-[#005A6A] px-5 pb-6 pt-5 shadow-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
               src="/schoologo.png"
               alt="Progress Secondary School logo"
-              className="h-12 w-12 rounded-xl bg-white p-1 object-contain"
+              className="h-14 w-14 rounded-2xl bg-white/10 p-1.5 object-contain shadow-lg backdrop-blur-sm"
             />
-            <div>
-              <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-white/70">Learner</div>
-              <div className="text-sm font-black tracking-[0.14em]">PROGRESS</div>
-              <div className="text-[9px] text-white/70">Secondary School</div>
+            <div className="leading-tight">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[#7DE3FF]">
+                Student Portal
+              </div>
+              <h1 className="text-lg font-black tracking-wide text-white">
+                Progress School
+              </h1>
+              <div className="text-xs font-light text-white/60">
+                Secondary School
+              </div>
             </div>
           </div>
           <button
             onClick={handleLogout}
-            className="rounded-xl bg-red-600 px-3 py-2 text-xs font-semibold text-white"
+            className="group flex items-center gap-1.5 rounded-xl bg-white/10 px-4 py-2.5 text-xs font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20"
           >
-            <ArrowRightOnRectangleIcon className="mr-1 inline h-4 w-4" />
-            Logout
+            <ArrowRightOnRectangleIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            <span>Exit</span>
           </button>
         </div>
-        <div className="mt-5">
-          <div className="text-xs font-bold uppercase tracking-widest text-[#7DE3FF]">Dashboard</div>
-          <h1 className="mt-1 text-xl font-bold">{user?.name || 'Learner'} <span className="text-[#7DE3FF]">👋</span></h1>
-          <p className="mt-1 text-sm text-white/75">{user?.form || 'Learner'}</p>
+
+        {/* Welcome Section */}
+        <div className="mt-5 rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-light text-[#7DE3FF]">Welcome back,</span>
+                <span className="text-sm font-bold text-white">👋</span>
+              </div>
+              <h2 className="mt-0.5 text-2xl font-bold text-white">
+                {user?.name || 'Learner'}
+              </h2>
+              <div className="mt-1 flex items-center gap-2">
+                <AcademicCapIcon className="h-4 w-4 text-[#7DE3FF]" />
+                <span className="text-sm font-medium text-white/80">
+                  {user?.form || 'Form'}
+                </span>
+              </div>
+            </div>
+            <div className="rounded-2xl bg-white/5 px-4 py-2 text-center">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-[#7DE3FF]">
+                Today
+              </div>
+              <div className="text-sm font-bold text-white">
+                {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -132,7 +164,7 @@ export default function MobileLearnerDashboard() {
               <div className="border-b border-slate-200 px-4 py-3">
                 <h2 className="flex items-center gap-2 font-bold text-[#0A2540]">
                   <DocumentTextIcon className="h-5 w-5 text-[#2A9D8F]" />
-                  Latest
+                  Latest Report Card
                 </h2>
               </div>
               <div className="p-4">
@@ -148,8 +180,8 @@ export default function MobileLearnerDashboard() {
                         <div className="text-[10px] uppercase text-slate-500">Average</div>
                       </div>
                     </div>
-                    <button onClick={() => setActiveTab('reports')} className="mt-4 w-full rounded-xl bg-[#2A9D8F]/10 py-3 text-sm font-semibold text-[#006770]">
-                      All reports
+                    <button onClick={() => setActiveTab('reports')} className="mt-4 w-full rounded-xl bg-[#2A9D8F]/10 py-3 text-sm font-semibold text-[#006770] transition-all hover:bg-[#2A9D8F]/20">
+                      View All Reports →
                     </button>
                   </>
                 ) : (
@@ -162,7 +194,7 @@ export default function MobileLearnerDashboard() {
 
         {activeTab === 'reports' && (
           <section className="space-y-3">
-            <h2 className="text-xl font-bold text-[#0A2540]">Report cards</h2>
+            <h2 className="text-xl font-bold text-[#0A2540]">Report Cards</h2>
             {reports.length ? reports.map(report => (
               <article key={report.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                 <div className="flex items-center justify-between">
@@ -187,14 +219,14 @@ export default function MobileLearnerDashboard() {
 
         {activeTab === 'attendance' && (
           <section className="space-y-3">
-            <h2 className="text-xl font-bold text-[#0A2540]">Attendance</h2>
+            <h2 className="text-xl font-bold text-[#0A2540]">Attendance Records</h2>
             <div className="rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm">
               <div className="text-4xl font-bold text-[#2A9D8F]">{attendanceRate === '—' ? '—' : `${attendanceRate}%`}</div>
-              <div className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-500">Rate</div>
+              <div className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-500">Overall Attendance Rate</div>
             </div>
             {attendance.records.length ? attendance.records.slice(0, 12).map(record => (
               <div key={record.id || `${record.date}-${record.status}`} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <span className="text-sm text-slate-600">{record.date ? new Date(record.date).toLocaleDateString() : 'Date unavailable'}</span>
+                <span className="text-sm text-slate-600">{record.date ? new Date(record.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Date unavailable'}</span>
                 <span className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${record.status === 'present' ? 'bg-green-100 text-green-700' : record.status === 'late' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
                   {record.status || 'unknown'}
                 </span>
@@ -204,6 +236,7 @@ export default function MobileLearnerDashboard() {
         )}
       </main>
 
+      {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#006770] px-2 py-2 shadow-lg">
         <div className="mx-auto flex max-w-md justify-around">
           {[
@@ -211,8 +244,16 @@ export default function MobileLearnerDashboard() {
             { id: 'reports', label: 'Reports', icon: DocumentTextIcon },
             { id: 'attendance', label: 'Attendance', icon: CalendarIcon }
           ].map(({ id, label, icon: Icon }) => (
-            <button key={id} onClick={() => setActiveTab(id)} className={`flex min-w-[84px] flex-col items-center gap-1 rounded-xl px-3 py-2 text-[10px] font-semibold ${activeTab === id ? 'bg-white text-[#006770]' : 'text-white/80'}`}>
-              <Icon className="h-5 w-5" />
+            <button 
+              key={id} 
+              onClick={() => setActiveTab(id)} 
+              className={`flex min-w-[84px] flex-col items-center gap-1 rounded-xl px-3 py-2 text-[10px] font-semibold transition-all ${
+                activeTab === id 
+                  ? 'bg-white text-[#006770] shadow-lg' 
+                  : 'text-white/70 hover:text-white'
+              }`}
+            >
+              <Icon className={`h-5 w-5 ${activeTab === id ? 'text-[#006770]' : 'text-white/70'}`} />
               {label}
             </button>
           ))}
