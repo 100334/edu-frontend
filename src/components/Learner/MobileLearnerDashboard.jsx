@@ -54,7 +54,7 @@ const DashboardCard = ({ icon: Icon, title, color, onClick, className = '' }) =>
     onClick={onClick}
     className={`w-full min-h-36 rounded-2xl border-2 border-[#005F7B] bg-white p-5 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md active:scale-[0.98] ${className}`}
   >
-    <div className="flex items-start justify-between">
+    <div className="flex justify-center">
       <div className="rounded-xl bg-[#005F7B]/10 p-2">
         <Icon className="h-6 w-6 text-[#005F7B]" />
       </div>
@@ -64,7 +64,7 @@ const DashboardCard = ({ icon: Icon, title, color, onClick, className = '' }) =>
 );
 
 const MobileStat = ({ icon: Icon, value, label }) => (
-  <div className="rounded-2xl border border-[#005F7B] bg-transparent px-3 py-3 text-center text-[#005F7B]">
+  <div className="rounded-2xl bg-transparent px-3 py-3 text-center text-[#005F7B]">
     <Icon className="mx-auto mb-1 h-5 w-5 text-[#005F7B]" />
     <div className="text-lg font-bold">{value}</div>
     <div className="text-[10px] font-semibold uppercase tracking-wide text-[#005F7B]/75">{label}</div>
