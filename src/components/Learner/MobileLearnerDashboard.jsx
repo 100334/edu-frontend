@@ -28,6 +28,25 @@ const getAverage = (subjects = []) => {
   return scores.length ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length) : '—';
 };
 
+const getGrade = (score, form) => {
+  if (form === 'Form 3' || form === 'Form 4') {
+    if (score >= 85) return { letter: 'A*', points: 1, description: 'Distinction' };
+    if (score >= 75) return { letter: 'A', points: 2, description: 'Distinction' };
+    if (score >= 65) return { letter: 'B', points: 3, description: 'Credit' };
+    if (score >= 56) return { letter: 'C', points: 4, description: 'Credit' };
+    if (score >= 50) return { letter: 'D', points: 5, description: 'Credit' };
+    if (score >= 45) return { letter: 'E', points: 6, description: 'Pass' };
+    if (score >= 40) return { letter: 'F', points: 7, description: 'Pass' };
+    if (score >= 35) return { letter: 'G', points: 8, description: 'Pass' };
+    return { letter: 'U', points: 9, description: 'Fail' };
+  }
+  if (score >= 75) return { letter: 'A', description: 'Excellent' };
+  if (score >= 65) return { letter: 'B', description: 'Very good' };
+  if (score >= 55) return { letter: 'C', description: 'Good' };
+  if (score >= 40) return { letter: 'D', description: 'Pass' };
+  return { letter: 'F', description: 'Need improvement' };
+};
+
 const MobileStat = ({ icon: Icon, label, value, color }) => (
   <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
     <Icon className="mb-2 h-5 w-5" style={{ color }} />
@@ -82,38 +101,129 @@ export default function MobileLearnerDashboard() {
   const attendanceRate = attendance.stats?.rate ?? attendance.stats?.percentage ?? '—';
   const latestReport = reports[0];
 
-  const downloadReportPDF = (report) => {
+  const downloadReportPDF = async (report) => {
     if (!report?.subjects?.length) {
       toast.error('No report data');
       return;
     }
 
     try {
-      const doc = new jsPDF();
-      const average = getAverage(report.subjects);
-      doc.setFillColor(0, 59, 70);
-      doc.rect(0, 0, 210, 35, 'F');
+      let logoDataUrl = null;
+      try {
+        const response = await fetch('/schoologo.png');
+        const blob = await response.blob();
+        logoDataUrl = await new Promise(resolve => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+      } catch (error) {
+        console.error('Mobile report logo error:', error);
+      }
+
+      const subjects = (report.subjects || []).filter(subject => subject && subject.score !== undefined && subject.score !== null);
+      const isUpperForm = report.form === 'Form 3' || report.form === 'Form 4';
+      const average = getAverage(subjects);
+      const grades = subjects.map(subject => ({ ...subject, grade: getGrade(Number(subject.score), report.form) }));
+      const english = grades.find(subject => subject.name?.toLowerCase().includes('english'));
+      const bestSubjects = isUpperForm
+        ? (english ? [english, ...grades.filter(subject => subject !== english).sort((a, b) => a.grade.points - b.grade.points).slice(0, 5)] : grades.sort((a, b) => a.grade.points - b.grade.points).slice(0, 6)).slice(0, 6)
+        : grades;
+      const totalPoints = isUpperForm ? bestSubjects.reduce((sum, subject) => sum + subject.grade.points, 0) : null;
+      const status = isUpperForm
+        ? (english && Number(english.score) < 35 ? 'FAIL' : totalPoints <= 2 ? 'DISTINCTION' : totalPoints <= 5 ? 'CREDIT' : totalPoints <= 8 ? 'PASS' : 'FAIL')
+        : subjects.filter(subject => Number(subject.score) >= 40).length >= 6 ? 'PASS' : 'FAIL';
+      const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const darkBlue = [10, 37, 64];
+      const teal = [42, 157, 143];
+      const lightGray = [248, 250, 252];
+      const darkGray = [15, 25, 35];
+      doc.setFillColor(...darkBlue);
+      doc.rect(0, 0, pageWidth, 50, 'F');
+      doc.setFillColor(...teal);
+      doc.rect(0, 48, pageWidth, 2, 'F');
+      if (logoDataUrl) {
+        try {
+          doc.addImage(logoDataUrl, 'PNG', 8, 5, 38, 38);
+        } catch (error) {
+          console.error('Mobile report logo rendering error:', error);
+        }
+      }
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(16);
-      doc.text('PROGRESS SECONDARY SCHOOL', 105, 15, { align: 'center' });
-      doc.setFontSize(10);
-      doc.text('Report Card', 105, 25, { align: 'center' });
-      doc.setTextColor(10, 37, 64);
-      doc.setFontSize(11);
-      doc.text(`Learner: ${user?.name || 'Learner'}`, 15, 48);
-      doc.text(`Form: ${report.form || user?.form || '—'}`, 15, 55);
-      doc.text(`Term: ${report.term || '—'}`, 120, 48);
-      doc.text(`Average: ${average}%`, 120, 55);
-      autoTable(doc, {
-        startY: 65,
-        head: [['Subject', 'Score']],
-        body: report.subjects.map(subject => [subject.name || 'Subject', `${subject.score}%`]),
-        theme: 'grid',
-        headStyles: { fillColor: [42, 157, 143], textColor: 255 },
-        styles: { fontSize: 9 }
+      doc.setFontSize(15);
+      doc.setFont('helvetica', 'bold');
+      const headerCenter = pageWidth / 2 + (logoDataUrl ? 8 : 0);
+      doc.text('PROGRESS SECONDARY SCHOOL', headerCenter, 20, { align: 'center' });
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(220, 220, 220);
+      doc.text('Academic Report Card', headerCenter, 30, { align: 'center' });
+      let currentY = 60;
+      doc.setFillColor(...lightGray);
+      doc.roundedRect(15, currentY, pageWidth - 30, 28, 3, 3, 'F');
+      doc.setDrawColor(...teal);
+      doc.roundedRect(15, currentY, pageWidth - 30, 28, 3, 3, 'S');
+      doc.setTextColor(...darkGray);
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Name: ${user?.name || 'N/A'}`, 20, currentY + 8);
+      doc.text(`Registration: ${user?.reg_number || user?.registration_number || 'N/A'}`, 20, currentY + 15);
+      doc.text(`Form: ${report.form || user?.form || 'N/A'}`, 20, currentY + 22);
+      doc.text(`Class Position: N/A`, pageWidth - 20, currentY + 8, { align: 'right' });
+      doc.text(`Term: ${report.term || 'N/A'}  |  Year: ${report.academic_year || new Date().getFullYear()}`, pageWidth - 20, currentY + 15, { align: 'right' });
+      currentY += 35;
+      const cardWidth = (pageWidth - 45) / 3;
+      ['Average', 'Grade', 'Status'].forEach((label, index) => {
+        const x = 15 + index * (cardWidth + 7);
+        doc.setFillColor(...lightGray);
+        doc.roundedRect(x, currentY, cardWidth, 30, 3, 3, 'F');
+        doc.setDrawColor(...teal);
+        doc.roundedRect(x, currentY, cardWidth, 30, 3, 3, 'S');
+        doc.setTextColor(...darkGray);
+        doc.setFontSize(7);
+        doc.text(label, x + 5, currentY + 8);
+        doc.setFontSize(16);
+        doc.setTextColor(...teal);
+        const value = index === 0 ? `${average}%` : index === 1 ? getGrade(Number(average), report.form).letter : status;
+        doc.text(value, x + 5, currentY + 24);
       });
-      doc.save(`${user?.name?.replace(/\s+/g, '_') || 'learner'}_report.pdf`);
-      toast.success('Report downloaded');
+      currentY += 40;
+      const tableColumn = isUpperForm ? ['Subject', 'Score', 'Points', 'Grade'] : ['Subject', 'Score', 'Grade', 'Remarks'];
+      const tableRows = bestSubjects.map(subject => isUpperForm
+        ? [subject.name, `${subject.score}%`, `${subject.grade.points} pts`, subject.grade.letter]
+        : [subject.name, `${subject.score}%`, subject.grade.letter, subject.grade.description]);
+      if (isUpperForm) {
+        tableRows.push([{ content: 'BEST 6 AGGREGATE', styles: { fontStyle: 'bold', fillColor: [255, 248, 225] } }, '', { content: `${totalPoints} pts`, styles: { fontStyle: 'bold', textColor: teal } }, { content: status, styles: { fontStyle: 'bold', textColor: teal } }]);
+        tableRows.push([{ content: status === 'PASS' ? 'Pass - Satisfactory Performance' : 'Fail - Needs Improvement', colSpan: 4, styles: { fontStyle: 'bold', halign: 'center', textColor: status === 'PASS' ? [30, 126, 74] : [192, 57, 43] } }]);
+      } else {
+        tableRows.push([{ content: 'OVERALL AVERAGE', styles: { fontStyle: 'bold', fillColor: [255, 248, 225] } }, { content: `${average}%`, styles: { fontStyle: 'bold', textColor: teal } }, { content: getGrade(Number(average), report.form).letter, styles: { fontStyle: 'bold', textColor: teal } }, { content: getGrade(Number(average), report.form).description, styles: { fontStyle: 'bold' } }]);
+        tableRows.push([{ content: `OVERALL RESULT: ${status} (${subjects.filter(subject => Number(subject.score) >= 40).length} of ${subjects.length} subjects passed with A–D)`, colSpan: 4, styles: { fontStyle: 'bold', halign: 'center', textColor: status === 'PASS' ? [30, 126, 74] : [192, 57, 43] } }]);
+      }
+      autoTable(doc, { startY: currentY, margin: { left: 15, right: 15 }, head: [tableColumn], body: tableRows, theme: 'grid', headStyles: { fillColor: darkBlue, textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 8, cellPadding: 3 }, bodyStyles: { textColor: darkGray, fontSize: 7, cellPadding: 2.5 }, alternateRowStyles: { fillColor: lightGray }, columnStyles: { 0: { cellWidth: 70, fontStyle: 'bold' }, 1: { halign: 'center', cellWidth: 30 }, 2: { halign: 'center', cellWidth: 30 }, 3: { halign: 'center' } } });
+      const remarks = report.remarks || report.comment || report.teacher_comment || report.principal_comment || '';
+      if (remarks) {
+        const remarkY = doc.lastAutoTable.finalY + 10;
+        doc.setFillColor(255, 249, 230);
+        doc.roundedRect(15, remarkY, pageWidth - 30, 20, 3, 3, 'F');
+        doc.setDrawColor(...teal);
+        doc.roundedRect(15, remarkY, pageWidth - 30, 20, 3, 3, 'S');
+        doc.setTextColor(...teal);
+        doc.setFontSize(8);
+        doc.text('REMARKS', 20, remarkY + 8);
+        doc.setTextColor(...darkGray);
+        doc.setFontSize(7);
+        doc.text(doc.splitTextToSize(remarks, pageWidth - 40), 20, remarkY + 15);
+      }
+      doc.setDrawColor(...teal);
+      doc.line(15, pageHeight - 10, pageWidth - 15, pageHeight - 10);
+      doc.setFontSize(6);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth / 2, pageHeight - 5, { align: 'center' });
+      doc.save(`${user?.name?.replace(/\s+/g, '_') || 'student'}_${report?.term || 'report'}.pdf`);
+      toast.success('Report downloaded!');
+      return;
     } catch (error) {
       console.error('Mobile report PDF error:', error);
       toast.error('Could not create PDF');
