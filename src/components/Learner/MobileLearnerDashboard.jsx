@@ -59,15 +59,15 @@ const DashboardCard = ({ icon: Icon, title, color, onClick, className = '' }) =>
         <Icon className="h-6 w-6 text-[#005F7B]" />
       </div>
     </div>
-    <h3 className="mt-3 text-left text-sm font-semibold text-[#005F7B]">{title}</h3>
+    <h3 className="mt-3 text-center text-sm font-semibold text-[#005F7B]">{title}</h3>
   </button>
 );
 
 const MobileStat = ({ icon: Icon, value, label }) => (
-  <div className="rounded-2xl border border-[#005F7B] bg-[#005F7B] px-3 py-3 text-center text-white">
-    <Icon className="mx-auto mb-1 h-5 w-5 text-[#F8FAFC]" />
+  <div className="rounded-2xl border border-[#005F7B] bg-transparent px-3 py-3 text-center text-[#005F7B]">
+    <Icon className="mx-auto mb-1 h-5 w-5 text-[#005F7B]" />
     <div className="text-lg font-bold">{value}</div>
-    <div className="text-[10px] font-semibold uppercase tracking-wide text-white/75">{label}</div>
+    <div className="text-[10px] font-semibold uppercase tracking-wide text-[#005F7B]/75">{label}</div>
   </div>
 );
 
