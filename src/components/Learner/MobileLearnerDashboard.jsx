@@ -22,6 +22,7 @@ const NAVBAR_BG = '#006770';
 const HEADER_BG = '#003B46';
 const TEAL = '#2A9D8F';
 const CYAN = '#00B4D8';
+const ICE_WHITE = '#F8FAFC';
 
 const getAverage = (subjects = []) => {
   const scores = subjects
@@ -49,28 +50,17 @@ const getGrade = (score, form) => {
   return { letter: 'F', description: 'Need improvement' };
 };
 
-const DashboardCard = ({ icon: Icon, title, value, subtitle, color, onClick, className = '' }) => (
+const DashboardCard = ({ icon: Icon, title, color, onClick, className = '' }) => (
   <button 
     onClick={onClick}
-    className={`w-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:shadow-md active:scale-[0.98] ${className}`}
+    className={`w-full rounded-2xl border border-[#238579] bg-[#2A9D8F] p-4 shadow-sm transition-all hover:bg-[#238579] hover:shadow-md active:scale-[0.98] ${className}`}
   >
     <div className="flex items-start justify-between">
-      <div className="rounded-xl p-2" style={{ backgroundColor: color + '15' }}>
-        <Icon className="h-6 w-6" style={{ color }} />
+      <div className="rounded-xl bg-white/15 p-2">
+        <Icon className="h-6 w-6" style={{ color: ICE_WHITE }} />
       </div>
-      {value && (
-        <span className="text-sm font-bold" style={{ color }}>
-          {value}
-        </span>
-      )}
     </div>
-    <div className="mt-3 text-left">
-      <h3 className="text-sm font-semibold text-[#0A2540]">{title}</h3>
-      <p className="mt-0.5 text-xs text-slate-500">{subtitle}</p>
-    </div>
-    <div className="mt-3 flex items-center text-xs font-medium" style={{ color }}>
-      Tap to view →
-    </div>
+    <h3 className="mt-3 text-left text-sm font-semibold text-[#F8FAFC]">{title}</h3>
   </button>
 );
 
@@ -118,9 +108,6 @@ export default function MobileLearnerDashboard() {
   };
 
   const attendanceRate = attendance.stats?.rate ?? attendance.stats?.percentage ?? '—';
-  const latestReport = reports[0];
-  const averageScore = latestReport ? `${getAverage(latestReport.subjects)}%` : '—';
-
   const downloadReportPDF = async (report) => {
     if (!report?.subjects?.length) {
       toast.error('No report data');
@@ -346,8 +333,6 @@ export default function MobileLearnerDashboard() {
               <DashboardCard
                 icon={DocumentTextIcon}
                 title="Results"
-                subtitle={`${reports.length} report${reports.length !== 1 ? 's' : ''} available`}
-                value={averageScore !== '—' ? averageScore : null}
                 color={TEAL}
                 onClick={() => setActiveTab('reports')}
               />
@@ -356,7 +341,6 @@ export default function MobileLearnerDashboard() {
               <DashboardCard
                 icon={BookOpenIcon}
                 title="Learn"
-                subtitle="Lessons & quizzes"
                 color={CYAN}
                 onClick={() => setActiveTab('learning')}
               />
@@ -365,8 +349,6 @@ export default function MobileLearnerDashboard() {
               <DashboardCard
                 icon={CalendarIcon}
                 title="Attendance"
-                subtitle={`${attendanceRate !== '—' ? attendanceRate + '% rate' : 'No records yet'}`}
-                value={attendanceRate !== '—' ? `${attendanceRate}%` : null}
                 color="#6C63FF"
                 onClick={() => setActiveTab('attendance')}
               />
@@ -375,43 +357,11 @@ export default function MobileLearnerDashboard() {
               <DashboardCard
                 icon={UserCircleIcon}
                 title="Profile"
-                subtitle={user?.email || user?.username || 'View details'}
                 color="#F59E0B"
                 onClick={() => toast.info('Profile details coming soon')}
               />
             </div>
 
-            {/* Latest Report Preview */}
-            {latestReport && (
-              <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="border-b border-slate-200 px-4 py-3">
-                  <h2 className="flex items-center gap-2 font-bold text-[#0A2540]">
-                    <DocumentTextIcon className="h-5 w-5 text-[#2A9D8F]" />
-                    Latest Report Card
-                  </h2>
-                </div>
-                <div className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-bold text-[#0A2540]">{latestReport.term || 'Report card'}</div>
-                      <div className="text-xs text-slate-500">{latestReport.form || user?.form || 'Form'}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-[#2A9D8F]">{getAverage(latestReport.subjects)}%</div>
-                      <div className="text-[10px] uppercase text-slate-500">Average</div>
-                    </div>
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <button onClick={() => setActiveTab('reports')} className="rounded-xl bg-[#2A9D8F]/10 py-3 text-sm font-semibold text-[#006770]">
-                       All Reports
-                    </button>
-                    <button onClick={() => downloadReportPDF(latestReport)} className="rounded-xl bg-[#006770] py-3 text-sm font-semibold text-white">
-                       PDF
-                    </button>
-                  </div>
-                </div>
-              </section>
-            )}
           </>
         )}
 
