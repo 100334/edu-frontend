@@ -18,8 +18,7 @@ import {
   ClipboardDocumentCheckIcon
 } from '@heroicons/react/24/outline';
 
-const NAVBAR_BG = '#006770';
-const HEADER_BG = '#003B46';
+const HEADER_BG = '#2A9D8F';
 const TEAL = '#2A9D8F';
 const CYAN = '#00B4D8';
 const ICE_WHITE = '#F8FAFC';
@@ -265,7 +264,7 @@ export default function MobileLearnerDashboard() {
   return (
     <div className="min-h-screen bg-[#F5F2EB] pb-20">
       {/* Header Section */}
-      <header className="sticky top-0 z-30 bg-gradient-to-br from-[#003B46] to-[#005A6A] px-5 pb-6 pt-5 shadow-xl">
+      <header className="sticky top-0 z-30 bg-[#2A9D8F] px-5 pb-6 pt-5 shadow-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
@@ -294,8 +293,7 @@ export default function MobileLearnerDashboard() {
           </button>
         </div>
 
-        {/* Welcome Section */}
-        <div className="mt-5 rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
+        <div className="mt-5 border-t border-white/20 pt-4">
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-center gap-2">
@@ -312,7 +310,7 @@ export default function MobileLearnerDashboard() {
                 </span>
               </div>
             </div>
-            <div className="rounded-2xl bg-white/5 px-4 py-2 text-center">
+            <div className="px-2 py-2 text-center">
               <div className="text-[10px] font-semibold uppercase tracking-wider text-[#7DE3FF]">
                 Today
               </div>
@@ -435,7 +433,7 @@ export default function MobileLearnerDashboard() {
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/10 bg-[#006770] px-2 py-2 shadow-lg">
+      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-transparent px-2 py-2">
         <div className="mx-auto flex max-w-md justify-around">
           {[
             { id: 'overview', label: 'Home', icon: HomeIcon },
@@ -446,14 +444,12 @@ export default function MobileLearnerDashboard() {
             <button 
               key={id} 
               onClick={() => setActiveTab(id)} 
-              className={`flex min-w-[84px] flex-col items-center gap-1 rounded-xl px-3 py-2 text-[10px] font-semibold transition-all ${
-                activeTab === id 
-                  ? 'bg-white text-[#006770] shadow-lg' 
-                  : 'text-white/70 hover:text-white'
+              aria-label={label}
+              className={`flex items-center justify-center rounded-xl p-3 transition-all ${
+                activeTab === id ? 'text-slate-600' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
-              <Icon className={`h-5 w-5 ${activeTab === id ? 'text-[#006770]' : 'text-white/70'}`} />
-              {label}
+              <Icon className="h-6 w-6" />
             </button>
           ))}
         </div>
