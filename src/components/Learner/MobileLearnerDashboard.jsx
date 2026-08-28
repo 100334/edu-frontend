@@ -340,14 +340,6 @@ export default function MobileLearnerDashboard() {
       <main className="space-y-5 px-4 py-5">
         {activeTab === 'overview' && (
           <>
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 gap-3">
-              <MobileStat icon={DocumentTextIcon} label="Reports" value={reports.length} color={TEAL} />
-              <MobileStat icon={CalendarIcon} label="Attendance" value={attendanceRate === '—' ? '—' : `${attendanceRate}%`} color={CYAN} />
-              <MobileStat icon={ChartBarIcon} label="Average" value={averageScore} color={TEAL} />
-              <MobileStat icon={UserCircleIcon} label="Form" value={user?.form || '—'} color="#6C63FF" />
-            </div>
-
             {/* Four Main Cards */}
             <div className="grid grid-cols-2 gap-3">
               {/* Results Card */}
