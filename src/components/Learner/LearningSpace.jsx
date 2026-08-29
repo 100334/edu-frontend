@@ -87,7 +87,6 @@ const FolderCard = ({ config, itemCount, onClick }) => {
 
 // ── main component ────────────────────────────────────────────────────────────
 const LearningSpace = ({ onStartQuiz }) => {
-  const [loading,          setLoading]          = useState(true);
   const [lessons,          setLessons]          = useState([]);
   const [quizItems,        setQuizItems]        = useState([]);
   const [activeFolderId,   setActiveFolderId]   = useState(null);
@@ -113,7 +112,6 @@ const LearningSpace = ({ onStartQuiz }) => {
   useEffect(() => { setExpandedSubjects({}); }, [activeFolderId, activeWeek]);
 
   const loadLessonsAndQuizzes = async () => {
-    setLoading(true);
     try {
       const token   = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
@@ -137,8 +135,6 @@ const LearningSpace = ({ onStartQuiz }) => {
     } catch (err) {
       console.error('LearningSpace load error:', err);
       toast.error('Could not load learning materials');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -279,14 +275,6 @@ const LearningSpace = ({ onStartQuiz }) => {
       </div>
     );
   };
-
-  // ── loading ───────────────────────────────────────────────────────────────────
-  if (loading) return (
-    <div className="h-64 flex flex-col items-center justify-center gap-3">
-      <div className="w-7 h-7 border-4 border-[#006770] border-t-transparent rounded-full animate-spin" />
-      <p className="text-xs text-slate-400 font-medium tracking-wide">Loading your curriculum…</p>
-    </div>
-  );
 
   // ── back handler ──────────────────────────────────────────────────────────────
   const handleBack = () => {

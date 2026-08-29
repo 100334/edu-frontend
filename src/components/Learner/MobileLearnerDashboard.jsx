@@ -82,7 +82,6 @@ const MobileStat = ({ icon: Icon, value, label }) => (
 export default function MobileLearnerDashboard() {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
-  const [loading, setLoading] = useState(true);
   const [reports, setReports] = useState([]);
   const [attendance, setAttendance] = useState({ stats: {}, records: [] });
   const [showQuiz, setShowQuiz] = useState(null);
@@ -90,7 +89,6 @@ export default function MobileLearnerDashboard() {
   const [selectedAssessment, setSelectedAssessment] = useState('');
 
   const loadData = useCallback(async () => {
-    setLoading(true);
     try {
       const [reportsResponse, attendanceResponse] = await Promise.all([
         api.get('/api/learner/reports'),
@@ -111,8 +109,6 @@ export default function MobileLearnerDashboard() {
     } catch (error) {
       console.error('Error loading mobile learner dashboard:', error);
       toast.error('Could not load dashboard data');
-    } finally {
-      setLoading(false);
     }
   }, []);
 
@@ -301,17 +297,6 @@ export default function MobileLearnerDashboard() {
       toast.error('Could not create PDF');
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F5F2EB]">
-        <div className="text-center">
-          <div className="mx-auto mb-3 h-10 w-10 animate-spin rounded-full border-4 border-[#00B4D8] border-t-transparent" />
-          <p className="text-sm text-slate-500">Loading dashboard...</p>
-        </div>
-      </div>
-    );
-  }
 
   if (showQuiz) {
     return (
