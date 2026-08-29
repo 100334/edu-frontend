@@ -56,7 +56,11 @@ const DashboardCard = ({ icon: Icon, title, color, onClick, className = '' }) =>
   >
     <div className="flex justify-center">
       <div className="rounded-xl bg-white/15 p-2">
-        <Icon className="h-6 w-6 text-white" />
+        {typeof Icon === 'string' ? (
+          <img src={Icon} alt={title} className="h-6 w-6 object-contain" />
+        ) : (
+          <Icon className="h-6 w-6 text-white" />
+        )}
       </div>
     </div>
     <h3 className="mt-3 text-center text-sm font-semibold text-white">{title}</h3>
@@ -65,7 +69,11 @@ const DashboardCard = ({ icon: Icon, title, color, onClick, className = '' }) =>
 
 const MobileStat = ({ icon: Icon, value, label }) => (
   <div className="rounded-2xl bg-transparent px-3 py-3 text-center text-[#005F7B]">
-    <Icon className="mx-auto mb-1 h-5 w-5 text-[#005F7B]" />
+    {typeof Icon === 'string' ? (
+      <img src={Icon} alt={label} className="mx-auto mb-1 h-5 w-5 object-contain" />
+    ) : (
+      <Icon className="mx-auto mb-1 h-5 w-5 text-[#005F7B]" />
+    )}
     <div className="text-lg font-bold">{value}</div>
     <div className="text-[10px] font-semibold uppercase tracking-wide text-[#005F7B]/75">{label}</div>
   </div>
@@ -350,12 +358,12 @@ export default function MobileLearnerDashboard() {
             <div className="grid grid-cols-3 gap-2">
               <MobileStat icon={ChartBarIcon} value={latestAverage} label="Average" />
               <MobileStat icon={DocumentTextIcon} value={filteredReports.length} label="Reports" />
-              <MobileStat icon={CalendarIcon} value={attendanceRate === '—' ? '—' : `${attendanceRate}%`} label="Attendance" />
+              <MobileStat icon="/user.png" value={attendanceRate === '—' ? '—' : `${attendanceRate}%`} label="Attendance" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               {/* Results Card */}
               <DashboardCard
-                icon={DocumentTextIcon}
+                icon="/results.png"
                 title="Results"
                 color={TEAL}
                 onClick={() => setActiveTab('reports')}
@@ -371,7 +379,7 @@ export default function MobileLearnerDashboard() {
 
               {/* Attendance Card */}
               <DashboardCard
-                icon={CalendarIcon}
+                icon="/user.png"
                 title="Attendance"
                 color="#6C63FF"
                 onClick={() => setActiveTab('attendance')}
@@ -482,8 +490,8 @@ export default function MobileLearnerDashboard() {
           {[
             { id: 'overview', label: 'Home', icon: HomeIcon },
             { id: 'learning', label: 'Learn', icon: BookOpenIcon },
-            { id: 'reports', label: 'Reports', icon: DocumentTextIcon },
-            { id: 'attendance', label: 'Attendance', icon: CalendarIcon }
+            { id: 'reports', label: 'Reports', icon: '/results.png' },
+            { id: 'attendance', label: 'Attendance', icon: '/user.png' }
           ].map(({ id, label, icon: Icon }) => (
             <button 
               key={id} 
@@ -493,7 +501,11 @@ export default function MobileLearnerDashboard() {
                 activeTab === id ? 'text-slate-600' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
-              <Icon className="h-6 w-6" />
+              {typeof Icon === 'string' ? (
+                <img src={Icon} alt={label} className="h-6 w-6 object-contain" />
+              ) : (
+                <Icon className="h-6 w-6" />
+              )}
             </button>
           ))}
         </div>
