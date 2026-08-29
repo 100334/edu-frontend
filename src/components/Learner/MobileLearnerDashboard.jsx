@@ -52,18 +52,18 @@ const getGrade = (score, form) => {
 const DashboardCard = ({ icon: Icon, title, color, onClick, className = '' }) => (
   <button 
     onClick={onClick}
-    className={`w-full min-h-36 rounded-2xl border-2 border-[#224248] bg-[#224248] p-5 shadow-sm transition-all hover:bg-[#224248] hover:shadow-md active:scale-[0.98] ${className}`}
+    className={`w-full min-h-36 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md active:scale-[0.98] ${className}`}
   >
     <div className="flex justify-center">
-      <div className="rounded-xl bg-white/15 p-2">
+      <div className="rounded-xl p-2">
         {typeof Icon === 'string' ? (
-          <img src={Icon} alt={title} className="h-6 w-6 object-contain" />
+          <img src={Icon} alt={title} className="h-8 w-8 object-contain" />
         ) : (
-          <Icon className="h-6 w-6 text-white" />
+          <Icon className="h-8 w-8 text-[#224248]" />
         )}
       </div>
     </div>
-    <h3 className="mt-3 text-center text-sm font-semibold text-white">{title}</h3>
+    <h3 className="mt-3 text-center text-sm font-semibold text-[#224248]">{title}</h3>
   </button>
 );
 
@@ -298,14 +298,14 @@ export default function MobileLearnerDashboard() {
     <div className="min-h-screen bg-[#F5F2EB] pb-20">
       {/* Header Section */}
       <header className="sticky top-0 z-30 bg-[#224248] px-5 pb-6 pt-5 shadow-xl">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="flex items-start justify-between">
+          <div className="flex flex-col items-center text-center">
             <img
               src="/schoologo.png"
               alt="Progress Secondary School logo"
-              className="h-14 w-14 rounded-2xl bg-white/10 p-1.5 object-contain shadow-lg backdrop-blur-sm"
+              className="h-20 w-20 object-contain drop-shadow-lg"
             />
-            <div className="leading-tight">
+            <div className="mt-2 leading-tight">
               <div className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[#7DE3FF]">
                 Student Portal
               </div>
