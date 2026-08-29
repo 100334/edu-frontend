@@ -138,6 +138,39 @@ export default function MobileLearnerDashboard() {
     return (!selectedYear || String(reportYear) === String(selectedYear))
       && (!selectedAssessment || report.term === selectedAssessment);
   }), [reports, selectedYear, selectedAssessment]);
+
+  const resultsCategories = useMemo(() => [
+    {
+      id: 'term-1',
+      label: 'Term 1',
+      matcher: report => /term\s*1/i.test(report?.term || '') || /term\s*one/i.test(report?.term || '')
+    },
+    {
+      id: 'term-2',
+      label: 'Term 2',
+      matcher: report => /term\s*2/i.test(report?.term || '') || /term\s*two/i.test(report?.term || '')
+    },
+    {
+      id: 'term-3',
+      label: 'Term 3',
+      matcher: report => /term\s*3/i.test(report?.term || '') || /term\s*three/i.test(report?.term || '')
+    },
+    {
+      id: 'testsa',
+      label: 'Testsa',
+      matcher: report => /testsa|testsa|test sa/i.test(report?.term || '') || /testsa|testsa|test sa/i.test(report?.assessment || '') || /testsa|testsa|test sa/i.test(report?.name || '')
+    }
+  ], []);
+
+  const [selectedResultCategory, setSelectedResultCategory] = useState(null);
+
+  const selectedCategoryReports = useMemo(() => {
+    if (!selectedResultCategory) return [];
+    const category = resultsCategories.find(item => item.id === selectedResultCategory);
+    if (!category) return [];
+    return filteredReports.filter(category.matcher);
+  }, [filteredReports, resultsCategories, selectedResultCategory]);
+
   const latestReport = filteredReports[0];
   const latestAverage = latestReport ? `${getAverage(latestReport.subjects)}%` : '—';
   const downloadReportPDF = async (report) => {
@@ -297,7 +330,7 @@ export default function MobileLearnerDashboard() {
   return (
     <div className="min-h-screen bg-[#F5F2EB] pb-20">
       {/* Header Section */}
-      <header className="sticky top-0 z-30 border-b-2 border-[#2AA9C9] bg-[#224248] px-4 pb-3 pt-3 shadow-xl">
+      <header className="sticky top-0 z-30 border border-[#2AA9C9] bg-[#224248] px-4 pb-3 pt-3 shadow-xl">
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col items-center text-center">
             <img
@@ -400,51 +433,82 @@ export default function MobileLearnerDashboard() {
         {activeTab === 'reports' && (
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-[#0A2540]">Report Cards</h2>
-              <button onClick={() => setActiveTab('overview')} className="text-sm font-semibold text-[#005F7B]">
-                ← Back
+              <h2 className="text-xl font-bold text-[#0A2540]">
+                {selectedResultCategory ? (resultsCategories.find(item => item.id === selectedResultCategory)?.label || 'Results') : 'Report Cards'}
+              </h2>
+              <button
+                onClick={() => selectedResultCategory ? setSelectedResultCategory(null) : setActiveTab('overview')}
+                className="text-sm font-semibold text-[#005F7B]"
+              >
+                {selectedResultCategory ? '← Back' : '← Back'}
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <select
-                value={selectedYear}
-                onChange={(event) => setSelectedYear(event.target.value)}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-              >
-                <option value="">All Years</option>
-                {availableYears.map(year => <option key={year} value={year}>{year}</option>)}
-              </select>
-              <select
-                value={selectedAssessment}
-                onChange={(event) => setSelectedAssessment(event.target.value)}
-                className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
-              >
-                <option value="">All Exams</option>
-                {availableAssessments.map(assessment => <option key={assessment} value={assessment}>{assessment}</option>)}
-              </select>
-            </div>
-            {filteredReports.length ? filteredReports.map(report => (
-              <article key={report.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-bold text-[#0A2540]">{report.term || 'Report card'}</div>
-                    <div className="text-xs text-slate-500">{report.form || user?.form} · {report.academic_year || ''}</div>
-                  </div>
-                  <div className="text-lg font-bold text-[#005F7B]">{getAverage(report.subjects)}%</div>
+
+            {!selectedResultCategory && (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    value={selectedYear}
+                    onChange={(event) => setSelectedYear(event.target.value)}
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="">All Years</option>
+                    {availableYears.map(year => <option key={year} value={year}>{year}</option>)}
+                  </select>
+                  <select
+                    value={selectedAssessment}
+                    onChange={(event) => setSelectedAssessment(event.target.value)}
+                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                  >
+                    <option value="">All Exams</option>
+                    {availableAssessments.map(assessment => <option key={assessment} value={assessment}>{assessment}</option>)}
+                  </select>
                 </div>
-                <div className="mt-3 space-y-2">
-                  {(report.subjects || []).slice(0, 4).map(subject => (
-                    <div key={subject.name} className="flex justify-between text-sm">
-                      <span className="text-slate-600">{subject.name}</span>
-                      <span className="font-semibold text-[#0A2540]">{subject.score}%</span>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {resultsCategories.map(category => {
+                    const count = filteredReports.filter(category.matcher).length;
+                    return (
+                      <button
+                        key={category.id}
+                        onClick={() => setSelectedResultCategory(category.id)}
+                        className="rounded-2xl border-2 border-[#2AA9C9] bg-white p-4 text-left shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98]"
+                      >
+                        <div className="text-lg font-bold text-[#0A2540]">{category.label}</div>
+                        <div className="mt-2 text-xs text-slate-500">{count} result{count === 1 ? '' : 's'}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {selectedResultCategory && (
+              <div className="space-y-3">
+                {selectedCategoryReports.length ? selectedCategoryReports.map(report => (
+                  <article key={report.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-bold text-[#0A2540]">{report.term || 'Report card'}</div>
+                        <div className="text-xs text-slate-500">{report.form || user?.form} · {report.academic_year || ''}</div>
+                      </div>
+                      <div className="text-lg font-bold text-[#005F7B]">{getAverage(report.subjects)}%</div>
                     </div>
-                  ))}
-                </div>
-                <button onClick={() => downloadReportPDF(report)} className="mt-4 w-full rounded-xl bg-[#005F7B] py-3 text-sm font-semibold text-white">
-                  Download PDF
-                </button>
-              </article>
-            )) : <p className="rounded-2xl bg-white p-6 text-center text-sm text-slate-500">No reports match your selection.</p>}
+                    <div className="mt-3 space-y-2">
+                      {(report.subjects || []).slice(0, 4).map(subject => (
+                        <div key={`${report.id}-${subject.name}`} className="flex justify-between text-sm">
+                          <span className="text-slate-600">{subject.name}</span>
+                          <span className="font-semibold text-[#0A2540]">{subject.score}%</span>
+                        </div>
+                      ))}
+                    </div>
+                    <button onClick={() => downloadReportPDF(report)} className="mt-4 w-full rounded-xl bg-[#005F7B] py-3 text-sm font-semibold text-white">
+                      Download PDF
+                    </button>
+                  </article>
+                )) : <p className="rounded-2xl bg-white p-6 text-center text-sm text-slate-500">No reports match this selection.</p>}
+              </div>
+            )}
           </section>
         )}
 
