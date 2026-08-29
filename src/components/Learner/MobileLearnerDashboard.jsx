@@ -358,7 +358,7 @@ export default function MobileLearnerDashboard() {
             <div className="grid grid-cols-3 gap-2">
               <MobileStat icon={ChartBarIcon} value={latestAverage} label="Average" />
               <MobileStat icon={DocumentTextIcon} value={filteredReports.length} label="Reports" />
-              <MobileStat icon="/user.png" value={attendanceRate === '—' ? '—' : `${attendanceRate}%`} label="Attendance" />
+              <MobileStat icon="/attendance.png" value={attendanceRate === '—' ? '—' : `${attendanceRate}%`} label="Attendance" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               {/* Results Card */}
@@ -379,7 +379,7 @@ export default function MobileLearnerDashboard() {
 
               {/* Attendance Card */}
               <DashboardCard
-                icon="/user.png"
+                icon="/attendance.png"
                 title="Attendance"
                 color="#6C63FF"
                 onClick={() => setActiveTab('attendance')}
@@ -491,7 +491,7 @@ export default function MobileLearnerDashboard() {
             { id: 'overview', label: 'Home', icon: '/schoologo.png' },
             { id: 'learning', label: 'Learn', icon: '/open-book.png' },
             { id: 'reports', label: 'Reports', icon: '/results.png' },
-            { id: 'attendance', label: 'Attendance', icon: '/user.png' }
+            { id: 'attendance', label: 'Attendance', icon: '/attendance.png' }
           ].map(({ id, label, icon: Icon }) => (
             <button 
               key={id} 
