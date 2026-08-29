@@ -297,53 +297,53 @@ export default function MobileLearnerDashboard() {
   return (
     <div className="min-h-screen bg-[#F5F2EB] pb-20">
       {/* Header Section */}
-      <header className="sticky top-0 z-30 bg-[#224248] px-5 pb-6 pt-5 shadow-xl">
-        <div className="flex items-start justify-between">
+      <header className="sticky top-0 z-30 bg-[#224248] px-4 pb-3 pt-3 shadow-xl">
+        <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col items-center text-center">
             <img
               src="/schoologo.png"
               alt="Progress Secondary School logo"
-              className="h-20 w-20 object-contain drop-shadow-lg"
+              className="h-12 w-12 object-contain drop-shadow-lg"
             />
-            <div className="mt-2 leading-tight">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[#7DE3FF]">
+            <div className="mt-1 leading-tight">
+              <div className="text-[8px] font-semibold uppercase tracking-[0.2em] text-[#7DE3FF]">
                 Student Portal
               </div>
-              <h1 className="text-lg font-black tracking-wide text-white">
+              <h1 className="text-sm font-black tracking-wide text-white">
                 Progress School
               </h1>
-              <div className="text-xs font-light text-white/60">
+              <div className="text-[10px] font-light text-white/60">
                 Secondary School
               </div>
             </div>
           </div>
           <button
             onClick={handleLogout}
-            className="group flex items-center gap-1.5 rounded-xl bg-white/10 px-4 py-2.5 text-xs font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20"
+            className="group flex items-center gap-1 rounded-xl bg-white/10 px-3 py-2 text-[10px] font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20"
           >
-            <ArrowRightOnRectangleIcon className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            <ArrowRightOnRectangleIcon className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
             <span>Exit</span>
           </button>
         </div>
 
-        <div className="mt-5 border-t border-white/20 pt-4">
-          <div className="flex items-center justify-between">
+        <div className="mt-3 border-t border-white/20 pt-2">
+          <div className="flex items-center justify-between gap-2">
             <div>
-              <h2 className="mt-0.5 text-2xl font-bold text-white">
+              <h2 className="text-base font-bold text-white">
                 {user?.name || 'Learner'}
               </h2>
-              <div className="mt-1 flex items-center gap-2">
-                <AcademicCapIcon className="h-4 w-4 text-[#7DE3FF]" />
-                <span className="text-sm font-medium text-white/80">
+              <div className="mt-0.5 flex items-center gap-1.5">
+                <AcademicCapIcon className="h-3.5 w-3.5 text-[#7DE3FF]" />
+                <span className="text-[11px] font-medium text-white/80">
                   {user?.form || 'Form'}
                 </span>
               </div>
             </div>
-            <div className="px-2 py-2 text-center">
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-[#7DE3FF]">
+            <div className="px-1.5 py-1 text-center">
+              <div className="text-[8px] font-semibold uppercase tracking-wider text-[#7DE3FF]">
                 Today
               </div>
-              <div className="text-sm font-bold text-white">
+              <div className="text-[10px] font-bold text-white">
                 {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
               </div>
             </div>
