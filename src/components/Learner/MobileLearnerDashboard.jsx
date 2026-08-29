@@ -371,7 +371,7 @@ export default function MobileLearnerDashboard() {
 
               {/* Learn Card */}
               <DashboardCard
-                icon={BookOpenIcon}
+                icon="/open-book.png"
                 title="Learn"
                 color={CYAN}
                 onClick={() => setActiveTab('learning')}
@@ -387,7 +387,7 @@ export default function MobileLearnerDashboard() {
 
               {/* Profile Card */}
               <DashboardCard
-                icon={UserCircleIcon}
+                icon="/user.png"
                 title="Profile"
                 color="#F59E0B"
                 onClick={() => toast.info('Profile details coming soon')}
@@ -488,8 +488,8 @@ export default function MobileLearnerDashboard() {
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-transparent px-2 py-2">
         <div className="mx-auto flex max-w-md justify-around">
           {[
-            { id: 'overview', label: 'Home', icon: HomeIcon },
-            { id: 'learning', label: 'Learn', icon: BookOpenIcon },
+            { id: 'overview', label: 'Home', icon: '/schoologo.png' },
+            { id: 'learning', label: 'Learn', icon: '/open-book.png' },
             { id: 'reports', label: 'Reports', icon: '/results.png' },
             { id: 'attendance', label: 'Attendance', icon: '/user.png' }
           ].map(({ id, label, icon: Icon }) => (
