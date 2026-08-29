@@ -41,8 +41,7 @@ const QuizResults = () => {
         setError(response.data.message || 'Failed to load results');
       }
     } catch (err) {
-      console.error('Error loading results:', err);
-      setError('Could not connect to server. Please try again later.');
+setError('Could not connect to server. Please try again later.');
       toast.error('Failed to load quiz results');
     } finally {
       setLoading(false);
@@ -62,8 +61,7 @@ const QuizResults = () => {
         toast.error('Could not load details');
       }
     } catch (error) {
-      console.error(error);
-      toast.error('Failed to load quiz details');
+toast.error('Failed to load quiz details');
     }
   };
 
@@ -82,8 +80,7 @@ const QuizResults = () => {
       await html2pdf().set(opt).from(element).save();
       toast.success('Feedback PDF downloaded!');
     } catch (error) {
-      console.error('PDF error:', error);
-      toast.error('Failed to generate PDF');
+toast.error('Failed to generate PDF');
     } finally {
       setGeneratingPdf(false);
     }

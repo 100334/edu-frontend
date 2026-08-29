@@ -155,14 +155,7 @@ export default function TeacherDashboard() {
       const reportsData = reportsRes.data?.data || reportsRes.data || [];
       const attendanceData = attendanceRes.data?.data?.records || attendanceRes.data || [];
       const statsData = statsRes.data?.data || statsRes.data || {};
-      
-      console.log('📊 My Learners:', myLearnersData.length);
-      console.log('📊 All Learners:', allLearnersData.length);
-      console.log('📊 Reports:', reportsData.length);
-      console.log('📊 Attendance:', attendanceData.length);
-      console.log('📊 Stats:', statsData);
-      
-      setMyLearners(myLearnersData);
+setMyLearners(myLearnersData);
       setAllLearners(allLearnersData);
       setReports(reportsData);
       setAttendance(attendanceData);
@@ -179,8 +172,7 @@ export default function TeacherDashboard() {
       setAvailableLearners(available);
       
     } catch (error) {
-      console.error('Error loading dashboard:', error);
-      toast.error('Failed to load dashboard data');
+toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
@@ -201,8 +193,7 @@ export default function TeacherDashboard() {
       });
       setSubjectScores(newScores);
     } catch (error) {
-      console.error('Error fetching subjects:', error);
-      setSubjects([]);
+setSubjects([]);
     }
   };
 
@@ -230,8 +221,7 @@ export default function TeacherDashboard() {
         toast.error(response.data.message || 'Failed to add learners');
       }
     } catch (error) {
-      console.error('Error adding learners:', error);
-      toast.error(error.response?.data?.message || 'Failed to add learners');
+toast.error(error.response?.data?.message || 'Failed to add learners');
     } finally {
       setIsSubmitting(false);
     }
@@ -396,14 +386,7 @@ export default function TeacherDashboard() {
       const reportsData = reportsRes.data?.data || reportsRes.data || [];
       const attendanceData = attendanceRes.data?.data?.records || attendanceRes.data || [];
       const statsData = statsRes.data?.data || statsRes.data || {};
-      
-      console.log('📊 My Learners:', myLearnersData.length);
-      console.log('📊 All Learners:', allLearnersData.length);
-      console.log('📊 Reports:', reportsData.length);
-      console.log('📊 Attendance:', attendanceData.length);
-      console.log('📊 Stats:', statsData);
-      
-      setMyLearners(myLearnersData);
+setMyLearners(myLearnersData);
       setAllLearners(allLearnersData);
       setReports(reportsData);
       setAttendance(attendanceData);
@@ -420,8 +403,7 @@ export default function TeacherDashboard() {
       setAvailableLearners(available);
       
     } catch (error) {
-      console.error('Error loading dashboard:', error);
-      toast.error('Failed to load dashboard data');
+toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
@@ -442,8 +424,7 @@ export default function TeacherDashboard() {
       });
       setSubjectScores(newScores);
     } catch (error) {
-      console.error('Error fetching subjects:', error);
-      setSubjects([]);
+setSubjects([]);
     }
   };
 
@@ -471,8 +452,7 @@ export default function TeacherDashboard() {
         toast.error(response.data.message || 'Failed to add learners');
       }
     } catch (error) {
-      console.error('Error adding learners:', error);
-      toast.error(error.response?.data?.message || 'Failed to add learners');
+toast.error(error.response?.data?.message || 'Failed to add learners');
     } finally {
       setIsSubmitting(false);
     }
@@ -484,19 +464,15 @@ export default function TeacherDashboard() {
   try {
     // First, get teacher's assigned class info
     const teacherInfoRes = await api.get('/api/teacher/debug-setup');
-    console.log('Teacher info:', teacherInfoRes.data);
-    
-    let teacherClassId = null;
+let teacherClassId = null;
     let teacherClassName = null;
     
     if (teacherInfoRes.data.success && teacherInfoRes.data.current_teacher) {
       teacherClassId = teacherInfoRes.data.current_teacher.class_id;
       teacherClassName = teacherInfoRes.data.assigned_class?.name;
       setTeacherClass(teacherInfoRes.data.assigned_class);
-      console.log('👨‍🏫 Teacher assigned to class:', teacherClassName, 'ID:', teacherClassId);
-    } else {
-      console.log('⚠️ Teacher has no class assigned');
-      setTeacherClass(null);
+} else {
+setTeacherClass(null);
     }
     
     const [myLearnersRes, allLearnersRes, reportsRes, attendanceRes, statsRes] = await Promise.all([
@@ -512,9 +488,6 @@ export default function TeacherDashboard() {
     const reportsData = reportsRes.data?.data || reportsRes.data || [];
     const attendanceData = attendanceRes.data?.data?.records || attendanceRes.data || [];
     const statsData = statsRes.data?.data || statsRes.data || {};
-    
-    console.log('📊 My Learners:', myLearnersData.length);
-    console.log('📊 All Learners:', allLearnersData.length);
     
     setMyLearners(myLearnersData);
     setAllLearners(allLearnersData);
@@ -538,17 +511,14 @@ export default function TeacherDashboard() {
         !assignedIds.has(l.id) && 
         l.class_id === teacherClassId
       );
-      console.log(`📚 Found ${available.length} learners in ${teacherClassName} available to add`);
-    } else {
-      console.log('⚠️ Teacher has no class assigned - no learners available');
-      available = [];
+} else {
+available = [];
     }
     
     setAvailableLearners(available);
     
   } catch (error) {
-    console.error('Error loading dashboard:', error);
-    toast.error('Failed to load dashboard data');
+toast.error('Failed to load dashboard data');
   } finally {
     setLoading(false);
   }
@@ -607,8 +577,7 @@ export default function TeacherDashboard() {
         toast.error(response.data.message || 'Failed to save report');
       }
     } catch (error) {
-      console.error('Error saving report:', error);
-      toast.error('Failed to save report');
+toast.error('Failed to save report');
     } finally {
       setIsSubmitting(false);
     }
@@ -623,8 +592,7 @@ export default function TeacherDashboard() {
       toast.success('Report deleted');
       loadDashboardData();
     } catch (error) {
-      console.error('Error deleting report:', error);
-      toast.error('Failed to delete report');
+toast.error('Failed to delete report');
     }
   };
 
@@ -656,8 +624,7 @@ export default function TeacherDashboard() {
       setAttLearnerId('');
       loadDashboardData();
     } catch (error) {
-      console.error('Error recording attendance:', error);
-      toast.error('Failed to record attendance');
+toast.error('Failed to record attendance');
     } finally {
       setIsSubmitting(false);
     }

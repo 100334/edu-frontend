@@ -38,8 +38,7 @@ export default function TeacherReports() {
       setLearners(learnersRes.data || []);
       setReports(reportsRes.data || []);
     } catch (error) {
-      console.error('Error loading data:', error);
-      toast.error('Failed to load data. Please check your connection.');
+toast.error('Failed to load data. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -77,24 +76,17 @@ export default function TeacherReports() {
       attendance_days: formData.attendance_days,
       days_present: formData.days_present
     };
-
-    console.log('📤 Sending report data:', reportData);
-
-    try {
+try {
       const response = await api.post('/api/teacher/reports', reportData);
-      console.log('✅ Report saved:', response.data);
-      setReports([response.data.report || response.data, ...reports]);
+setReports([response.data.report || response.data, ...reports]);
       setShowReportModal(false);
       resetForm();
       toast.success('Report card saved successfully!');
     } catch (error) {
-      console.error('❌ Error saving report:', error.response?.data || error.message);
-      
-      if (error.response?.data?.error) {
+if (error.response?.data?.error) {
         toast.error(`Server error: ${error.response.data.error}`);
         if (error.response.data.details) {
-          console.error('Details:', error.response.data.details);
-        }
+}
       } else if (error.response?.status === 500) {
         toast.error('Server error. Please check the console for details.');
       } else {
@@ -111,8 +103,7 @@ export default function TeacherReports() {
       setReports(reports.filter(r => r.id !== id));
       toast.success('Report deleted successfully');
     } catch (error) {
-      console.error('Error deleting report:', error);
-      toast.error('Failed to delete report. Please try again.');
+toast.error('Failed to delete report. Please try again.');
     }
   };
 
@@ -121,8 +112,7 @@ export default function TeacherReports() {
       const response = await api.get(`/api/teacher/reports/${id}`);
       setSelectedReport(response.data);
     } catch (error) {
-      console.error('Error loading report:', error);
-      toast.error('Failed to load report');
+toast.error('Failed to load report');
     }
   };
 

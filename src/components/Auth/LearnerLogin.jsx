@@ -18,7 +18,7 @@ const InputField = ({ icon: Icon, label, value, onChange, placeholder, type = 't
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className={`w-full pl-11 pr-4 py-2.5 bg-[#F4F9F9] border border-slate-200 rounded-md text-slate-800 text-sm placeholder-slate-400 placeholder:font-sans focus:outline-none focus:bg-white focus:border-[#006770] focus:ring-1 focus:ring-[#006770] transition-all duration-200 ${
+        className={`w-full pl-10 pr-3 py-2 bg-[#F4F9F9] border border-slate-200 rounded-md text-slate-800 text-sm placeholder-slate-400 placeholder:font-sans focus:outline-none focus:bg-white focus:border-[#006770] focus:ring-1 focus:ring-[#006770] transition-all duration-200 ${
           monospace ? 'font-mono' : ''
         }`}
         placeholder={placeholder}
@@ -105,12 +105,12 @@ const LearnerLogin = ({ serverStatus }) => {
 
   return (
     <div className="min-h-screen bg-[#F4F9F9] flex items-center justify-center p-3">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-sm">
         {/* Main Card */}
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden">
           
           {/* Header Section */}
-          <div className="pt-5 pb-4 px-6 text-center border-b border-slate-100">
+          <div className="pt-4 pb-3 px-5 text-center border-b border-slate-100">
             <SchoolLogo />
             <h1 className="text-lg sm:text-xl font-bold text-slate-800 tracking-tight">
               PROGRESS SECONDARY SCHOOL
@@ -122,8 +122,8 @@ const LearnerLogin = ({ serverStatus }) => {
           </div>
 
           {/* Form Section */}
-          <div className="p-4 sm:p-5">
-            <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} className="space-y-3.5">
+          <div className="p-3 sm:p-4">
+            <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} className="space-y-3">
               <InputField
                 icon={UserIcon}
                 label="Full Name"
@@ -161,7 +161,7 @@ const LearnerLogin = ({ serverStatus }) => {
               <button
                 type="submit"
                 disabled={loading || serverStatus?.status === 'offline'}
-                className="w-full mt-1 py-2.5 bg-[#006770] hover:bg-[#006770] text-white font-semibold rounded-md transition-colors duration-200 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
+                className="w-full mt-1 py-2 bg-[#006770] hover:bg-[#006770] text-white font-semibold rounded-md transition-colors duration-200 disabled:cursor-not-allowed text-sm flex items-center justify-center gap-2"
               >
                 {loading ? (
                   <>

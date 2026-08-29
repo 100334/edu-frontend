@@ -67,9 +67,7 @@ export default function AdminLogin() {
         });
       }
     } catch (error) {
-      console.error('Login error:', error);
-      
-      if (error.response?.status === 401) {
+if (error.response?.status === 401) {
         toast.error('Invalid email or password');
       } else if (error.response?.status === 403) {
         toast.error('Access denied. Admin privileges required.');

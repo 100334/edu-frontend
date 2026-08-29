@@ -59,9 +59,7 @@ export default function TeacherLogin() {
         toast.error(response.data.message || 'Login failed');
       }
     } catch (error) {
-      console.error('Login error:', error);
-      
-      if (error.response) {
+if (error.response) {
         toast.error(error.response.data.message || 'Invalid credentials');
       } else if (error.request) {
         toast.error('Cannot reach server. Please try again.');

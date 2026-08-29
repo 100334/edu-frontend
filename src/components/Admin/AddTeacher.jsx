@@ -56,8 +56,7 @@ export default function AddTeacher({ onSuccess }) {
         if (onSuccess) setTimeout(onSuccess, 3000);
       }
     } catch (error) {
-      console.error('Error creating teacher:', error);
-      toast.error(error.response?.data?.error || 'Failed to create teacher');
+toast.error(error.response?.data?.error || 'Failed to create teacher');
     } finally {
       setLoading(false);
     }

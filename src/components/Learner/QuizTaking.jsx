@@ -60,7 +60,7 @@ const QuizTaking = ({ quizId, onComplete }) => {
             answer: ans,
             attempt_id: attemptId
           }, { headers: { Authorization: `Bearer ${token}` } });
-        } catch (error) { console.warn('Auto-save failed:', error); }
+        } catch (error) {  }
       }
     }
   };
@@ -99,8 +99,7 @@ const QuizTaking = ({ quizId, onComplete }) => {
       setTimeLeft(res.data.quiz.duration * 60);
       if (res.data.saved_answers) setAnswers(res.data.saved_answers);
     } catch (error) {
-      console.error(error);
-      toast.error('Failed to load quiz.');
+toast.error('Failed to load quiz.');
       navigate('/learner/dashboard');
     }
   };
@@ -161,8 +160,7 @@ const QuizTaking = ({ quizId, onComplete }) => {
       toast.dismiss(loadingToast);
       toast.success('PDF generated successfully!');
     } catch (error) {
-      console.error('PDF generation error:', error);
-      toast.dismiss(loadingToast);
+toast.dismiss(loadingToast);
       toast.error('Failed to generate PDF. Please try again.');
     }
   };

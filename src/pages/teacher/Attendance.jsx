@@ -29,16 +29,10 @@ export default function TeacherAttendance() {
       // FIXED: Handle different response structures
       const learnersData = learnersRes.data?.learners || learnersRes.data || [];
       const attendanceData = attendanceRes.data?.data?.records || attendanceRes.data || [];
-      
-      console.log('📊 Loaded learners:', learnersData.length);
-      console.log('📊 Loaded attendance:', attendanceData.length);
-      console.log('📊 Sample learner ID:', learnersData[0]?.id, typeof learnersData[0]?.id);
-      
-      setLearners(learnersData);
+setLearners(learnersData);
       setAttendance(attendanceData);
     } catch (error) {
-      console.error('Error loading attendance data:', error);
-      toast.error('Failed to load data. Please check your connection.');
+toast.error('Failed to load data. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -75,14 +69,9 @@ export default function TeacherAttendance() {
       date: formData.date,
       status: formData.status
     };
-    
-    console.log('📤 Sending attendance payload:', payload);
-    
-    try {
+try {
       const response = await api.post('/api/teacher/attendance', payload);
-      console.log('✅ Attendance response:', response.data);
-      
-      if (response.data.success) {
+if (response.data.success) {
         // FIXED: Handle different response structures
         const newRecord = response.data.attendance || response.data.data;
         
@@ -100,11 +89,7 @@ export default function TeacherAttendance() {
         toast.error(response.data.message || 'Failed to record attendance');
       }
     } catch (error) {
-      console.error('❌ Error recording attendance:', error);
-      console.error('Error details:', error.response?.data);
-      console.error('Error status:', error.response?.status);
-      
-      // Handle specific error cases
+// Handle specific error cases
       if (error.response?.status === 409) {
         toast.error('Attendance already recorded for this learner on this date');
       } else if (error.response?.status === 400) {

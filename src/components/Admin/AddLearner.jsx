@@ -57,8 +57,7 @@ export default function AddLearner({ onSuccess }) {
         if (onSuccess) setTimeout(onSuccess, 3000);
       }
     } catch (error) {
-      console.error('Error creating learner:', error);
-      toast.error(error.response?.data?.error || 'Failed to create learner');
+toast.error(error.response?.data?.error || 'Failed to create learner');
     } finally {
       setLoading(false);
     }

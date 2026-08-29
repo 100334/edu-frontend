@@ -61,8 +61,7 @@ const DebugAuth = () => {
         const decoded = JSON.parse(atob(token));
         setDecodedToken(decoded);
       } catch (e) {
-        console.error('Failed to decode token:', e);
-      }
+}
     }
   }, [token]);
   
@@ -87,17 +86,13 @@ const ProtectedRoute = ({ children, allowedRole }) => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    console.log('ProtectedRoute check:', { user, loading, allowedRole });
-    
-    if (!loading && !user) {
-      console.log('No user, redirecting to home');
-      navigate('/');
+if (!loading && !user) {
+navigate('/');
       return;
     }
     
     if (!loading && user && allowedRole && user.role !== allowedRole) {
-      console.log(`Wrong role: ${user.role} !== ${allowedRole}, redirecting`);
-      if (user.role === 'teacher') {
+if (user.role === 'teacher') {
         navigate('/teacher/dashboard');
       } else if (user.role === 'learner') {
         navigate('/learner/dashboard');
@@ -204,19 +199,14 @@ function AppContent() {
   useEffect(() => {
     const checkServer = async () => {
       try {
-        console.log('🔍 Checking server connection...');
-        console.log('API URL:', api.defaults.baseURL);
         const healthResult = await checkHealth();
         if (healthResult.success) {
-          console.log('✅ Server connected:', healthResult.data);
-          setServerStatus({ status: 'online', data: healthResult.data });
+setServerStatus({ status: 'online', data: healthResult.data });
         } else {
-          console.warn('⚠️ Server connection failed:', healthResult.error);
-          setServerStatus({ status: 'offline', error: healthResult.error });
+setServerStatus({ status: 'offline', error: healthResult.error });
         }
       } catch (error) {
-        console.error('❌ Server check error:', error);
-        setServerStatus({ status: 'offline', error: error.message });
+setServerStatus({ status: 'offline', error: error.message });
       }
     };
     checkServer();

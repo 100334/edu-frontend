@@ -43,40 +43,31 @@ export default function LearnerReportCard() {
 
   const loadReports = async () => {
     if (!user?.id) {
-      console.log('No user ID available, skipping report fetch');
-      setLoading(false);
+setLoading(false);
       setFetchError('User not authenticated');
       return;
     }
 
     try {
-      console.log('Fetching reports for user ID:', user.id);
-      const response = await api.get(`/api/learner/reports`);
-      
-      console.log('Full API response:', response.data);
-      
-      // IMPORTANT: Extract reports from the response structure
+const response = await api.get(`/api/learner/reports`);
+// IMPORTANT: Extract reports from the response structure
       let reportsData = [];
       
       // Check different possible response structures
       if (response.data && response.data.data && Array.isArray(response.data.data)) {
         // Structure: { success: true, data: [...] }
         reportsData = response.data.data;
-        console.log('Found reports in data.data:', reportsData.length);
-      } 
+} 
       else if (Array.isArray(response.data)) {
         // Structure: direct array
         reportsData = response.data;
-        console.log('Found reports as direct array:', reportsData.length);
-      }
+}
       else if (response.data && response.data.reports && Array.isArray(response.data.reports)) {
         // Structure: { reports: [...] }
         reportsData = response.data.reports;
-        console.log('Found reports in reports property:', reportsData.length);
-      }
+}
       else {
-        console.warn('Unexpected response structure:', response.data);
-        reportsData = [];
+reportsData = [];
       }
       
       // Process each report to ensure subjects is an array
@@ -87,8 +78,7 @@ export default function LearnerReportCard() {
           try {
             subjects = JSON.parse(subjects);
           } catch (e) {
-            console.error('Failed to parse subjects JSON:', e);
-            subjects = [];
+subjects = [];
           }
         }
         
@@ -112,12 +102,7 @@ export default function LearnerReportCard() {
         };
       });
       
-      console.log('Processed reports:', processedReports);
-      console.log('Number of reports:', processedReports.length);
-      
       if (processedReports.length > 0) {
-        console.log('First report subjects:', processedReports[0].subjects);
-        console.log('First report subjects count:', processedReports[0].subjects.length);
       }
       
       setReports(processedReports);
@@ -127,9 +112,7 @@ export default function LearnerReportCard() {
       }
       
     } catch (error) {
-      console.error('Failed to load reports:', error);
-      
-      // Handle different error types
+// Handle different error types
       if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
         setFetchError('Server is taking too long to respond. Please try again.');
       } else if (error.response?.status === 401) {
@@ -324,8 +307,7 @@ export default function LearnerReportCard() {
       doc.save(fileName);
       toast.success('Report card downloaded successfully!');
     } catch (error) {
-      console.error('PDF generation error:', error);
-      toast.error('Failed to generate PDF: ' + error.message);
+toast.error('Failed to generate PDF: ' + error.message);
     }
   };
 
@@ -474,8 +456,7 @@ export default function LearnerReportCard() {
       doc.save(fileName);
       toast.success('All reports downloaded successfully!');
     } catch (error) {
-      console.error('PDF generation error:', error);
-      toast.error('Failed to generate PDFs: ' + error.message);
+toast.error('Failed to generate PDFs: ' + error.message);
     }
   };
 

@@ -40,8 +40,7 @@ const ImageUploader = ({ label, currentImage = '', onImageUpload, onRemove }) =>
         toast.success('Image uploaded!');
       }
     } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('Upload failed');
+toast.error('Upload failed');
       setPreview(currentImage); // revert
     } finally {
       setUploading(false);

@@ -111,7 +111,6 @@ const downloadAllReports = () => {
     toast.success('All reports merged and downloaded!');
     
   } catch (error) {
-    console.error('Bulk PDF Error:', error);
-    toast.error('Failed to generate multiple reports');
+toast.error('Failed to generate multiple reports');
   }
 };

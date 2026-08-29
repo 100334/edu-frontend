@@ -51,8 +51,7 @@ const ImageUploader = ({ label, currentImage = '', onImageUpload, onRemove }) =>
         throw new Error('No image URL returned');
       }
     } catch (error) {
-      console.error('Upload error:', error);
-      toast.error(error.response?.data?.message || 'Upload failed. Please try again.');
+toast.error(error.response?.data?.message || 'Upload failed. Please try again.');
       // Revert preview
       setPreview(currentImage);
     } finally {

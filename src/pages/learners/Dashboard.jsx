@@ -130,8 +130,7 @@ export default function LearnerDashboard() {
 
   const loadDashboardData = useCallback(async () => {
     if (!user?.id) {
-      console.log('No user ID available');
-      setLoading(false);
+setLoading(false);
       return;
     }
 
@@ -139,39 +138,29 @@ export default function LearnerDashboard() {
     setError(null);
     
     try {
-      console.log('Loading dashboard data for learner:', user.id);
-      
-      // Fetch reports with better error handling
+// Fetch reports with better error handling
       let reportsData = [];
       try {
-        console.log('Fetching reports from: /api/learner/reports');
-        const reportsRes = await api.get('/api/learner/reports');
-        console.log('Reports response:', reportsRes.data);
-        
-        if (reportsRes.data && Array.isArray(reportsRes.data)) {
+const reportsRes = await api.get('/api/learner/reports');
+if (reportsRes.data && Array.isArray(reportsRes.data)) {
           reportsData = reportsRes.data;
         } else if (reportsRes.data && reportsRes.data.data && Array.isArray(reportsRes.data.data)) {
           reportsData = reportsRes.data.data;
         } else if (reportsRes.data && reportsRes.data.reports && Array.isArray(reportsRes.data.reports)) {
           reportsData = reportsRes.data.reports;
         } else {
-          console.warn('Unexpected reports response structure:', reportsRes.data);
-          reportsData = [];
+reportsData = [];
         }
       } catch (reportError) {
-        console.error('Error fetching reports:', reportError);
-        toast.error('Could not load reports');
+toast.error('Could not load reports');
         reportsData = [];
       }
       
       // Fetch attendance with better error handling
       let attendanceData = { stats: {}, records: [] };
       try {
-        console.log('Fetching attendance from: /api/learner/attendance');
-        const attendanceRes = await api.get('/api/learner/attendance');
-        console.log('Attendance response:', attendanceRes.data);
-        
-        if (attendanceRes.data) {
+const attendanceRes = await api.get('/api/learner/attendance');
+if (attendanceRes.data) {
           if (attendanceRes.data.stats && attendanceRes.data.records) {
             attendanceData = attendanceRes.data;
           } else if (attendanceRes.data.data) {
@@ -183,8 +172,7 @@ export default function LearnerDashboard() {
           }
         }
       } catch (attendanceError) {
-        console.error('Error fetching attendance:', attendanceError);
-        toast.error('Could not load attendance');
+toast.error('Could not load attendance');
         attendanceData = { stats: {}, records: [] };
       }
 
@@ -282,8 +270,7 @@ export default function LearnerDashboard() {
       setRecentActivity(sortedActivity);
 
     } catch (error) {
-      console.error('Dashboard error:', error);
-      setError(error.message);
+setError(error.message);
       toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
@@ -442,8 +429,7 @@ export default function LearnerDashboard() {
       
       toast.success('Report downloaded successfully!');
     } catch (error) {
-      console.error('PDF generation error:', error);
-      toast.error('Failed to generate PDF: ' + error.message);
+toast.error('Failed to generate PDF: ' + error.message);
     }
   };
 
@@ -520,8 +506,7 @@ export default function LearnerDashboard() {
       doc.save(`${user?.name?.replace(/\s+/g, '_') || 'student'}_Attendance_Record.pdf`);
       toast.success('Attendance record downloaded successfully!');
     } catch (error) {
-      console.error('PDF generation error:', error);
-      toast.error('Failed to generate PDF: ' + error.message);
+toast.error('Failed to generate PDF: ' + error.message);
     }
   };
 

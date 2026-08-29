@@ -324,8 +324,7 @@ export default function AdminDashboard() {
         totalClasses: response.data.classes || 0
       });
     } catch (error) {
-      console.error('Error loading stats:', error);
-      toast.error('Failed to load statistics');
+toast.error('Failed to load statistics');
     } finally {
       setLoading(false);
     }
@@ -343,8 +342,7 @@ export default function AdminDashboard() {
         setUnreadCount(notifs.length);
       }
     } catch (error) {
-      console.error('Failed to fetch notifications:', error);
-    }
+}
   };
 
   const markNotificationAsRead = async (id) => {
@@ -356,8 +354,7 @@ export default function AdminDashboard() {
       // Refresh notifications
       await fetchNotifications();
     } catch (error) {
-      console.error('Failed to mark notification as read:', error);
-    }
+}
   };
 
   const handleLogout = async () => {

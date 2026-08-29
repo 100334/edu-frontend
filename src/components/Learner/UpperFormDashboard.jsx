@@ -304,8 +304,7 @@ export default function UpperFormDashboard() {
         quizzesCompleted: quizHistoryData.length,
       });
     } catch (err) {
-      console.error('UpperFormDashboard load error:', err);
-    }
+}
   }, [user, extractFilters]);
 
   const loadLeaderboard = useCallback(async () => {
@@ -448,7 +447,7 @@ export default function UpperFormDashboard() {
       doc.save(`${user?.name?.replace(/\s+/g, '_') || 'student'}_${report?.term || 'report'}.pdf`);
       toast.success('Report downloaded!');
     } catch (e) {
-      console.error(e); toast.error('Failed to generate PDF');
+toast.error('Failed to generate PDF');
     }
   };
 
@@ -487,7 +486,7 @@ export default function UpperFormDashboard() {
       });
       doc.save(`${user?.name?.replace(/\s+/g, '_') || 'student'}_Attendance.pdf`);
       toast.success('Attendance downloaded!');
-    } catch (e) { console.error(e); toast.error('Failed to generate PDF'); }
+    } catch (e) {  }
   };
 
   // ── Quiz overlay ─────────────────────────────────────────────────────────────

@@ -79,14 +79,11 @@ const SecurityLogs = () => {
         const hasMoreLogs = (page + 1) * limit < total;
         setHasMore(hasMoreLogs);
         setCurrentPage(page);
-        
-        console.log(`Loaded ${newLogs.length} logs, total ${total}`);
-      } else {
+} else {
         throw new Error(response.data.message || 'Failed to load logs');
       }
     } catch (err) {
-      console.error('Error fetching logs:', err);
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to load logs';
+const errorMessage = err.response?.data?.message || err.message || 'Failed to load logs';
       setError(errorMessage);
       
       if (err.response?.status === 401 || err.response?.status === 403) {
@@ -135,8 +132,7 @@ const SecurityLogs = () => {
         throw new Error(response.data.message || 'Failed to clear logs');
       }
     } catch (err) {
-      console.error('Error clearing logs:', err);
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to clear logs';
+const errorMessage = err.response?.data?.message || err.message || 'Failed to clear logs';
       toast.error(errorMessage);
     } finally {
       setClearing(false);

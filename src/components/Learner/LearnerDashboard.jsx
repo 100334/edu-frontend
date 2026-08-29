@@ -385,8 +385,7 @@ function LowerFormDashboard() {
         else if (reportsRes.data?.data && Array.isArray(reportsRes.data.data)) reportsData = reportsRes.data.data;
         else if (reportsRes.data?.reports && Array.isArray(reportsRes.data.reports)) reportsData = reportsRes.data.reports;
       } catch (reportError) {
-        console.error('Error fetching reports:', reportError);
-      }
+}
       try {
         const attendanceRes = await api.get('/api/learner/attendance');
         if (attendanceRes.data) {
@@ -395,8 +394,7 @@ function LowerFormDashboard() {
           else if (Array.isArray(attendanceRes.data)) attendanceData = { stats: {}, records: attendanceRes.data };
         }
       } catch (attendanceError) {
-        console.error('Error fetching attendance:', attendanceError);
-      }
+}
       try {
         const quizRes = await api.get('/api/quiz/history');
         if (quizRes.data && quizRes.data.attempts) {
@@ -406,8 +404,7 @@ function LowerFormDashboard() {
           setQuizAttempts([]);
         }
       } catch (quizError) {
-        console.error('Error fetching quiz history:', quizError);
-        setQuizAttempts([]);
+setQuizAttempts([]);
       }
       const processedReports = reportsData.map(report => ({
         ...report,
@@ -499,8 +496,7 @@ function LowerFormDashboard() {
       const sortedActivity = activity.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 3);
       setRecentActivity(sortedActivity);
     } catch (error) {
-      console.error('Dashboard data loading error:', error);
-    } finally {
+} finally {
       setLoading(false);
     }
   }, [user, extractFilters]);
@@ -518,8 +514,7 @@ function LowerFormDashboard() {
         setCurrentUserRank(res.data.current_user_rank);
       }
     } catch (error) {
-      console.error('Leaderboard loading error:', error);
-      toast.error('Failed to load leaderboard');
+toast.error('Failed to load leaderboard');
     } finally {
       setLeaderboardLoading(false);
     }
@@ -537,8 +532,7 @@ function LowerFormDashboard() {
         setUnreadCount(notifs.filter((n) => n.is_read === false || n.is_read === 'false' || n.is_read === null || n.is_read === undefined).length);
       }
     } catch (error) {
-      console.error('Failed to fetch notifications:', error);
-    }
+}
   };
 
   const markAsRead = async (id) => {
@@ -549,8 +543,7 @@ function LowerFormDashboard() {
       });
       fetchNotifications();
     } catch (error) {
-      console.error('Failed to mark as read:', error);
-    }
+}
   };
 
   useEffect(() => {
@@ -784,8 +777,7 @@ function LowerFormDashboard() {
       doc.save(`${user?.name?.replace(/\s+/g, '_') || 'student'}_${report?.term || 'report'}.pdf`);
       toast.success('Report downloaded!');
     } catch (error) {
-      console.error('PDF generation error:', error);
-      toast.error('Failed to generate PDF');
+toast.error('Failed to generate PDF');
     }
   };
 
@@ -840,8 +832,7 @@ function LowerFormDashboard() {
       doc.save(`${user?.name?.replace(/\s+/g, '_') || 'student'}_Attendance.pdf`);
       toast.success('Attendance downloaded!');
     } catch (error) {
-      console.error('PDF error:', error);
-      toast.error('Failed to generate PDF');
+toast.error('Failed to generate PDF');
     }
   };
 

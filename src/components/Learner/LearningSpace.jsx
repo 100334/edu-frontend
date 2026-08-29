@@ -133,8 +133,7 @@ const LearningSpace = ({ onStartQuiz }) => {
         })));
       }
     } catch (err) {
-      console.error('LearningSpace load error:', err);
-      toast.error('Could not load learning materials');
+toast.error('Could not load learning materials');
     }
   };
 

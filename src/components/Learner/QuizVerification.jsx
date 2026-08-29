@@ -33,8 +33,7 @@ const QuizVerification = ({ quiz, onVerify, onCancel }) => {
         toast.error(response.data.message || 'Access denied');
       }
     } catch (error) {
-      console.error('Verification error:', error);
-      const errorMsg = error.response?.data?.message || 'Failed to verify access';
+const errorMsg = error.response?.data?.message || 'Failed to verify access';
       setError(errorMsg);
       toast.error(errorMsg);
     } finally {

@@ -236,8 +236,7 @@ export default function TeacherDashboard() {
         setTeacherComment(draft.teacherComment);
       }
     } catch (error) {
-      console.error('Error restoring report draft:', error);
-    }
+}
   }, [getDraftKey, isEditing, selectedLearnerId, subjects.length]);
 
   // Keep saved scores and comments available if the teacher leaves and returns.
@@ -254,8 +253,7 @@ export default function TeacherDashboard() {
         updatedAt: new Date().toISOString()
       }));
     } catch (error) {
-      console.error('Error saving report draft:', error);
-    }
+}
   }, [getDraftKey, isEditing, selectedLearnerId, savedSubjectScores, teacherComment]);
 
   // Save active tab to sessionStorage
@@ -289,8 +287,7 @@ export default function TeacherDashboard() {
         setAssessmentTypes(response.data.assessment_types || []);
       }
     } catch (error) {
-      console.error('Error fetching assessment types:', error);
-    }
+}
   };
 
   // Generate years for dropdown
@@ -307,9 +304,7 @@ export default function TeacherDashboard() {
     setLoading(true);
     try {
       const teacherInfoRes = await api.get('/api/teacher/debug-setup');
-      console.log('Teacher info:', teacherInfoRes.data);
-      
-      let teacherClassId = null;
+let teacherClassId = null;
       let teacherClassName = null;
       
       if (teacherInfoRes.data.success && teacherInfoRes.data.current_teacher) {
@@ -331,12 +326,7 @@ export default function TeacherDashboard() {
       const reportsData = reportsRes.data?.data || reportsRes.data || [];
       const attendanceData = attendanceRes.data?.data?.records || attendanceRes.data || [];
       const statsData = statsRes.data?.data || statsRes.data || {};
-      
-      console.log('✅ Accepted learners (My Learners):', myLearnersData.length);
-      console.log('⏳ Pending learners (Add Learners):', allLearnersData.length);
-      console.log('📊 Reports:', reportsData.length);
-      
-      setMyLearners(myLearnersData);
+setMyLearners(myLearnersData);
       setAllLearners(allLearnersData);
       setAvailableLearners(allLearnersData);
       setReports(reportsData);
@@ -349,8 +339,7 @@ export default function TeacherDashboard() {
       });
       
     } catch (error) {
-      console.error('Error loading dashboard:', error);
-      toast.error('Failed to load dashboard data');
+toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
@@ -371,8 +360,7 @@ export default function TeacherDashboard() {
       setSubjectScores(newScores);
       setSavedSubjectScores({});
     } catch (error) {
-      console.error('Error fetching subjects:', error);
-      setSubjects([]);
+setSubjects([]);
     } finally {
       setLoadingSubjects(false);
     }
@@ -401,8 +389,7 @@ export default function TeacherDashboard() {
         toast.error(response.data.message || 'Failed to add learners');
       }
     } catch (error) {
-      console.error('Error adding learners:', error);
-      toast.error(error.response?.data?.message || 'Failed to add learners');
+toast.error(error.response?.data?.message || 'Failed to add learners');
     } finally {
       setIsSubmitting(false);
     }
@@ -421,8 +408,7 @@ export default function TeacherDashboard() {
         toast.error(response.data.message || 'Failed to remove learner');
       }
     } catch (error) {
-      console.error('Error removing learner:', error);
-      toast.error('Failed to remove learner');
+toast.error('Failed to remove learner');
     }
   };
 
@@ -600,8 +586,7 @@ export default function TeacherDashboard() {
         loadDashboardData();
       }
     } catch (error) {
-      console.error('Error saving report:', error);
-      toast.error(error.response?.data?.message || 'Failed to save report');
+toast.error(error.response?.data?.message || 'Failed to save report');
     } finally {
       setIsSubmitting(false);
     }
@@ -615,8 +600,7 @@ export default function TeacherDashboard() {
       toast.success('Report deleted');
       loadDashboardData();
     } catch (error) {
-      console.error('Error deleting report:', error);
-      toast.error('Failed to delete report');
+toast.error('Failed to delete report');
     }
   };
 
@@ -650,8 +634,7 @@ export default function TeacherDashboard() {
         toast.error(response.data.message || 'Failed to record attendance');
       }
     } catch (error) {
-      console.error('Error recording attendance:', error);
-      toast.error('Failed to record attendance');
+toast.error('Failed to record attendance');
     } finally {
       setIsSubmitting(false);
     }

@@ -41,8 +41,7 @@ export default function LearnerAttendance() {
         rate: statsData.rate || 0
       });
     } catch (error) {
-      console.error('Failed to load attendance:', error);
-      toast.error('Failed to load attendance records');
+toast.error('Failed to load attendance records');
     } finally {
       setLoading(false);
     }

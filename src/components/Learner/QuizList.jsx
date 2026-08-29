@@ -27,8 +27,7 @@ const QuizList = ({ onStartQuiz }) => {
         if (user.form) setLearnerForm(user.form);
       }
     } catch (error) {
-      console.error('Error getting learner form:', error);
-    }
+}
   };
 
   const loadQuizzes = async () => {
@@ -44,8 +43,7 @@ const QuizList = ({ onStartQuiz }) => {
         setQuizzes([]);
       }
     } catch (error) {
-      console.error('Error loading quizzes:', error);
-      setQuizzes([]);
+setQuizzes([]);
     } finally {
       setLoading(false);
     }
@@ -70,8 +68,7 @@ const QuizList = ({ onStartQuiz }) => {
         setQuizHistory(historyMap);
       }
     } catch (error) {
-      console.error('Error loading history:', error);
-    }
+}
   };
 
   const getQuizId = (quiz) => {

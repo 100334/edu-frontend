@@ -107,8 +107,7 @@ export default function MobileLearnerDashboard() {
         records: attendancePayload.records || (Array.isArray(attendancePayload) ? attendancePayload : [])
       });
     } catch (error) {
-      console.error('Error loading mobile learner dashboard:', error);
-      toast.error('Could not load dashboard data');
+toast.error('Could not load dashboard data');
     }
   }, []);
 
@@ -186,8 +185,7 @@ export default function MobileLearnerDashboard() {
           reader.readAsDataURL(blob);
         });
       } catch (error) {
-        console.error('Mobile report logo error:', error);
-      }
+}
 
       const subjects = (report.subjects || []).filter(subject => subject && subject.score !== undefined && subject.score !== null);
       const isUpperForm = report.form === 'Form 3' || report.form === 'Form 4';
@@ -216,8 +214,7 @@ export default function MobileLearnerDashboard() {
         try {
           doc.addImage(logoDataUrl, 'PNG', 8, 5, 38, 38);
         } catch (error) {
-          console.error('Mobile report logo rendering error:', error);
-        }
+}
       }
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(15);
@@ -293,8 +290,7 @@ export default function MobileLearnerDashboard() {
       toast.success('Report downloaded!');
       return;
     } catch (error) {
-      console.error('Mobile report PDF error:', error);
-      toast.error('Could not create PDF');
+toast.error('Could not create PDF');
     }
   };
 

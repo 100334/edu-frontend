@@ -10,12 +10,6 @@ const SERVER_URL = process.env.REACT_APP_API_URL || 'https://eduportal-backend-v
 // IMPORTANT: Do NOT add /api here because your routes already include it
 // Your backend has routes like /api/teacher/learners, so base URL should be just the server URL
 const API_URL = SERVER_URL;
-
-console.log('🔧 API Configuration:');
-console.log('   Server URL:', SERVER_URL);
-console.log('   API URL:', API_URL);
-console.log('   Note: Routes will be called with /api prefix (e.g., /api/auth/login)');
-
 const api = axios.create({
   baseURL: API_URL,
   headers: {
@@ -33,37 +27,24 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
-    console.log(`🚀 ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
-    return config;
+return config;
   },
   (error) => {
-    console.error('Request error:', error);
-    return Promise.reject(error);
+return Promise.reject(error);
   }
 );
 
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
-    console.log(`✅ ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`);
-    return response;
+return response;
   },
   async (error) => {
     const fullUrl = `${error.config?.baseURL}${error.config?.url}`;
-    
-    console.error('❌ API Error Details:', {
-      message: error.message,
-      code: error.code,
-      status: error.response?.status,
-      url: fullUrl,
-      method: error.config?.method?.toUpperCase()
-    });
 
     // Handle network errors
     if (error.message === 'Network Error') {
-      console.error('🌐 Network Error - Cannot reach server');
-      toast.error('Cannot connect to server. The server may be waking up from sleep. Please try again in a moment.', {
+toast.error('Cannot connect to server. The server may be waking up from sleep. Please try again in a moment.', {
         duration: 6000,
         icon: '🔄'
       });
@@ -72,8 +53,7 @@ api.interceptors.response.use(
 
     // Handle timeouts (Render cold start)
     if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-      console.error('⏱️ Timeout - Server may be waking up from cold start');
-      toast.error('Server is waking up (cold start). Please wait 10-15 seconds and try again.', { 
+toast.error('Server is waking up (cold start). Please wait 10-15 seconds and try again.', { 
         id: 'timeout',
         duration: 8000,
         icon: '⏳'
@@ -89,14 +69,11 @@ api.interceptors.response.use(
         msg.startsWith('Route not found:') || msg === '' || msg === 'undefined';
 
       if (looksLikeMissingRoute) {
-        console.error(`❌ 404 - Endpoint not found: ${fullUrl}`);
-      } else {
-        console.warn(`❌ 404 - ${msg} (${fullUrl})`);
-      }
+} else {
+}
 
       if (fullUrl.includes('/api/api/')) {
-        console.error('⚠️ Detected double /api in URL! Check your API calls.');
-        toast.error('API configuration error: Double /api in URL. Please check your API service configuration.', {
+toast.error('API configuration error: Double /api in URL. Please check your API service configuration.', {
           duration: 5000,
           icon: '🔧'
         });
@@ -139,8 +116,6 @@ api.interceptors.response.use(
 // ============================================
 
 export const testServerConnection = async () => {
-  console.log('Testing server connection...');
-  console.log('Testing:', `${SERVER_URL}/health`);
   
   const results = [];
   
@@ -154,16 +129,14 @@ export const testServerConnection = async () => {
       status: response.status,
       data: response.data
     });
-    console.log('✅ Server health check passed');
-  } catch (error) {
+} catch (error) {
     results.push({ 
       name: 'Server Health', 
       url: `${SERVER_URL}/health`,
       success: false, 
       error: error.message 
     });
-    console.log('❌ Server health check failed:', error.message);
-  }
+}
   
   // Test API endpoint
   try {
@@ -175,53 +148,45 @@ export const testServerConnection = async () => {
       status: response.status,
       data: response.data
     });
-    console.log('✅ API test endpoint works');
-  } catch (error) {
+} catch (error) {
     results.push({ 
       name: 'API Test', 
       url: `${SERVER_URL}/api/test`,
       success: false, 
       error: error.message 
     });
-    console.log('❌ API test endpoint failed:', error.message);
-  }
+}
   
   return results;
 };
 
 export const testConnection = async () => {
   try {
-    console.log('Testing connection to API:', `${SERVER_URL}/api/test`);
-    const response = await api.get('/api/test', { timeout: 10000 });
+const response = await api.get('/api/test', { timeout: 10000 });
     return { success: true, data: response.data };
   } catch (error) {
-    console.error('Test connection failed:', error.message);
-    return { success: false, error: error.message, code: error.code };
+return { success: false, error: error.message, code: error.code };
   }
 };
 
 export const checkHealth = async () => {
   try {
-    console.log('Checking server health at:', `${SERVER_URL}/health`);
-    const response = await axios.get(`${SERVER_URL}/health`, { timeout: 10000 });
+const response = await axios.get(`${SERVER_URL}/health`, { timeout: 10000 });
     return { success: true, data: response.data };
   } catch (error) {
-    console.error('Health check failed:', error.message);
-    return { success: false, error: error.message, code: error.code };
+return { success: false, error: error.message, code: error.code };
   }
 };
 
 export const checkServerStatus = async (retries = 3) => {
   for (let i = 0; i < retries; i++) {
     try {
-      console.log(`Health check attempt ${i + 1}/${retries}`);
-      const result = await checkHealth();
+const result = await checkHealth();
       if (result.success) {
         return { status: 'online', ...result };
       }
     } catch (error) {
-      console.log(`Health check attempt ${i + 1} failed`);
-    }
+}
     if (i < retries - 1) {
       await new Promise(resolve => setTimeout(resolve, 3000));
     }
@@ -230,31 +195,22 @@ export const checkServerStatus = async (retries = 3) => {
 };
 
 export const diagnoseConnection = async () => {
-  console.log('=== API CONNECTION DIAGNOSIS ===');
-  console.log('Server URL:', SERVER_URL);
   
   const results = await testServerConnection();
-  
-  console.log('\n=== RESULTS ===');
-  results.forEach(r => {
-    console.log(`${r.success ? '✅' : '❌'} ${r.name}: ${r.success ? `Status ${r.status}` : r.error}`);
-    if (r.success && r.data) {
-      console.log(`   Response:`, r.data);
-    }
+results.forEach(r => {
+if (r.success && r.data) {
+}
   });
   
   const serverOnline = results.find(r => r.name === 'Server Health' && r.success);
   const apiWorking = results.find(r => r.name === 'API Test' && r.success);
   
   if (serverOnline && apiWorking) {
-    console.log('\n🎯 Server is online and API is working!');
-    return { success: true, serverOnline: true, apiWorking: true };
+return { success: true, serverOnline: true, apiWorking: true };
   } else if (serverOnline && !apiWorking) {
-    console.log('\n⚠️ Server is online but API endpoints are not responding. Check your backend routes.');
-    return { success: false, serverOnline: true, apiWorking: false };
+return { success: false, serverOnline: true, apiWorking: false };
   } else {
-    console.log('\n❌ Server is not reachable. Make sure your backend is deployed and running.');
-    return { success: false, serverOnline: false, apiWorking: false };
+return { success: false, serverOnline: false, apiWorking: false };
   }
 };
 
