@@ -297,7 +297,7 @@ export default function MobileLearnerDashboard() {
   return (
     <div className="min-h-screen bg-[#F5F2EB] pb-20">
       {/* Header Section */}
-      <header className="sticky top-0 z-30 bg-[#224248] px-4 pb-3 pt-3 shadow-xl">
+      <header className="sticky top-0 z-30 border-b-2 border-[#2AA9C9] bg-[#224248] px-4 pb-3 pt-3 shadow-xl">
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col items-center text-center">
             <img
