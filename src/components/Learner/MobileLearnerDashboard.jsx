@@ -52,7 +52,7 @@ const getGrade = (score, form) => {
 const DashboardCard = ({ icon: Icon, title, color, onClick, className = '' }) => (
   <button 
     onClick={onClick}
-    className={`w-full min-h-36 rounded-2xl border-2 border-[#2AA9C9] bg-white p-5 shadow-sm transition-all hover:bg-slate-50 hover:shadow-md active:scale-[0.98] ${className}`}
+    className={`w-full min-h-36 rounded-2xl border-2 border-[#224248] bg-transparent p-5 shadow-sm transition-all hover:bg-transparent hover:shadow-md active:scale-[0.98] ${className}`}
   >
     <div className="flex justify-center">
       <div className="rounded-xl p-2">
@@ -156,9 +156,9 @@ export default function MobileLearnerDashboard() {
       matcher: report => /term\s*3/i.test(report?.term || '') || /term\s*three/i.test(report?.term || '')
     },
     {
-      id: 'testsa',
-      label: 'Testsa',
-      matcher: report => /testsa|testsa|test sa/i.test(report?.term || '') || /testsa|testsa|test sa/i.test(report?.assessment || '') || /testsa|testsa|test sa/i.test(report?.name || '')
+      id: 'tests',
+      label: 'Tests',
+      matcher: report => /tests?|test\s*sa|test\s*sa/i.test(report?.term || '') || /tests?|test\s*sa|test\s*sa/i.test(report?.assessment || '') || /tests?|test\s*sa|test\s*sa/i.test(report?.name || '')
     }
   ], []);
 
@@ -330,7 +330,7 @@ export default function MobileLearnerDashboard() {
   return (
     <div className="min-h-screen bg-[#F5F2EB] pb-20">
       {/* Header Section */}
-      <header className="sticky top-0 z-30 border border-[#2AA9C9] bg-[#224248] px-4 pb-3 pt-3 shadow-xl">
+      <header className="sticky top-0 z-30 bg-[#224248] px-4 pb-3 pt-3 shadow-xl">
         <div className="flex items-start justify-between gap-3">
           <div className="flex flex-col items-center text-center">
             <img
@@ -472,7 +472,7 @@ export default function MobileLearnerDashboard() {
                       <button
                         key={category.id}
                         onClick={() => setSelectedResultCategory(category.id)}
-                        className="rounded-2xl border-2 border-[#2AA9C9] bg-white p-4 text-left shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98]"
+                        className="rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98]"
                       >
                         <div className="text-lg font-bold text-[#0A2540]">{category.label}</div>
                         <div className="mt-2 text-xs text-slate-500">{count} result{count === 1 ? '' : 's'}</div>
