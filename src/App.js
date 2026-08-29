@@ -296,7 +296,10 @@ setServerStatus({ status: 'offline', error: error.message });
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{
+      v7_startTransition: true,
+      v7_relativeSplatPath: true,
+    }}>
       <AppProvider>
         <AuthProvider>
           <AppContent />
