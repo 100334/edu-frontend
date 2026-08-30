@@ -32,7 +32,7 @@ export default function TeacherReports() {
     setLoading(true);
     try {
       const [learnersRes, reportsRes] = await Promise.all([
-        api.get('/api/teacher/learners'),
+        api.get('/api/teacher/my-learners'),
         api.get('/api/teacher/reports')
       ]);
       setLearners(learnersRes.data || []);

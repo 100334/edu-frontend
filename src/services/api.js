@@ -231,10 +231,10 @@ export const authAPI = {
 // ============================================
 
 export const teacherAPI = {
-  getLearners: () => api.get('/api/teacher/learners'),
-  addLearner: (data) => api.post('/api/teacher/learners', data),
+  getLearners: () => api.get('/api/teacher/my-learners'),
+  addLearner: (data) => api.post('/api/teacher/add-learners', data),
   updateLearner: (id, data) => api.put(`/api/teacher/learners/${id}`, data),
-  deleteLearner: (id) => api.delete(`/api/teacher/learners/${id}`),
+  deleteLearner: (id) => api.delete(`/api/teacher/remove-learner/${id}`),
   getReports: () => api.get('/api/teacher/reports'),
   createReport: (data) => api.post('/api/teacher/reports', data),
   deleteReport: (id) => api.delete(`/api/teacher/reports/${id}`),

@@ -22,7 +22,7 @@ export default function TeacherAttendance() {
     setLoading(true);
     try {
       const [learnersRes, attendanceRes] = await Promise.all([
-        api.get('/api/teacher/learners'),
+        api.get('/api/teacher/my-learners'),
         api.get('/api/teacher/attendance')
       ]);
       
