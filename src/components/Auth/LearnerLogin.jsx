@@ -75,10 +75,6 @@ const LearnerLogin = ({ serverStatus }) => {
           localStorage.removeItem('rememberLearner');
         }
 
-        toast.success(`Welcome back, ${result.user.name}!`, {
-          icon: '🎒',
-          duration: 4000
-        });
         navigate('/learner/dashboard');
       } else {
         setError(result.message || 'Invalid credentials');

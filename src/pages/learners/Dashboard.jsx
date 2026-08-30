@@ -655,7 +655,6 @@ toast.error('Failed to generate PDF: ' + error.message);
             <h1 className="text-base lg:text-2xl font-bold text-white">
               Hello, {getUserName()}
             </h1>
-            <p className="text-xs lg:text-sm text-white/70 mt-0.5 lg:mt-1">{getGreeting()}! Welcome back</p>
           </div>
         </div>
       </div>

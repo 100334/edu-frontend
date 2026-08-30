@@ -500,7 +500,7 @@ toast.error('Could not create PDF');
               <button onClick={() => setActiveTab('overview')} className="text-sm font-semibold text-[#005F7B]">
                 ← Back
               </button>
-            </div>
+             </div>
             <LearningSpace onStartQuiz={(quizId) => setShowQuiz(quizId)} />
           </section>
         )}
