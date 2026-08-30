@@ -200,6 +200,7 @@ export default function TeacherDashboard() {
   const [savedSubjectScores, setSavedSubjectScores] = useState({});
   const [teacherComment, setTeacherComment] = useState('');
   const [loadingSubjects, setLoadingSubjects] = useState(false);
+  const [reportDraftId, setReportDraftId] = useState(null);
   
   // Edit mode states
   const [editingReportId, setEditingReportId] = useState(null);
@@ -238,6 +239,39 @@ export default function TeacherDashboard() {
     } catch (error) {
 }
   }, [getDraftKey, isEditing, selectedLearnerId, subjects.length]);
+
+  // Restore database-saved grades for the current report context.
+  useEffect(() => {
+    if (isEditing || !selectedLearnerId || subjects.length === 0) return;
+
+    const loadDatabaseDraft = async () => {
+      try {
+        const response = await api.get('/api/teacher/report-drafts', {
+          params: {
+            learnerId: selectedLearnerId,
+            term: reportTerm,
+            form: reportForm,
+            assessment_type_id: selectedAssessmentType || '',
+            academic_year: selectedYear
+          }
+        });
+
+        if (response.data.success && response.data.draft) {
+          const scores = Object.fromEntries(
+            (response.data.subjects || []).map(subject => [subject.subject_name, subject.score])
+          );
+          setReportDraftId(response.data.draft.id);
+          setSavedSubjectScores(scores);
+          setSubjectScores(previous => ({ ...previous, ...scores }));
+          setTeacherComment(response.data.draft.comment || '');
+        }
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Failed to load saved grades');
+      }
+    };
+
+    loadDatabaseDraft();
+  }, [isEditing, selectedLearnerId, subjects.length, reportTerm, reportForm, selectedAssessmentType, selectedYear]);
 
   // Keep saved scores and comments available if the teacher leaves and returns.
   useEffect(() => {
@@ -359,6 +393,7 @@ toast.error('Failed to load dashboard data');
       });
       setSubjectScores(newScores);
       setSavedSubjectScores({});
+      setReportDraftId(null);
     } catch (error) {
 setSubjects([]);
     } finally {
@@ -452,7 +487,7 @@ toast.error('Failed to remove learner');
     document.getElementById('report-form')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleSaveSubject = (subject) => {
+  const handleSaveSubject = async (subject) => {
     const rawScore = subjectScores[subject.name];
     const score = parseInt(rawScore, 10);
 
@@ -461,8 +496,30 @@ toast.error('Failed to remove learner');
       return;
     }
 
-    setSavedSubjectScores(previous => ({ ...previous, [subject.name]: score }));
-    toast.success(`${subject.name} saved`);
+    try {
+      const response = await api.post('/api/teacher/report-drafts/subjects', {
+        learnerId: parseInt(selectedLearnerId, 10),
+        term: reportTerm,
+        form: reportForm,
+        assessment_type_id: selectedAssessmentType || null,
+        academic_year: parseInt(selectedYear, 10),
+        comment: teacherComment,
+        subject_name: subject.name,
+        subject_code: subject.code,
+        score
+      });
+
+      if (!response.data.success) {
+        toast.error(response.data.message || `Failed to save ${subject.name}`);
+        return;
+      }
+
+      setReportDraftId(response.data.draft.id);
+      setSavedSubjectScores(previous => ({ ...previous, [subject.name]: score }));
+      toast.success(`${subject.name} saved to database`);
+    } catch (error) {
+      toast.error(error.response?.data?.message || `Failed to save ${subject.name}`);
+    }
   };
 
   const handleSaveReport = async () => {
@@ -569,6 +626,9 @@ toast.error('Failed to remove learner');
       }
       
       if (response.data.success) {
+        if (reportDraftId) {
+          await api.post(`/api/teacher/report-drafts/${reportDraftId}/submit`);
+        }
         const draftKey = getDraftKey();
         if (draftKey) {
           localStorage.removeItem(draftKey);
