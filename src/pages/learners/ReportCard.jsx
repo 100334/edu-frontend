@@ -152,6 +152,23 @@ subjects = [];
     return 'Need improvement';
   };
 
+  const getOrdinalSuffix = (value) => {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return '';
+    const mod100 = num % 100;
+    if (mod100 >= 11 && mod100 <= 13) return 'th';
+    const mod10 = num % 10;
+    if (mod10 === 1) return 'st';
+    if (mod10 === 2) return 'nd';
+    if (mod10 === 3) return 'rd';
+    return 'th';
+  };
+
+  const classPositionValue = selectedReport?.class_rank ?? selectedReport?.rank ?? null;
+  const classPositionLabel = classPositionValue !== null && classPositionValue !== undefined && classPositionValue !== ''
+    ? `${classPositionValue}${getOrdinalSuffix(Number(classPositionValue))}`
+    : 'N/A';
+
   const downloadPDF = () => {
     if (!selectedReport) {
       toast.error('No report selected');
@@ -213,6 +230,7 @@ subjects = [];
       
       doc.text(`Term: ${selectedReport?.term || 'N/A'}`, pageWidth - 85, 82);
       doc.text(`Form: ${selectedReport?.form || selectedReport?.grade || 'N/A'}`, pageWidth - 85, 92);
+      doc.text(`Class Position: ${classPositionLabel}`, pageWidth - 85, 102);
 
       // 4. ACADEMIC PERFORMANCE TABLE
       const tableColumn = ["Subject", "Score", "Grade", "Remarks"];
@@ -379,8 +397,14 @@ toast.error('Failed to generate PDF: ' + error.message);
         doc.text(`ID: ${user?.reg_number || 'N/A'}`, 20, 98);
         doc.text(`Form: ${report.form || report.grade || 'N/A'}`, 20, 106);
         
+        const reportPositionValue = report.class_rank ?? report.rank ?? null;
+        const reportPositionLabel = reportPositionValue !== null && reportPositionValue !== undefined && reportPositionValue !== ''
+          ? `${reportPositionValue}${getOrdinalSuffix(Number(reportPositionValue))}`
+          : 'N/A';
+
         doc.text(`Term: ${report.term || 'N/A'}`, pageWidth - 80, 90);
         doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 80, 98);
+        doc.text(`Class Position: ${reportPositionLabel}`, pageWidth - 80, 106);
 
         // Subjects Table
         const subjects = report.subjects || [];
@@ -576,6 +600,7 @@ toast.error('Failed to generate PDFs: ' + error.message);
                     <div className="text-left md:text-right">
                       <p className="font-serif text-xl font-semibold text-white">{user?.name}</p>
                       <p className="font-mono text-sm text-white/60 mt-1">{user?.reg_number}</p>
+                      <p className="text-sm text-[#00B0FF] mt-1 font-medium">Class Position: {classPositionLabel}</p>
                     </div>
                   </div>
                 </div>
