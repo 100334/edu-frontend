@@ -222,6 +222,14 @@ const calculateStatusByPassedSubjects = (subjects) => {
   return { status: 'FAIL', message: `Passed only ${passedCount} subject${passedCount !== 1 ? 's' : ''} (need 6) — Overall: FAIL`, color: '#c0392b' };
 };
 
+// Returns the ordinal suffix for a number: 1→"st", 2→"nd", 3→"rd", 4+→"th"
+const getOrdinalSuffix = (n) => {
+  if (!Number.isInteger(n) || n <= 0) return '';
+  const s = ['th', 'st', 'nd', 'rd'];
+  const v = n % 100;
+  return s[(v - 20) % 10] || s[v] || s[0];
+};
+
 // --- Stat Card ---
 const StatCard = ({ icon, value, label, color = TEAL_ACCENT }) => (
   <div className="bg-white rounded-xl border border-[#e2e8f0] p-4 shadow-sm hover:shadow transition-all duration-200">
@@ -570,10 +578,10 @@ toast.error('Failed to load leaderboard');
   }, [user, loadDashboardData]);
 
   useEffect(() => {
-    if (user?.id && activeTab === 'leaderboard') {
+    if (user?.id) {
       loadLeaderboardData();
     }
-  }, [user, activeTab, loadLeaderboardData]);
+  }, [user, loadLeaderboardData]);
 
   // --- Helpers ---
   const getGreeting = () => {
@@ -625,7 +633,14 @@ toast.error('Failed to load leaderboard');
       const avgScore      = calculateAverage(validSubjects);
       const avgGrade      = getGradeFromScore(avgScore, report.form);
       const passedSubjects = !isUpperForm ? validSubjects.filter(s => s.score >= 40).length : 0;
-      const classPosition = currentUserRank ? `#${currentUserRank}` : 'N/A';
+      // Prefer stored values from the report; fall back to live session data
+      const classPosition = report.class_rank
+        ? `${report.class_rank}${getOrdinalSuffix(parseInt(report.class_rank))}`
+        : (currentUserRank ? `${currentUserRank}${getOrdinalSuffix(currentUserRank)}` : 'N/A');
+      const regNumber = report.learner_reg_number
+        || user?.reg_number
+        || user?.registration_number
+        || 'N/A';
       const reportRemarks = report.remarks || report.comment || report.teacher_comment || report.principal_comment || '';
       const darkBlue = [10, 37, 64];
       const teal = [42, 157, 143];
@@ -662,9 +677,9 @@ toast.error('Failed to load leaderboard');
       doc.setFontSize(8);
       doc.setFont('helvetica', 'bold');
       doc.text(`Name: ${user?.name || user?.full_name || 'N/A'}`, 20, currentY + 8);
-      doc.text(`Registration: ${user?.reg_number || user?.registration_number || 'N/A'}`, 20, currentY + 15);
+      doc.text(`Reg #: ${regNumber}`, 20, currentY + 15);
       doc.text(`Form: ${report?.form || user?.form || 'N/A'}`, 20, currentY + 22);
-      doc.text(`Class Position: ${classPosition}`, pageWidth - 20, currentY + 8, { align: 'right' });
+      doc.text(`Position: ${classPosition}`, pageWidth - 20, currentY + 8, { align: 'right' });
       doc.text(`Term: ${report?.term || 'N/A'}  |  Year: ${report?.academic_year || new Date().getFullYear()}`, pageWidth - 20, currentY + 15, { align: 'right' });
       currentY += 35;
       // Summary cards
@@ -868,7 +883,15 @@ toast.error('Failed to generate PDF');
 
     const avg     = calculateAverage(validSubjects);
     const avgGrade = getGradeFromScore(avg, report.form);
-    const classPosition = currentUserRank ? `#${currentUserRank}` : 'N/A';
+    // Prefer the per-report rank stored in DB; fall back to live leaderboard rank
+    const classPosition = report.class_rank
+      ? `${report.class_rank}`
+      : (currentUserRank ? `${currentUserRank}` : 'N/A');
+    // Prefer reg number stored on the report; fall back to auth context
+    const regNumber = report.learner_reg_number
+      || user?.reg_number
+      || user?.registration_number
+      || 'N/A';
     const reportRemarks = report.remarks || report.comment || report.teacher_comment || report.principal_comment || 'No remarks provided';
 
     // Lower form
@@ -883,10 +906,10 @@ toast.error('Failed to generate PDF');
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); gap: 24px;">
             <div>
               <div style="font-weight: 600; font-size: 14px;">${user?.name || user?.full_name || 'Unknown'}</div>
-              <div style="font-family: monospace; font-size: 10px; opacity: 0.7; margin-top: 2px;">${user?.reg_number || user?.registration_number || 'N/A'}</div>
+              <div style="font-family: monospace; font-size: 10px; opacity: 0.7; margin-top: 2px;">Reg #: ${regNumber}</div>
             </div>
-            <div style="text-align: right; font-size: 10px; opacity: 0.85; line-height: 1.5;">
-              <div>Class Position: <strong>${classPosition}</strong></div>
+            <div style="text-align: right; font-size: 10px; opacity: 0.85; line-height: 1.7;">
+              <div>Class Position: <strong style="font-size: 13px;">${classPosition === 'N/A' ? 'N/A' : classPosition + getOrdinalSuffix(parseInt(classPosition))}</strong></div>
               <div>Term: ${report.term || 'N/A'} · Year: ${report.academic_year || new Date().getFullYear()}</div>
             </div>
           </div>

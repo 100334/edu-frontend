@@ -386,16 +386,20 @@ toast.error('Failed to load dashboard data');
       const response = await api.get(`/api/teacher/subjects/${classId}`);
       const subjectsData = response.data || [];
       setSubjects(subjectsData);
-      
-      const newScores = {};
-      subjectsData.forEach(subject => {
-        newScores[subject.name] = '';
+
+      // Only initialise scores for subjects not already saved — preserves any
+      // in-memory draft scores that were set before subjects finished loading.
+      setSubjectScores(prev => {
+        const next = {};
+        subjectsData.forEach(subject => {
+          next[subject.name] = prev[subject.name] ?? '';
+        });
+        return next;
       });
-      setSubjectScores(newScores);
-      setSavedSubjectScores({});
-      setReportDraftId(null);
+      // Do NOT clear savedSubjectScores or reportDraftId here.
+      // The database-restore useEffect will load them once subjects are ready.
     } catch (error) {
-setSubjects([]);
+      setSubjects([]);
     } finally {
       setLoadingSubjects(false);
     }
