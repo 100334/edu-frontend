@@ -1,17 +1,81 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   PlusIcon, PencilIcon, TrashIcon, XMarkIcon,
-  VideoCameraIcon, DocumentIcon,
-  AcademicCapIcon, BookOpenIcon, FolderIcon,
+  VideoCameraIcon, DocumentTextIcon, BookOpenIcon, ArchiveBoxIcon,
+  AcademicCapIcon, FolderIcon,
   ExclamationTriangleIcon, CalendarDaysIcon,
-  TrophyIcon, ChevronDownIcon, ChevronRightIcon,
+  TrophyIcon, ChevronRightIcon, ChevronLeftIcon,
+  LockClosedIcon,
 } from '@heroicons/react/24/outline';
+import {
+  CheckCircleIcon,
+} from '@heroicons/react/24/outline';
+import {
+  VideoCameraIcon as VideoCameraIconSolid,
+  DocumentTextIcon as DocumentTextIconSolid,
+  BookOpenIcon as BookOpenIconSolid,
+  ArchiveBoxIcon as ArchiveBoxIconSolid,
+  FolderIcon as FolderIconSolid,
+  ChevronRightIcon as ChevronRightIconSolid,
+  TrophyIcon as TrophyIconSolid,
+  CalendarDaysIcon as CalendarDaysIconSolid,
+  PlayIcon,
+} from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 
 const inp = 'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#00B4D8] focus:border-[#00B4D8] transition';
 
-const WEEKS = Array.from({ length: 20 }, (_, i) => i + 1); // Week 1 – 20
+const WEEKS = Array.from({ length: 20 }, (_, i) => i + 1);
+
+// ── matches LearningSpace folderConfig exactly ────────────────────────────────
+const folderConfig = [
+  { id: 'videos',     name: 'Videos',      type: 'video',     Icon: VideoCameraIconSolid,  folderColor: '#0EA5E9' },
+  { id: 'pdfs',       name: 'Notes',       type: 'pdf',       Icon: DocumentTextIconSolid, folderColor: '#10B981' },
+  { id: 'quizzes',    name: 'Assessments', type: 'quiz',      Icon: BookOpenIconSolid,     folderColor: '#F59E0B' },
+  { id: 'pastpapers', name: 'Past Papers', type: 'pastpaper', Icon: ArchiveBoxIconSolid,   folderColor: '#8B5CF6' },
+];
+
+// ── ResourceIcon — mirrors LearningSpace ────────────────────────────────────
+const ResourceIcon = ({ type, className = 'w-4 h-4' }) => {
+  if (type === 'video')     return <VideoCameraIconSolid  className={`${className} text-sky-500`}     />;
+  if (type === 'pdf')       return <DocumentTextIconSolid className={`${className} text-emerald-500`}  />;
+  if (type === 'pastpaper') return <ArchiveBoxIconSolid   className={`${className} text-purple-500`}   />;
+  if (type === 'quiz')      return <BookOpenIconSolid     className={`${className} text-amber-500`}    />;
+  return null;
+};
+
+// ── FolderCard — exact copy of LearningSpace's FolderCard ───────────────────
+const FolderCard = ({ config, itemCount, onClick }) => {
+  const { name, folderColor, Icon } = config;
+  return (
+    <button
+      onClick={onClick}
+      className="group flex flex-col items-center gap-2.5 p-4 rounded-2xl border border-gray-100 bg-white hover:shadow-md hover:border-gray-200 transition-all duration-200 active:scale-95"
+    >
+      <div className="relative w-14 h-11 flex-shrink-0">
+        {/* Tab */}
+        <div
+          className="absolute top-0 left-0 w-5 h-2 rounded-t-md"
+          style={{ backgroundColor: folderColor, opacity: 0.7 }}
+        />
+        {/* Body */}
+        <div
+          className="absolute top-1.5 left-0 w-full h-9 rounded-b-lg rounded-tr-lg shadow-sm flex items-center justify-center transition-transform group-hover:scale-105"
+          style={{ backgroundColor: folderColor }}
+        >
+          <Icon className="w-5 h-5 text-white/90" />
+        </div>
+      </div>
+      <div className="text-center">
+        <p className="text-xs font-semibold text-slate-700 leading-tight">{name}</p>
+        <p className="text-[10px] text-slate-400 mt-0.5">{itemCount} item{itemCount !== 1 ? 's' : ''}</p>
+      </div>
+    </button>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const LessonManagement = () => {
   const [lessons,       setLessons]       = useState([]);
@@ -23,7 +87,11 @@ const LessonManagement = () => {
   const [submitting,    setSubmitting]    = useState(false);
   const [uploadStatus,  setUploadStatus]  = useState({ video: false, pdf: false });
   const [confirmLesson, setConfirmLesson] = useState(null);
-  const [expandedWeeks, setExpandedWeeks] = useState({});   // { [weekNum]: bool }
+
+  // ── navigation state (mirrors LearningSpace) ─────────────────────────────
+  const [activeWeek,       setActiveWeek]       = useState(null);   // null | number
+  const [activeFolderId,   setActiveFolderId]   = useState(null);   // null | 'videos' | 'pdfs' | ...
+  const [expandedSubjects, setExpandedSubjects] = useState({});
 
   const emptyForm = {
     title: '', description: '', video_url: '', pdf_url: '',
@@ -33,7 +101,7 @@ const LessonManagement = () => {
   };
   const [formData, setFormData] = useState(emptyForm);
 
-  // ── data loading ────────────────────────────────────────────────────────────
+  // ── data loading ─────────────────────────────────────────────────────────
   const loadSubjects = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -41,7 +109,7 @@ const LessonManagement = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.data.success) {
-        const raw = res.data.subjects || [];
+        const raw  = res.data.subjects || [];
         const seen = new Set();
         setSubjects(raw.filter(s => {
           const key = s.name?.trim().toLowerCase();
@@ -72,35 +140,71 @@ const LessonManagement = () => {
 
   useEffect(() => { loadDashboardData(); }, [loadDashboardData]);
 
-  // Expand all weeks that have at least one lesson on first load
-  useEffect(() => {
-    if (lessons.length === 0) return;
-    const weeks = {};
-    lessons.forEach(l => { weeks[l.week_number ?? 0] = true; });
-    setExpandedWeeks(weeks);
-  }, [lessons.length]); // eslint-disable-line
+  // reset subject expansion when navigating levels
+  useEffect(() => { setExpandedSubjects({}); }, [activeFolderId, activeWeek]);
 
-  // ── helpers ─────────────────────────────────────────────────────────────────
-  const getSubjectName = (id) => {
+  // ── helpers ───────────────────────────────────────────────────────────────
+  const getSubjectName  = (id) => {
     const s = subjects.find(s => String(s.id) === String(id));
     return s ? s.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '') : 'uncategorized';
   };
   const getSubjectLabel = (id) => subjects.find(s => String(s.id) === String(id))?.name || 'General';
 
-  // Group lessons by week_number, sort unassigned (0) at the end
-  const lessonsByWeek = () => {
+  // ── week grouping ─────────────────────────────────────────────────────────
+  const weekGroups = React.useMemo(() => {
     const map = {};
     lessons.forEach(l => {
       const w = l.week_number ?? 0;
-      if (!map[w]) map[w] = [];
-      map[w].push(l);
+      if (!map[w]) map[w] = { lessons: [], exams: [] };
+      if (l.is_weekend_exam) map[w].exams.push(l);
+      else                   map[w].lessons.push(l);
     });
     return Object.entries(map)
-      .map(([w, ls]) => ({ week: parseInt(w), lessons: ls }))
+      .map(([w, data]) => ({ week: parseInt(w), ...data }))
       .sort((a, b) => (a.week === 0 ? 1 : b.week === 0 ? -1 : a.week - b.week));
+  }, [lessons]);
+
+  // items split by type for the active week's folder grid
+  const weekFolderItems = React.useMemo(() => {
+    if (activeWeek === null) return {};
+    const wd = weekGroups.find(g => g.week === activeWeek);
+    if (!wd) return {};
+    const all = [...wd.lessons, ...wd.exams];
+    return {
+      video:     all.filter(i => i.resource_type === 'video'),
+      pdf:       all.filter(i => i.resource_type === 'pdf'),
+      quiz:      all.filter(i => i.resource_type === 'quiz'),
+      pastpaper: all.filter(i => i.resource_type === 'pastpaper'),
+    };
+  }, [activeWeek, weekGroups]);
+
+  // items in the active folder
+  const currentFolderItems = React.useMemo(() => {
+    if (!activeFolderId) return [];
+    const type = folderConfig.find(f => f.id === activeFolderId)?.type;
+    if (activeWeek !== null) return weekFolderItems[type] || [];
+    if (type === 'video')     return lessons.filter(l => l.resource_type === 'video');
+    if (type === 'pdf')       return lessons.filter(l => l.resource_type === 'pdf');
+    if (type === 'pastpaper') return lessons.filter(l => l.resource_type === 'pastpaper');
+    if (type === 'quiz')      return lessons.filter(l => l.resource_type === 'quiz');
+    return [];
+  }, [activeFolderId, activeWeek, weekFolderItems, lessons]);
+
+  // breadcrumb
+  const breadcrumb = () => {
+    const parts = ['Lessons'];
+    if (activeWeek !== null) parts.push(activeWeek === 0 ? 'Unscheduled' : `Week ${activeWeek}`);
+    if (activeFolderId) parts.push(folderConfig.find(f => f.id === activeFolderId)?.name || activeFolderId);
+    return parts.join(' / ');
   };
 
-  // ── upload ──────────────────────────────────────────────────────────────────
+  const canGoBack = activeFolderId !== null || activeWeek !== null;
+  const handleBack = () => {
+    if (activeFolderId) { setActiveFolderId(null); return; }
+    if (activeWeek !== null) setActiveWeek(null);
+  };
+
+  // ── upload ────────────────────────────────────────────────────────────────
   const uploadToR2 = async (file, type) => {
     if (!file) return;
     if (!formData.subject_id) { toast.error('Select a subject first.'); return; }
@@ -121,7 +225,7 @@ const LessonManagement = () => {
     finally { setUploadStatus(p => ({ ...p, [type]: false })); }
   };
 
-  // ── submit ──────────────────────────────────────────────────────────────────
+  // ── submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.title.trim())  { toast.error('Lesson title is required'); return; }
@@ -130,9 +234,9 @@ const LessonManagement = () => {
     if (formData.resource_type === 'pdf'   && !formData.pdf_url)   { toast.error('Please upload a PDF file');   return; }
     setSubmitting(true);
     try {
-      const token  = localStorage.getItem('token');
-      const method = editingLesson ? 'put' : 'post';
-      const url    = editingLesson ? `/api/admin/lessons/${editingLesson.id}` : '/api/admin/lessons';
+      const token   = localStorage.getItem('token');
+      const method  = editingLesson ? 'put' : 'post';
+      const url     = editingLesson ? `/api/admin/lessons/${editingLesson.id}` : '/api/admin/lessons';
       const payload = {
         title:           formData.title.trim(),
         description:     formData.description || '',
@@ -156,7 +260,7 @@ const LessonManagement = () => {
     finally { setSubmitting(false); }
   };
 
-  // ── delete ──────────────────────────────────────────────────────────────────
+  // ── delete ────────────────────────────────────────────────────────────────
   const handleDeleteLesson = async () => {
     if (!confirmLesson) return;
     try {
@@ -168,7 +272,7 @@ const LessonManagement = () => {
     finally { setConfirmLesson(null); }
   };
 
-  // ── open modal ──────────────────────────────────────────────────────────────
+  // ── open modal ────────────────────────────────────────────────────────────
   const openModal = (lesson = null) => {
     setEditingLesson(lesson);
     setFormData(lesson ? {
@@ -187,6 +291,86 @@ const LessonManagement = () => {
     setShowModal(true);
   };
 
+  // ── grouped resource renderer (mirrors LearningSpace's renderGroupedResources)
+  const renderGroupedResources = (items) => {
+    if (!items || items.length === 0)
+      return <div className="text-center py-10 text-slate-400 text-sm">No content here yet.</div>;
+
+    const grouped = items.reduce((acc, item) => {
+      const sub = getSubjectLabel(item.subject_id);
+      if (!acc[sub]) acc[sub] = [];
+      acc[sub].push(item);
+      return acc;
+    }, {});
+
+    return (
+      <div className="space-y-3">
+        {Object.entries(grouped).map(([subjectName, subjectItems]) => {
+          const isExpanded = expandedSubjects[subjectName] ?? false;
+          return (
+            <div key={subjectName} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+              <button
+                onClick={() => setExpandedSubjects(p => ({ ...p, [subjectName]: !p[subjectName] }))}
+                className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition"
+              >
+                <div className="flex items-center gap-2.5">
+                  <FolderIconSolid className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                  <span className="text-sm font-semibold text-slate-800">{subjectName}</span>
+                  <span className="text-[10px] text-slate-400 bg-slate-200 px-1.5 py-0.5 rounded-full">{subjectItems.length}</span>
+                </div>
+                <ChevronRightIconSolid className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+              </button>
+
+              {isExpanded && (
+                <div className="p-3 border-t border-slate-100 space-y-1">
+                  {subjectItems.map(item => (
+                    <div
+                      key={item.id}
+                      className="group flex items-center p-3 rounded-lg border border-transparent hover:bg-[#f0faf9] hover:border-[#006770]/20 transition-all"
+                    >
+                      <div className="mr-3 flex-shrink-0">
+                        <ResourceIcon type={item.resource_type} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-700 truncate">{item.title}</p>
+                        {item.description && (
+                          <p className="text-[10px] text-slate-400 truncate mt-0.5">{item.description}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                        {item.is_weekend_exam && (
+                          <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded">EXAM</span>
+                        )}
+                        <span className="px-1.5 py-0.5 bg-[#e0f7fa] text-[#006770] text-[10px] font-semibold rounded">
+                          {item.target_form}
+                        </span>
+                        <button
+                          onClick={() => openModal(item)}
+                          className="p-1 text-[#006770] hover:bg-[#006770]/10 rounded-lg transition"
+                          title="Edit"
+                        >
+                          <PencilIcon className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => setConfirmLesson(item)}
+                          className="p-1 text-red-400 hover:bg-red-50 rounded-lg transition"
+                          title="Delete"
+                        >
+                          <TrashIcon className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-16">
       <div className="w-8 h-8 border-4 border-[#006770] border-t-transparent rounded-full animate-spin" />
@@ -194,14 +378,12 @@ const LessonManagement = () => {
     </div>
   );
 
-  const grouped = lessonsByWeek();
-
   return (
     <div>
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-5">
         <span className="text-xs text-gray-400 font-medium">
-          {lessons.length} lesson{lessons.length !== 1 ? 's' : ''} across {grouped.length} week{grouped.length !== 1 ? 's' : ''}
+          {lessons.length} lesson{lessons.length !== 1 ? 's' : ''} across {weekGroups.length} week{weekGroups.length !== 1 ? 's' : ''}
         </span>
         <button
           onClick={() => openModal()}
@@ -211,162 +393,195 @@ const LessonManagement = () => {
         </button>
       </div>
 
-      {/* Weekly grouped view */}
-      {lessons.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm text-center py-12">
-          <BookOpenIcon className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-          <p className="text-sm text-gray-400">No lessons yet.</p>
-          <button onClick={() => openModal()} className="mt-1 text-xs text-[#006770] hover:underline">
-            Add the first lesson →
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {grouped.map(({ week, lessons: wLessons }) => {
-            const isExpanded = expandedWeeks[week] ?? true;
-            const examLesson = wLessons.find(l => l.is_weekend_exam);
-            const regularLessons = wLessons.filter(l => !l.is_weekend_exam);
-            const label = week === 0 ? 'Unscheduled' : `Week ${week}`;
+      {/* ── MAIN TREE (mirrors LearningSpace) ── */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
 
-            return (
-              <div key={week} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                {/* Week header */}
-                <button
-                  onClick={() => setExpandedWeeks(p => ({ ...p, [week]: !isExpanded }))}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-[#f0faf9] hover:bg-[#e6f7f5] transition text-left"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-lg bg-[#006770] flex items-center justify-center flex-shrink-0">
-                      <CalendarDaysIcon className="w-4 h-4 text-white" />
+        {/* ── Top nav bar — identical to LearningSpace ── */}
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-[#003B46] border-b border-slate-200">
+          <button
+            onClick={handleBack}
+            disabled={!canGoBack}
+            className={`p-1.5 rounded-lg transition ${
+              canGoBack
+                ? 'text-white/70 hover:bg-white/10 hover:text-white'
+                : 'text-white/20 cursor-default'
+            }`}
+          >
+            <ChevronLeftIcon className="w-4 h-4" />
+          </button>
+          <div className="flex-1 flex items-center gap-1.5 text-[11px] font-medium text-white/60 truncate">
+            <CalendarDaysIconSolid className="w-3.5 h-3.5 text-[#2A9D8F] flex-shrink-0" />
+            <span className="truncate">{breadcrumb()}</span>
+          </div>
+        </div>
+
+        {/* ── Content ── */}
+        <div className="flex-1 overflow-y-auto bg-[#F5F2EB]">
+
+          {/* ══ LEVEL 1 — Weekly timeline ═══════════════════════════════════ */}
+          {activeWeek === null && !activeFolderId && (
+            <div className="p-4 space-y-2.5">
+              {lessons.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                  <CalendarDaysIconSolid className="w-12 h-12 mb-3 opacity-20" />
+                  <p className="text-sm font-medium">No lessons yet.</p>
+                  <button
+                    onClick={() => openModal()}
+                    className="mt-2 text-xs text-[#006770] hover:underline"
+                  >
+                    Add the first lesson →
+                  </button>
+                </div>
+              ) : weekGroups.map(({ week, lessons: wLessons, exams: wExams }) => {
+                const isUnscheduled = week === 0;
+                const hasExam       = wExams.length > 0;
+                const videoCount    = wLessons.filter(l => l.resource_type === 'video').length;
+                const pdfCount      = wLessons.filter(l => l.resource_type === 'pdf').length;
+                const quizCount     = [...wLessons, ...wExams].filter(l => l.resource_type === 'quiz').length;
+
+                return (
+                  <div
+                    key={week}
+                    onClick={() => setActiveWeek(week)}
+                    className="rounded-xl border border-gray-200 bg-white hover:border-[#006770]/40 hover:shadow-sm cursor-pointer overflow-hidden transition-all duration-200"
+                  >
+                    <div className="flex items-center gap-4 px-4 py-3">
+                      {/* Week badge */}
+                      <div className="w-11 h-11 rounded-xl flex flex-col items-center justify-center flex-shrink-0 font-black bg-[#006770]/10 text-[#006770]">
+                        <span className="text-[8px] font-bold leading-none opacity-70">WK</span>
+                        <span className="text-base leading-none">{isUnscheduled ? '?' : week}</span>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-bold text-[#003B46]">
+                            {isUnscheduled ? 'Unscheduled' : `Week ${week}`}
+                          </span>
+                        </div>
+                        {/* Resource chips */}
+                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                          {videoCount > 0 && (
+                            <span className="flex items-center gap-1 text-[10px] text-sky-600 font-medium">
+                              <VideoCameraIconSolid className="w-3 h-3" /> {videoCount} video{videoCount !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                          {pdfCount > 0 && (
+                            <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium">
+                              <DocumentTextIconSolid className="w-3 h-3" /> {pdfCount} note{pdfCount !== 1 ? 's' : ''}
+                            </span>
+                          )}
+                          {quizCount > 0 && (
+                            <span className="flex items-center gap-1 text-[10px] text-amber-600 font-medium">
+                              <BookOpenIconSolid className="w-3 h-3" /> {quizCount} quiz{quizCount !== 1 ? 'zes' : ''}
+                            </span>
+                          )}
+                          {hasExam && (
+                            <span className="flex items-center gap-1 text-[10px] text-orange-500 font-semibold">
+                              <TrophyIconSolid className="w-3 h-3" /> Weekend exam
+                            </span>
+                          )}
+                          {wLessons.length === 0 && !hasExam && (
+                            <span className="text-[10px] text-gray-400">No content yet</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <ChevronRightIconSolid className="w-4 h-4 text-gray-300 flex-shrink-0" />
                     </div>
-                    <div>
-                      <span className="text-sm font-bold text-[#003B46]">{label}</span>
-                      <span className="ml-2 text-[10px] text-gray-400">
-                        {regularLessons.length} lesson{regularLessons.length !== 1 ? 's' : ''}
-                        {examLesson ? ' + weekend exam' : ''}
-                      </span>
+
+                    {/* Weekend exam preview strip */}
+                    {hasExam && (
+                      <div className="mx-4 mb-3 flex items-center gap-2.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        <TrophyIconSolid className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold text-amber-800 truncate">{wExams[0].title}</p>
+                          <p className="text-[10px] text-amber-500">{getSubjectLabel(wExams[0].subject_id)}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ══ LEVEL 2 — Week detail: exam card + folder grid ══════════════ */}
+          {activeWeek !== null && !activeFolderId && (
+            <div className="p-4">
+              {/* Weekend exam card */}
+              {(() => {
+                const wd = weekGroups.find(g => g.week === activeWeek);
+                return (wd?.exams || []).map(exam => (
+                  <div
+                    key={exam.id}
+                    className="mb-5 flex items-center gap-3 p-4 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl"
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                      <TrophyIconSolid className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[9px] font-black text-white/80 uppercase tracking-widest">Weekend Exam</span>
+                      <p className="text-sm font-bold text-white truncate">{exam.title}</p>
+                      <p className="text-[10px] text-white/70">{getSubjectLabel(exam.subject_id)}</p>
+                    </div>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => openModal(exam)}
+                        className="p-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition"
+                        title="Edit"
+                      >
+                        <PencilIcon className="w-3.5 h-3.5 text-white" />
+                      </button>
+                      <button
+                        onClick={() => setConfirmLesson(exam)}
+                        className="p-1.5 bg-white/20 hover:bg-red-500 rounded-lg transition"
+                        title="Delete"
+                      >
+                        <TrashIcon className="w-3.5 h-3.5 text-white" />
+                      </button>
                     </div>
                   </div>
-                  {isExpanded
-                    ? <ChevronDownIcon  className="w-4 h-4 text-gray-400" />
-                    : <ChevronRightIcon className="w-4 h-4 text-gray-400" />}
-                </button>
+                ));
+              })()}
 
-                {isExpanded && (
-                  <div className="overflow-x-auto">
-                    <table className="w-full min-w-[560px]">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          {['#', 'Lesson', 'Subject', 'Form', 'Type', 'Actions'].map(h => (
-                            <th key={h} className="px-4 py-2 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wide">{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {/* Regular lessons */}
-                        {regularLessons.map(lesson => (
-                          <tr key={lesson.id} className="hover:bg-[#f0faf9] transition-colors">
-                            <td className="px-4 py-2.5 text-xs font-bold text-gray-300">#{lesson.display_order}</td>
-                            <td className="px-4 py-2.5">
-                              <div className="flex items-center gap-2.5">
-                                <div className="w-7 h-7 rounded-lg bg-[#006770]/10 flex items-center justify-center flex-shrink-0">
-                                  {lesson.resource_type === 'video'
-                                    ? <VideoCameraIcon className="w-3.5 h-3.5 text-[#006770]" />
-                                    : <DocumentIcon    className="w-3.5 h-3.5 text-[#006770]" />}
-                                </div>
-                                <div>
-                                  <p className="text-sm font-semibold text-[#003B46]">{lesson.title}</p>
-                                  {lesson.description && (
-                                    <p className="text-[10px] text-gray-400 line-clamp-1">{lesson.description}</p>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-2.5">
-                              <span className="flex items-center gap-1 text-xs text-gray-500">
-                                <FolderIcon className="w-3.5 h-3.5 text-[#00B4D8]" />
-                                {getSubjectLabel(lesson.subject_id)}
-                              </span>
-                            </td>
-                            <td className="px-4 py-2.5">
-                              <span className="px-2 py-0.5 bg-[#e0f7fa] text-[#006770] text-[10px] font-semibold rounded">
-                                {lesson.target_form}
-                              </span>
-                            </td>
-                            <td className="px-4 py-2.5">
-                              <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                                lesson.resource_type === 'video' ? 'bg-purple-50 text-purple-600' : 'bg-green-50 text-green-600'
-                              }`}>
-                                {lesson.resource_type === 'video' ? 'Video' : 'PDF'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-2.5">
-                              <div className="flex items-center gap-1">
-                                <button onClick={() => openModal(lesson)} className="p-1.5 text-[#006770] hover:bg-[#006770]/10 rounded-lg transition" title="Edit">
-                                  <PencilIcon className="w-4 h-4" />
-                                </button>
-                                <button onClick={() => setConfirmLesson(lesson)} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition" title="Delete">
-                                  <TrashIcon className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Learning Materials</p>
 
-                        {/* Weekend exam row */}
-                        {examLesson && (
-                          <tr className="bg-amber-50 border-t-2 border-amber-200">
-                            <td className="px-4 py-2.5 text-xs font-bold text-amber-400">🏆</td>
-                            <td className="px-4 py-2.5">
-                              <div className="flex items-center gap-2.5">
-                                <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
-                                  <TrophyIcon className="w-3.5 h-3.5 text-amber-500" />
-                                </div>
-                                <div>
-                                  <p className="text-sm font-semibold text-amber-800">{examLesson.title}</p>
-                                  <p className="text-[10px] text-amber-500 font-semibold">Weekend Exam</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-4 py-2.5">
-                              <span className="flex items-center gap-1 text-xs text-amber-600">
-                                <FolderIcon className="w-3.5 h-3.5" />
-                                {getSubjectLabel(examLesson.subject_id)}
-                              </span>
-                            </td>
-                            <td className="px-4 py-2.5">
-                              <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-semibold rounded">
-                                {examLesson.target_form}
-                              </span>
-                            </td>
-                            <td className="px-4 py-2.5">
-                              <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-semibold rounded">
-                                Exam
-                              </span>
-                            </td>
-                            <td className="px-4 py-2.5">
-                              <div className="flex items-center gap-1">
-                                <button onClick={() => openModal(examLesson)} className="p-1.5 text-[#006770] hover:bg-[#006770]/10 rounded-lg transition" title="Edit">
-                                  <PencilIcon className="w-4 h-4" />
-                                </button>
-                                <button onClick={() => setConfirmLesson(examLesson)} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition" title="Delete">
-                                  <TrashIcon className="w-4 h-4" />
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
+              {/* Folder grid — same as LearningSpace */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {folderConfig.map(f => {
+                  const items = weekFolderItems[f.type] || [];
+                  if (items.length === 0) return null;
+                  return (
+                    <FolderCard
+                      key={f.id}
+                      config={f}
+                      itemCount={items.length}
+                      onClick={() => setActiveFolderId(f.id)}
+                    />
+                  );
+                })}
+                {folderConfig.every(f => (weekFolderItems[f.type] || []).length === 0) && (
+                  <div className="col-span-4 text-center py-10 text-slate-400 text-sm">
+                    No materials for this week yet.
+                    <button onClick={() => openModal()} className="block mx-auto mt-1 text-xs text-[#006770] hover:underline">
+                      Add a lesson →
+                    </button>
                   </div>
                 )}
               </div>
-            );
-          })}
-        </div>
-      )}
+            </div>
+          )}
 
-      {/* Add / Edit Modal */}
+          {/* ══ LEVEL 3 — Resource folder contents ══════════════════════════ */}
+          {activeFolderId && (
+            <div className="p-4">
+              {renderGroupedResources(currentFolderItems)}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Add / Edit Modal ── */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl w-full max-w-2xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
@@ -454,9 +669,9 @@ const LessonManagement = () => {
                 <label className="block text-xs font-semibold text-gray-600 mb-2">Resource Type *</label>
                 <div className="flex gap-3 flex-wrap">
                   {[
-                    { val: 'video',     Icon: VideoCameraIcon, label: 'Video'      },
-                    { val: 'pdf',       Icon: DocumentIcon,    label: 'PDF'        },
-                    { val: 'pastpaper', Icon: DocumentIcon,    label: 'Past Paper' },
+                    { val: 'video',     Icon: VideoCameraIcon,   label: 'Video'      },
+                    { val: 'pdf',       Icon: DocumentTextIcon,  label: 'PDF'        },
+                    { val: 'pastpaper', Icon: ArchiveBoxIcon,    label: 'Past Paper' },
                   ].map(({ val, Icon, label }) => (
                     <label key={val} className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition text-sm ${
                       formData.resource_type === val
@@ -549,18 +764,16 @@ const LessonManagement = () => {
         </div>
       )}
 
-      {/* Delete confirmation */}
+      {/* ── Delete confirmation ── */}
       {confirmLesson && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
-            {/* Red top band */}
             <div className="bg-red-500 px-5 py-4 flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
                 <ExclamationTriangleIcon className="w-5 h-5 text-white" />
               </div>
               <h3 className="text-sm font-bold text-white">Delete Lesson</h3>
             </div>
-            {/* Body */}
             <div className="px-5 py-4">
               <p className="text-xs text-gray-500 mb-2">You are about to permanently delete:</p>
               <p className="text-sm font-semibold text-[#003B46] bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 break-words">
@@ -571,7 +784,6 @@ const LessonManagement = () => {
                 This action cannot be undone.
               </p>
             </div>
-            {/* Actions */}
             <div className="flex gap-2 px-5 pb-5">
               <button
                 onClick={() => setConfirmLesson(null)}

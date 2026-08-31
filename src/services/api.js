@@ -68,33 +68,34 @@ toast.error('Server is waking up (cold start). Please wait 10-15 seconds and try
       const looksLikeMissingRoute =
         msg.startsWith('Route not found:') || msg === '' || msg === 'undefined';
 
-      if (looksLikeMissingRoute) {
-} else {
-}
-
       if (fullUrl.includes('/api/api/')) {
-toast.error('API configuration error: Double /api in URL. Please check your API service configuration.', {
+        toast.error('API configuration error: Double /api in URL. Please check your API service configuration.', {
           duration: 5000,
           icon: '🔧'
         });
       } else if (looksLikeMissingRoute) {
         toast.error(`API endpoint not found: ${error.config?.url}`, { duration: 3000 });
-      } else if (msg) {
-        toast.error(msg, { duration: 4000 });
       }
+      // For 404s with a real message, let the calling code handle the error — no toast here.
+      return Promise.reject(error);
     }
 
-    // Handle 401 Unauthorized
-    if (error.response?.status === 401 && !error.config._retry) {
-      error.config._retry = true;
-      localStorage.clear();
-      toast.error('Session expired. Please login again.');
-      if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/')) {
-        setTimeout(() => window.location.href = '/', 1500);
+    // Handle 401 Unauthorized — clear session and redirect, but do NOT toast here.
+    // The login page / calling code already shows a user-facing message.
+    if (error.response?.status === 401) {
+      if (!error.config._retry) {
+        error.config._retry = true;
+        localStorage.clear();
+        delete api.defaults.headers.common['Authorization'];
+        if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/')) {
+          toast.error('Session expired. Please login again.');
+          setTimeout(() => window.location.href = '/', 1500);
+        }
       }
+      return Promise.reject(error);
     }
 
-    // Handle other errors
+    // Handle other errors — single toast per status, then stop.
     if (error.response?.status === 403) {
       toast.error('You do not have permission to perform this action.');
     } else if (error.response?.status === 422) {
@@ -103,8 +104,6 @@ toast.error('API configuration error: Double /api in URL. Please check your API 
       toast.error('Too many requests. Please wait a moment.');
     } else if (error.response?.status >= 500) {
       toast.error('Server error. Please try again later.');
-    } else if (error.response?.data?.message) {
-      toast.error(error.response.data.message);
     }
 
     return Promise.reject(error);
