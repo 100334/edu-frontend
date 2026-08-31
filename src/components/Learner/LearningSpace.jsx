@@ -1,25 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
-  VideoCameraIcon,
-  DocumentTextIcon,
-  BookOpenIcon,
-  Squares2X2Icon,
-  ListBulletIcon,
-  ArrowRightCircleIcon,
   ChevronLeftIcon,
   XMarkIcon,
-  ArchiveBoxIcon,
-  TrophyIcon,
-  FolderIcon,
   ChevronRightIcon,
-  LockClosedIcon,
-  CalendarDaysIcon,
-  PlayIcon,
-  DocumentIcon,
 } from '@heroicons/react/24/solid';
 import {
   CheckCircleIcon,
-  ClockIcon,
 } from '@heroicons/react/24/outline';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
@@ -44,46 +30,45 @@ const getCurrentCurriculumWeek = () => {
   return getISOWeek(new Date());
 };
 
-// ── ResourceIcon ──────────────────────────────────────────────────────────────
-const ResourceIcon = ({ type, className = 'w-4 h-4' }) => {
-  if (type === 'video')     return <VideoCameraIcon  className={`${className} text-sky-500`}    />;
-  if (type === 'pdf')       return <DocumentTextIcon className={`${className} text-emerald-500`} />;
-  if (type === 'pastpaper') return <ArchiveBoxIcon   className={`${className} text-purple-500`}  />;
-  if (type === 'quiz')      return <BookOpenIcon     className={`${className} text-amber-500`}   />;
-  return null;
+// ── Basic emoji resource icon ─────────────────────────────────────────────────
+const ResourceEmoji = ({ type }) => {
+  if (type === 'video')     return <span className="text-base leading-none">🎬</span>;
+  if (type === 'pdf')       return <span className="text-base leading-none">📄</span>;
+  if (type === 'pastpaper') return <span className="text-base leading-none">📦</span>;
+  if (type === 'quiz')      return <span className="text-base leading-none">📝</span>;
+  return <span className="text-base leading-none">📄</span>;
 };
 
-// ── Folder card — clean, no number inside ─────────────────────────────────────
-const FolderCard = ({ config, itemCount, onClick }) => {
-  const { name, folderColor, icon: Icon } = config;
-  return (
-    <button
-      onClick={onClick}
-      className="group flex flex-col items-center gap-2.5 p-4 rounded-2xl border border-gray-100 bg-white hover:shadow-md hover:border-gray-200 transition-all duration-200 active:scale-95"
+// ── OS-style plain folder card (no icon inside, just the shape) ───────────────
+const FolderCard = ({ name, itemCount, onClick }) => (
+  <button
+    onClick={onClick}
+    className="group flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-200 bg-white hover:border-[#006770]/40 hover:shadow-sm transition-all duration-200 active:scale-95"
+  >
+    {/* Folder SVG — plain OS look, no inner icon */}
+    <svg
+      viewBox="0 0 56 44"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className="w-14 h-11 flex-shrink-0 transition-transform group-hover:scale-105"
     >
-      {/* Folder shape — no number, just the type icon */}
-      <div className="relative w-14 h-11 flex-shrink-0">
-        {/* Tab */}
-        <div
-          className="absolute top-0 left-0 w-5 h-2 rounded-t-md"
-          style={{ backgroundColor: folderColor, opacity: 0.7 }}
-        />
-        {/* Body */}
-        <div
-          className="absolute top-1.5 left-0 w-full h-9 rounded-b-lg rounded-tr-lg shadow-sm flex items-center justify-center transition-transform group-hover:scale-105"
-          style={{ backgroundColor: folderColor }}
-        >
-          <Icon className="w-5 h-5 text-white/90" />
-        </div>
-      </div>
-      {/* Label */}
-      <div className="text-center">
-        <p className="text-xs font-semibold text-slate-700 leading-tight">{name}</p>
-        <p className="text-[10px] text-slate-400 mt-0.5">{itemCount} item{itemCount !== 1 ? 's' : ''}</p>
-      </div>
-    </button>
-  );
-};
+      {/* Tab */}
+      <rect x="0" y="0" width="20" height="7" rx="3"
+        fill="#F5C842" />
+      {/* Body */}
+      <rect x="0" y="5" width="56" height="36" rx="4"
+        fill="#F5C842" />
+      {/* Inner highlight */}
+      <rect x="0" y="5" width="56" height="8" rx="4"
+        fill="#F9D85A" opacity="0.6" />
+    </svg>
+
+    <div className="text-center">
+      <p className="text-xs font-semibold text-slate-700 leading-tight">{name}</p>
+      <p className="text-[10px] text-slate-400 mt-0.5">{itemCount} item{itemCount !== 1 ? 's' : ''}</p>
+    </div>
+  </button>
+);
 
 // ── main component ────────────────────────────────────────────────────────────
 const LearningSpace = ({ onStartQuiz }) => {
@@ -98,10 +83,10 @@ const LearningSpace = ({ onStartQuiz }) => {
   const [currentWeek,      setCurrentWeek]      = useState(1);
 
   const folderConfig = [
-    { id: 'videos',     name: 'Videos',       type: 'video',     icon: VideoCameraIcon,  folderColor: '#0EA5E9' },
-    { id: 'pdfs',       name: 'Notes',         type: 'pdf',       icon: DocumentTextIcon, folderColor: '#10B981' },
-    { id: 'quizzes',    name: 'Assessments',   type: 'quiz',      icon: BookOpenIcon,     folderColor: '#F59E0B' },
-    { id: 'pastpapers', name: 'Past Papers',   type: 'pastpaper', icon: ArchiveBoxIcon,   folderColor: '#8B5CF6' },
+    { id: 'videos',     name: 'Videos',      type: 'video'     },
+    { id: 'pdfs',       name: 'Notes',       type: 'pdf'       },
+    { id: 'quizzes',    name: 'Assessments', type: 'quiz'      },
+    { id: 'pastpapers', name: 'Past Papers', type: 'pastpaper' },
   ];
 
   useEffect(() => {
@@ -132,19 +117,19 @@ const LearningSpace = ({ onStartQuiz }) => {
           week_number: q.week_number || null, is_weekend_exam: q.is_weekend_exam || false,
         })));
       }
-    } catch (err) {
-toast.error('Could not load learning materials');
+    } catch {
+      toast.error('Could not load learning materials');
     }
   };
 
-  // ── derived data ─────────────────────────────────────────────────────────────
+  // ── derived data ──────────────────────────────────────────────────────────────
   const weekGroups = React.useMemo(() => {
     const map = {};
     const addItem = (item) => {
       const w = item.week_number ?? 0;
       if (!map[w]) map[w] = { lessons: [], exams: [] };
       if (item.is_weekend_exam) map[w].exams.push(item);
-      else                       map[w].lessons.push(item);
+      else                      map[w].lessons.push(item);
     };
     lessons.forEach(addItem);
     quizItems.forEach(addItem);
@@ -166,13 +151,13 @@ toast.error('Could not load learning materials');
     };
   }, [activeWeek, weekGroups]);
 
-  // ── quiz click ───────────────────────────────────────────────────────────────
+  // ── quiz click ────────────────────────────────────────────────────────────────
   const handleQuizClick = (item) => {
     const startTime = item.scheduled_start ? new Date(item.scheduled_start) : null;
     const endTime   = item.scheduled_end   ? new Date(item.scheduled_end)   : null;
     const now       = new Date();
-    if (endTime && now > endTime)    { toast.error('This assessment is closed.'); return; }
-    if (startTime && now < startTime){ toast(`Opens on ${startTime.toLocaleString()}`, { duration: 4000 }); return; }
+    if (endTime   && now > endTime)   { toast.error('This assessment is closed.'); return; }
+    if (startTime && now < startTime) { toast(`Opens on ${startTime.toLocaleString()}`, { duration: 4000 }); return; }
     if (item.disabled && item.attempt_status === 'in-progress') {
       toast('Resuming in-progress attempt…', { duration: 2000 });
       if (onStartQuiz) onStartQuiz(item.quiz_id); return;
@@ -199,12 +184,13 @@ toast.error('Could not load learning materials');
           const isExpanded = expandedSubjects[subjectName] ?? false;
           return (
             <div key={subjectName} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+              {/* Subject row — plain folder emoji */}
               <button
                 onClick={() => setExpandedSubjects(p => ({ ...p, [subjectName]: !p[subjectName] }))}
                 className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition"
               >
                 <div className="flex items-center gap-2.5">
-                  <FolderIcon className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                  <span className="text-base leading-none">{isExpanded ? '📂' : '📁'}</span>
                   <span className="text-sm font-semibold text-slate-800">{subjectName}</span>
                   <span className="text-[10px] text-slate-400 bg-slate-200 px-1.5 py-0.5 rounded-full">{subjectItems.length}</span>
                 </div>
@@ -215,14 +201,14 @@ toast.error('Could not load learning materials');
                 <div className="p-3 border-t border-slate-100">
                   <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2' : 'space-y-1'}>
                     {subjectItems.map(item => {
-                      const isQuiz      = resourceType === 'quiz';
-                      const isDisabled  = isQuiz && item.disabled;
-                      const isResumable = isQuiz && item.attempt_status === 'in-progress';
-                      const startTime   = isQuiz && item.scheduled_start ? new Date(item.scheduled_start) : null;
-                      const endTime     = isQuiz && item.scheduled_end   ? new Date(item.scheduled_end)   : null;
-                      const now         = new Date();
-                      const isUpcoming  = isQuiz && startTime && now < startTime;
-                      const isClosed    = isQuiz && endTime   && now > endTime;
+                      const isQuiz        = resourceType === 'quiz';
+                      const isDisabled    = isQuiz && item.disabled;
+                      const isResumable   = isQuiz && item.attempt_status === 'in-progress';
+                      const startTime     = isQuiz && item.scheduled_start ? new Date(item.scheduled_start) : null;
+                      const endTime       = isQuiz && item.scheduled_end   ? new Date(item.scheduled_end)   : null;
+                      const now           = new Date();
+                      const isUpcoming    = isQuiz && startTime && now < startTime;
+                      const isClosed      = isQuiz && endTime   && now > endTime;
                       const isUnavailable = isUpcoming || isClosed;
 
                       return (
@@ -239,7 +225,7 @@ toast.error('Could not load learning materials');
                           } ${viewMode === 'grid' ? 'flex-col text-center' : ''}`}
                         >
                           <div className={viewMode === 'grid' ? 'mb-2' : 'mr-3 flex-shrink-0'}>
-                            <ResourceIcon type={resourceType} className="w-4 h-4" />
+                            <ResourceEmoji type={resourceType} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-slate-700 truncate">{item.title}</p>
@@ -249,9 +235,9 @@ toast.error('Could not load learning materials');
                           </div>
                           {viewMode === 'list' && (
                             <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                              {isQuiz && isUpcoming && <span className="text-[10px] text-slate-400 flex items-center gap-0.5"><ClockIcon className="w-3 h-3" /> Soon</span>}
+                              {isQuiz && isUpcoming  && <span className="text-[10px] text-slate-400">⏰ Soon</span>}
                               {isQuiz && isClosed    && <span className="text-[10px] text-slate-400">Closed</span>}
-                              {isQuiz && isDisabled && !isUnavailable && (
+                              {isQuiz && isDisabled  && !isUnavailable && (
                                 <span className={`text-[10px] font-semibold ${isResumable ? 'text-amber-600' : 'text-green-600'}`}>
                                   {isResumable ? 'Resume' : 'Done'}
                                 </span>
@@ -259,7 +245,7 @@ toast.error('Could not load learning materials');
                               {item.is_weekend_exam && (
                                 <span className="px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded">EXAM</span>
                               )}
-                              <ArrowRightCircleIcon className="w-4 h-4 text-slate-200 group-hover:text-[#006770] transition-colors" />
+                              <ChevronRightIcon className="w-4 h-4 text-slate-200 group-hover:text-[#006770] transition-colors" />
                             </div>
                           )}
                         </div>
@@ -275,14 +261,13 @@ toast.error('Could not load learning materials');
     );
   };
 
-  // ── back handler ──────────────────────────────────────────────────────────────
+  // ── navigation ────────────────────────────────────────────────────────────────
   const handleBack = () => {
     if (activeFolderId) { setActiveFolderId(null); return; }
     if (activeWeek !== null) setActiveWeek(null);
   };
   const canGoBack = activeFolderId !== null || activeWeek !== null;
 
-  // ── folder items for current view ─────────────────────────────────────────────
   const currentFolderItems = activeFolderId && activeWeek !== null
     ? (weekFolderItems[folderConfig.find(f => f.id === activeFolderId)?.type] || [])
     : activeFolderId
@@ -296,12 +281,11 @@ toast.error('Could not load learning materials');
         })()
       : [];
 
-  // ── breadcrumb ────────────────────────────────────────────────────────────────
   const breadcrumb = () => {
     const parts = ['Curriculum'];
-    if (activeWeek !== null) parts.push(`Week ${activeWeek}`);
+    if (activeWeek !== null) parts.push(activeWeek === 0 ? 'Unscheduled' : `Week ${activeWeek}`);
     if (activeFolderId) parts.push(folderConfig.find(f => f.id === activeFolderId)?.name || activeFolderId);
-    return parts.join(' / ');
+    return parts.join(' › ');
   };
 
   // ── render ────────────────────────────────────────────────────────────────────
@@ -309,14 +293,12 @@ toast.error('Could not load learning materials');
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
 
       {/* ── Top nav bar ── */}
-      <div className="flex items-center gap-3 px-4 py-2.5 bg-[#003B46] border-b border-slate-200">
+      <div className="flex items-center gap-3 px-4 py-2.5 bg-[#003B46]">
         <button
           onClick={handleBack}
           disabled={!canGoBack}
           className={`p-1.5 rounded-lg transition ${
-            canGoBack
-              ? 'text-white/70 hover:bg-white/10 hover:text-white'
-              : 'text-white/20 cursor-default'
+            canGoBack ? 'text-white/70 hover:bg-white/10 hover:text-white' : 'text-white/20 cursor-default'
           }`}
         >
           <ChevronLeftIcon className="w-4 h-4" />
@@ -324,24 +306,28 @@ toast.error('Could not load learning materials');
 
         {/* Breadcrumb */}
         <div className="flex-1 flex items-center gap-1.5 text-[11px] font-medium text-white/60 truncate">
-          <CalendarDaysIcon className="w-3.5 h-3.5 text-[#2A9D8F] flex-shrink-0" />
+          <span className="text-sm flex-shrink-0">📅</span>
           <span className="truncate">{breadcrumb()}</span>
         </div>
 
-        {/* View toggle — only inside a resource folder */}
+        {/* View toggle */}
         {activeFolderId && activeFolderId !== 'results' && (
-          <div className="flex bg-white/10 p-0.5 rounded-lg">
+          <div className="flex bg-white/10 p-0.5 rounded-lg gap-0.5">
             <button
               onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded transition ${viewMode === 'list' ? 'bg-white/20 text-white' : 'text-white/50 hover:text-white'}`}
+              className={`px-2 py-1 rounded text-xs font-medium transition ${
+                viewMode === 'list' ? 'bg-white/20 text-white' : 'text-white/50 hover:text-white'
+              }`}
             >
-              <ListBulletIcon className="w-3.5 h-3.5" />
+              ☰
             </button>
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded transition ${viewMode === 'grid' ? 'bg-white/20 text-white' : 'text-white/50 hover:text-white'}`}
+              className={`px-2 py-1 rounded text-xs font-medium transition ${
+                viewMode === 'grid' ? 'bg-white/20 text-white' : 'text-white/50 hover:text-white'
+              }`}
             >
-              <Squares2X2Icon className="w-3.5 h-3.5" />
+              ⊞
             </button>
           </div>
         )}
@@ -350,12 +336,12 @@ toast.error('Could not load learning materials');
       {/* ── Content ── */}
       <div className="flex-1 overflow-y-auto bg-[#F5F2EB]">
 
-        {/* ══ LEVEL 1 — Weekly timeline ════════════════════════════════════════ */}
+        {/* ══ LEVEL 1 — Weekly timeline ══════════════════════════════════════ */}
         {activeWeek === null && !activeFolderId && (
           <div className="p-4 space-y-2.5">
             {weekGroups.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                <CalendarDaysIcon className="w-12 h-12 mb-3 opacity-20" />
+              <div className="flex flex-col items-center justify-center py-20 text-slate-400 gap-2">
+                <span className="text-4xl">📅</span>
                 <p className="text-sm font-medium">No lessons scheduled yet.</p>
               </div>
             ) : weekGroups.map(({ week, lessons: wLessons, exams: wExams }) => {
@@ -381,15 +367,15 @@ toast.error('Could not load learning materials');
                   }`}
                 >
                   <div className="flex items-center gap-4 px-4 py-3">
-                    {/* Week number badge */}
+                    {/* Week badge */}
                     <div className={`w-11 h-11 rounded-xl flex flex-col items-center justify-center flex-shrink-0 font-black ${
-                      isLocked      ? 'bg-gray-100 text-gray-300'   :
-                      isPast        ? 'bg-[#006770] text-white'      :
-                      isCurrent     ? 'bg-[#003B46] text-white'      :
-                                      'bg-[#006770]/10 text-[#006770]'
+                      isLocked  ? 'bg-gray-100 text-gray-300' :
+                      isPast    ? 'bg-[#006770] text-white'   :
+                      isCurrent ? 'bg-[#003B46] text-white'   :
+                                  'bg-[#006770]/10 text-[#006770]'
                     }`}>
                       {isLocked ? (
-                        <LockClosedIcon className="w-4 h-4" />
+                        <span className="text-lg">🔒</span>
                       ) : (
                         <>
                           <span className="text-[8px] font-bold leading-none opacity-70">WK</span>
@@ -398,7 +384,6 @@ toast.error('Could not load learning materials');
                       )}
                     </div>
 
-                    {/* Week info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className={`text-sm font-bold ${isLocked ? 'text-gray-300' : 'text-[#003B46]'}`}>
@@ -412,49 +397,40 @@ toast.error('Could not load learning materials');
                         {isPast && <CheckCircleIcon className="w-3.5 h-3.5 text-[#006770]" />}
                       </div>
 
-                      {/* Resource chips */}
+                      {/* Resource chips — emoji only */}
                       {!isLocked && (
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <div className="flex items-center gap-3 mt-1 flex-wrap">
                           {videoCount > 0 && (
-                            <span className="flex items-center gap-1 text-[10px] text-sky-600 font-medium">
-                              <VideoCameraIcon className="w-3 h-3" /> {videoCount} video{videoCount !== 1 ? 's' : ''}
-                            </span>
+                            <span className="text-[10px] text-slate-500">🎬 {videoCount}</span>
                           )}
                           {pdfCount > 0 && (
-                            <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium">
-                              <DocumentIcon className="w-3 h-3" /> {pdfCount} note{pdfCount !== 1 ? 's' : ''}
-                            </span>
+                            <span className="text-[10px] text-slate-500">📄 {pdfCount}</span>
                           )}
                           {quizCount > 0 && (
-                            <span className="flex items-center gap-1 text-[10px] text-amber-600 font-medium">
-                              <BookOpenIcon className="w-3 h-3" /> {quizCount} quiz{quizCount !== 1 ? 'zes' : ''}
-                            </span>
+                            <span className="text-[10px] text-slate-500">📝 {quizCount}</span>
                           )}
                           {hasExam && (
-                            <span className="flex items-center gap-1 text-[10px] text-orange-500 font-semibold">
-                              <TrophyIcon className="w-3 h-3" /> Weekend exam
-                            </span>
+                            <span className="text-[10px] text-amber-600 font-semibold">🏆 Exam</span>
                           )}
                           {wLessons.length === 0 && !hasExam && (
                             <span className="text-[10px] text-gray-400">No content yet</span>
                           )}
                         </div>
                       )}
-
                       {isLocked && (
                         <p className="text-[10px] text-gray-300 mt-0.5">Unlocks on week {week}</p>
                       )}
                     </div>
 
                     {!isLocked && (
-                      <ChevronRightIcon className={`w-4 h-4 flex-shrink-0 transition-colors ${isCurrent ? 'text-[#006770]' : 'text-gray-300 group-hover:text-[#006770]'}`} />
+                      <ChevronRightIcon className="w-4 h-4 text-gray-300 flex-shrink-0" />
                     )}
                   </div>
 
-                  {/* Weekend exam preview — only for current / past weeks */}
+                  {/* Weekend exam strip */}
                   {hasExam && !isLocked && (
                     <div className="mx-4 mb-3 flex items-center gap-2.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                      <TrophyIcon className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                      <span className="text-base">🏆</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-bold text-amber-800 truncate">{wExams[0].title}</p>
                         <p className="text-[10px] text-amber-500">{wExams[0].subject_name}</p>
@@ -469,21 +445,21 @@ toast.error('Could not load learning materials');
             {/* My Results */}
             <div
               onClick={() => setActiveFolderId('results')}
-              className="flex items-center gap-3 px-4 py-3 bg-white border border-[#F97316]/20 rounded-xl cursor-pointer hover:shadow-sm hover:border-[#F97316]/40 transition group mt-1"
+              className="flex items-center gap-3 px-4 py-3 bg-white border border-[#F97316]/20 rounded-xl cursor-pointer hover:shadow-sm hover:border-[#F97316]/40 transition"
             >
               <div className="w-10 h-10 rounded-xl bg-[#F97316]/10 flex items-center justify-center flex-shrink-0">
-                <TrophyIcon className="w-5 h-5 text-[#F97316]" />
+                <span className="text-lg">🏆</span>
               </div>
               <div className="flex-1">
                 <p className="text-sm font-bold text-[#003B46]">My Results</p>
                 <p className="text-[10px] text-gray-400 mt-0.5">View all quiz scores and progress</p>
               </div>
-              <ChevronRightIcon className="w-4 h-4 text-gray-300 group-hover:text-[#F97316] transition-colors" />
+              <ChevronRightIcon className="w-4 h-4 text-gray-300" />
             </div>
           </div>
         )}
 
-        {/* ══ LEVEL 2 — Week detail: exam card + folder grid ═══════════════════ */}
+        {/* ══ LEVEL 2 — Week detail: exam card + folder grid ═════════════════ */}
         {activeWeek !== null && !activeFolderId && (
           <div className="p-4">
             {/* Weekend exam card */}
@@ -497,30 +473,29 @@ toast.error('Could not load learning materials');
                   <div
                     key={exam.id}
                     onClick={() => isQuiz ? handleQuizClick(exam) : (() => { setSelectedLesson(exam); setShowLessonModal(true); })()}
-                    className="mb-5 flex items-center gap-3 p-4 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl cursor-pointer hover:shadow-lg transition-all group"
+                    className="mb-5 flex items-center gap-3 p-4 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl cursor-pointer hover:shadow-lg transition-all"
                   >
                     <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                      <TrophyIcon className="w-6 h-6 text-white" />
+                      <span className="text-2xl">🏆</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className="text-[9px] font-black text-white/80 uppercase tracking-widest">Weekend Exam</span>
-                        {isTaken     && <CheckCircleIcon className="w-3.5 h-3.5 text-white/80" />}
+                        {isTaken     && <span className="text-white/80 text-xs">✓ Done</span>}
                         {isResumable && <span className="text-[9px] text-white/80 font-bold">In progress</span>}
                       </div>
                       <p className="text-sm font-bold text-white truncate">{exam.title}</p>
                       <p className="text-[10px] text-white/70">{exam.subject_name}</p>
                     </div>
-                    <PlayIcon className="w-5 h-5 text-white/60 group-hover:text-white transition-colors flex-shrink-0" />
+                    <span className="text-white/60 text-lg">▶</span>
                   </div>
                 );
               });
             })()}
 
-            {/* Section label */}
             <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Learning Materials</p>
 
-            {/* Folder grid — clean cards, no number inside folder */}
+            {/* Folder grid — plain OS folders */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {folderConfig.map(f => {
                 const items = weekFolderItems[f.type] || [];
@@ -528,7 +503,7 @@ toast.error('Could not load learning materials');
                 return (
                   <FolderCard
                     key={f.id}
-                    config={f}
+                    name={f.name}
                     itemCount={items.length}
                     onClick={() => setActiveFolderId(f.id)}
                   />
@@ -543,7 +518,7 @@ toast.error('Could not load learning materials');
           </div>
         )}
 
-        {/* ══ LEVEL 3 — Resource folder contents ═══════════════════════════════ */}
+        {/* ══ LEVEL 3 — Resource folder contents ════════════════════════════ */}
         {activeFolderId && activeFolderId !== 'results' && (
           <div className="p-4">
             {renderGroupedResources(
@@ -553,7 +528,7 @@ toast.error('Could not load learning materials');
           </div>
         )}
 
-        {/* ══ My Results ════════════════════════════════════════════════════════ */}
+        {/* ══ My Results ═════════════════════════════════════════════════════ */}
         {activeFolderId === 'results' && (
           <div className="p-4">
             <QuizResults />
@@ -565,18 +540,16 @@ toast.error('Could not load learning materials');
       {showLessonModal && selectedLesson && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[82vh] flex flex-col overflow-hidden">
-            {/* Modal title bar */}
             <div className="flex items-center gap-3 px-4 py-3 bg-[#003B46] flex-shrink-0">
-              <ResourceIcon type={selectedLesson.resource_type} className="w-4 h-4 flex-shrink-0" />
+              <ResourceEmoji type={selectedLesson.resource_type} />
               <span className="text-sm font-medium text-white truncate flex-1">{selectedLesson.title}</span>
               <button
                 onClick={() => setShowLessonModal(false)}
-                className="flex items-center justify-center w-7 h-7 rounded-lg bg-white/10 hover:bg-red-500 text-white/70 hover:text-white transition-colors flex-shrink-0"
+                className="w-7 h-7 rounded-lg bg-white/10 hover:bg-red-500 flex items-center justify-center transition flex-shrink-0"
               >
-                <XMarkIcon className="w-4 h-4" />
+                <XMarkIcon className="w-4 h-4 text-white" />
               </button>
             </div>
-            {/* Viewer */}
             <div className="flex-1 bg-slate-900">
               <iframe
                 src={

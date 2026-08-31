@@ -2,24 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   PlusIcon, PencilIcon, TrashIcon, XMarkIcon,
   VideoCameraIcon, DocumentTextIcon, BookOpenIcon, ArchiveBoxIcon,
-  AcademicCapIcon, FolderIcon,
-  ExclamationTriangleIcon, CalendarDaysIcon,
-  TrophyIcon, ChevronRightIcon, ChevronLeftIcon,
-  LockClosedIcon,
+  AcademicCapIcon, ExclamationTriangleIcon, CalendarDaysIcon,
+  TrophyIcon, ChevronLeftIcon,
 } from '@heroicons/react/24/outline';
 import {
-  CheckCircleIcon,
-} from '@heroicons/react/24/outline';
-import {
-  VideoCameraIcon as VideoCameraIconSolid,
-  DocumentTextIcon as DocumentTextIconSolid,
-  BookOpenIcon as BookOpenIconSolid,
-  ArchiveBoxIcon as ArchiveBoxIconSolid,
-  FolderIcon as FolderIconSolid,
   ChevronRightIcon as ChevronRightIconSolid,
-  TrophyIcon as TrophyIconSolid,
-  CalendarDaysIcon as CalendarDaysIconSolid,
-  PlayIcon,
 } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
@@ -28,52 +15,40 @@ const inp = 'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-whi
 
 const WEEKS = Array.from({ length: 20 }, (_, i) => i + 1);
 
-// ── matches LearningSpace folderConfig exactly ────────────────────────────────
 const folderConfig = [
-  { id: 'videos',     name: 'Videos',      type: 'video',     Icon: VideoCameraIconSolid,  folderColor: '#0EA5E9' },
-  { id: 'pdfs',       name: 'Notes',       type: 'pdf',       Icon: DocumentTextIconSolid, folderColor: '#10B981' },
-  { id: 'quizzes',    name: 'Assessments', type: 'quiz',      Icon: BookOpenIconSolid,     folderColor: '#F59E0B' },
-  { id: 'pastpapers', name: 'Past Papers', type: 'pastpaper', Icon: ArchiveBoxIconSolid,   folderColor: '#8B5CF6' },
+  { id: 'videos',     name: 'Videos',      type: 'video'     },
+  { id: 'pdfs',       name: 'Notes',       type: 'pdf'       },
+  { id: 'quizzes',    name: 'Assessments', type: 'quiz'      },
+  { id: 'pastpapers', name: 'Past Papers', type: 'pastpaper' },
 ];
 
-// ── ResourceIcon — mirrors LearningSpace ────────────────────────────────────
-const ResourceIcon = ({ type, className = 'w-4 h-4' }) => {
-  if (type === 'video')     return <VideoCameraIconSolid  className={`${className} text-sky-500`}     />;
-  if (type === 'pdf')       return <DocumentTextIconSolid className={`${className} text-emerald-500`}  />;
-  if (type === 'pastpaper') return <ArchiveBoxIconSolid   className={`${className} text-purple-500`}   />;
-  if (type === 'quiz')      return <BookOpenIconSolid     className={`${className} text-amber-500`}    />;
-  return null;
+// ── Basic emoji resource icon ─────────────────────────────────────────────────
+const ResourceEmoji = ({ type }) => {
+  if (type === 'video')     return <span className="text-base leading-none">🎬</span>;
+  if (type === 'pdf')       return <span className="text-base leading-none">📄</span>;
+  if (type === 'pastpaper') return <span className="text-base leading-none">📦</span>;
+  if (type === 'quiz')      return <span className="text-base leading-none">📝</span>;
+  return <span className="text-base leading-none">📄</span>;
 };
 
-// ── FolderCard — exact copy of LearningSpace's FolderCard ───────────────────
-const FolderCard = ({ config, itemCount, onClick }) => {
-  const { name, folderColor, Icon } = config;
-  return (
-    <button
-      onClick={onClick}
-      className="group flex flex-col items-center gap-2.5 p-4 rounded-2xl border border-gray-100 bg-white hover:shadow-md hover:border-gray-200 transition-all duration-200 active:scale-95"
-    >
-      <div className="relative w-14 h-11 flex-shrink-0">
-        {/* Tab */}
-        <div
-          className="absolute top-0 left-0 w-5 h-2 rounded-t-md"
-          style={{ backgroundColor: folderColor, opacity: 0.7 }}
-        />
-        {/* Body */}
-        <div
-          className="absolute top-1.5 left-0 w-full h-9 rounded-b-lg rounded-tr-lg shadow-sm flex items-center justify-center transition-transform group-hover:scale-105"
-          style={{ backgroundColor: folderColor }}
-        >
-          <Icon className="w-5 h-5 text-white/90" />
-        </div>
-      </div>
-      <div className="text-center">
-        <p className="text-xs font-semibold text-slate-700 leading-tight">{name}</p>
-        <p className="text-[10px] text-slate-400 mt-0.5">{itemCount} item{itemCount !== 1 ? 's' : ''}</p>
-      </div>
-    </button>
-  );
-};
+// ── OS-style plain folder (no icon inside) ────────────────────────────────────
+const FolderCard = ({ name, itemCount, onClick }) => (
+  <button
+    onClick={onClick}
+    className="group flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-200 bg-white hover:border-[#006770]/40 hover:shadow-sm transition-all duration-200 active:scale-95"
+  >
+    <svg viewBox="0 0 56 44" fill="none" xmlns="http://www.w3.org/2000/svg"
+      className="w-14 h-11 flex-shrink-0 transition-transform group-hover:scale-105">
+      <rect x="0" y="0" width="20" height="7" rx="3" fill="#F5C842" />
+      <rect x="0" y="5" width="56" height="36" rx="4" fill="#F5C842" />
+      <rect x="0" y="5" width="56" height="8" rx="4" fill="#F9D85A" opacity="0.6" />
+    </svg>
+    <div className="text-center">
+      <p className="text-xs font-semibold text-slate-700 leading-tight">{name}</p>
+      <p className="text-[10px] text-slate-400 mt-0.5">{itemCount} item{itemCount !== 1 ? 's' : ''}</p>
+    </div>
+  </button>
+);
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -314,7 +289,7 @@ const LessonManagement = () => {
                 className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition"
               >
                 <div className="flex items-center gap-2.5">
-                  <FolderIconSolid className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                  <span className="text-base leading-none">{isExpanded ? '📂' : '📁'}</span>
                   <span className="text-sm font-semibold text-slate-800">{subjectName}</span>
                   <span className="text-[10px] text-slate-400 bg-slate-200 px-1.5 py-0.5 rounded-full">{subjectItems.length}</span>
                 </div>
@@ -329,7 +304,7 @@ const LessonManagement = () => {
                       className="group flex items-center p-3 rounded-lg border border-transparent hover:bg-[#f0faf9] hover:border-[#006770]/20 transition-all"
                     >
                       <div className="mr-3 flex-shrink-0">
-                        <ResourceIcon type={item.resource_type} />
+                        <ResourceEmoji type={item.resource_type} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-slate-700 truncate">{item.title}</p>
@@ -410,7 +385,7 @@ const LessonManagement = () => {
             <ChevronLeftIcon className="w-4 h-4" />
           </button>
           <div className="flex-1 flex items-center gap-1.5 text-[11px] font-medium text-white/60 truncate">
-            <CalendarDaysIconSolid className="w-3.5 h-3.5 text-[#2A9D8F] flex-shrink-0" />
+            <span className="text-sm flex-shrink-0">📅</span>
             <span className="truncate">{breadcrumb()}</span>
           </div>
         </div>
@@ -423,7 +398,7 @@ const LessonManagement = () => {
             <div className="p-4 space-y-2.5">
               {lessons.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                  <CalendarDaysIconSolid className="w-12 h-12 mb-3 opacity-20" />
+                  <span className="text-5xl mb-3">📅</span>
                   <p className="text-sm font-medium">No lessons yet.</p>
                   <button
                     onClick={() => openModal()}
@@ -459,26 +434,18 @@ const LessonManagement = () => {
                           </span>
                         </div>
                         {/* Resource chips */}
-                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <div className="flex items-center gap-3 mt-1 flex-wrap">
                           {videoCount > 0 && (
-                            <span className="flex items-center gap-1 text-[10px] text-sky-600 font-medium">
-                              <VideoCameraIconSolid className="w-3 h-3" /> {videoCount} video{videoCount !== 1 ? 's' : ''}
-                            </span>
+                            <span className="text-[10px] text-slate-500">🎬 {videoCount}</span>
                           )}
                           {pdfCount > 0 && (
-                            <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium">
-                              <DocumentTextIconSolid className="w-3 h-3" /> {pdfCount} note{pdfCount !== 1 ? 's' : ''}
-                            </span>
+                            <span className="text-[10px] text-slate-500">📄 {pdfCount}</span>
                           )}
                           {quizCount > 0 && (
-                            <span className="flex items-center gap-1 text-[10px] text-amber-600 font-medium">
-                              <BookOpenIconSolid className="w-3 h-3" /> {quizCount} quiz{quizCount !== 1 ? 'zes' : ''}
-                            </span>
+                            <span className="text-[10px] text-slate-500">📝 {quizCount}</span>
                           )}
                           {hasExam && (
-                            <span className="flex items-center gap-1 text-[10px] text-orange-500 font-semibold">
-                              <TrophyIconSolid className="w-3 h-3" /> Weekend exam
-                            </span>
+                            <span className="text-[10px] text-amber-600 font-semibold">🏆 Exam</span>
                           )}
                           {wLessons.length === 0 && !hasExam && (
                             <span className="text-[10px] text-gray-400">No content yet</span>
@@ -492,7 +459,7 @@ const LessonManagement = () => {
                     {/* Weekend exam preview strip */}
                     {hasExam && (
                       <div className="mx-4 mb-3 flex items-center gap-2.5 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                        <TrophyIconSolid className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <span className="text-base">🏆</span>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-bold text-amber-800 truncate">{wExams[0].title}</p>
                           <p className="text-[10px] text-amber-500">{getSubjectLabel(wExams[0].subject_id)}</p>
@@ -517,7 +484,7 @@ const LessonManagement = () => {
                     className="mb-5 flex items-center gap-3 p-4 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl"
                   >
                     <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
-                      <TrophyIconSolid className="w-6 h-6 text-white" />
+                      <span className="text-2xl">🏆</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <span className="text-[9px] font-black text-white/80 uppercase tracking-widest">Weekend Exam</span>
@@ -554,7 +521,7 @@ const LessonManagement = () => {
                   return (
                     <FolderCard
                       key={f.id}
-                      config={f}
+                      name={f.name}
                       itemCount={items.length}
                       onClick={() => setActiveFolderId(f.id)}
                     />
