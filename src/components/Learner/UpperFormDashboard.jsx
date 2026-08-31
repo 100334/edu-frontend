@@ -624,90 +624,256 @@ toast.error('Failed to generate PDF');
     </div>
   );
 
-  const ReportsPanelContent = () => (
-    <div className="space-y-4">
-      {/* Filters */}
-      <div className="flex gap-2 flex-wrap">
-        {availableYears.length > 0 && (
-          <select
-            value={selectedYear || ''}
-            onChange={e => setSelectedYear(e.target.value ? parseInt(e.target.value) : null)}
-            className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:ring-1 focus:ring-[#2A9D8F] focus:border-transparent"
-          >
-            <option value="">All Years</option>
-            {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
-        )}
-        {availableAssessments.length > 0 && (
-          <select
-            value={selectedAssessment || ''}
-            onChange={e => setSelectedAssessment(e.target.value || null)}
-            className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs bg-white focus:ring-1 focus:ring-[#2A9D8F] focus:border-transparent"
-          >
-            <option value="">All Terms</option>
-            {availableAssessments.map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
-        )}
-      </div>
+  const ReportsPanelContent = () => {
+    // Sort newest first — the first entry is the active/current term
+    const sorted = [...filteredReports].sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at)
+    );
+    const activeReport = sorted[0] || null;
+    const previousReports = sorted.slice(1);
 
-      {/* Report cards */}
-      {filteredReports.length === 0 ? (
-        <div className="text-center py-10 bg-white rounded-xl border border-[#e2e8f0]">
-          <DocumentTextIcon className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-          <p className="text-sm text-gray-400">No reports available</p>
-        </div>
-      ) : (
-        filteredReports.map(report => {
-          const valid = (report.subjects || []).filter(s => s?.score != null);
-          const avg   = calculateAverage(valid);
-          const grade = getGradeFromScore(avg);
-          const pts   = calculateTotalPoints(valid);
-          return (
-            <div key={report.id} className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm overflow-hidden">
-              <div className="px-4 py-3 border-b border-[#e2e8f0] flex justify-between items-center">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold text-[#0A2540] text-sm">{report.term || 'Report'}</span>
-                  <span className="px-2 py-0.5 bg-[#2A9D8F]/10 text-[#2A9D8F] text-[10px] rounded-full">{report.form || user?.form}</span>
-                  <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] rounded-full">{report.academic_year}</span>
-                </div>
-                <span className="text-xs font-bold" style={{ color: grade.color }}>{avg}% ({grade.letter})</span>
-              </div>
-              <div className="p-4">
-                <div className="space-y-1.5 mb-3">
-                  {valid.slice(0, 5).map((s, i) => {
+    const ReportCard = ({ report, isActive }) => {
+      const valid = (report.subjects || []).filter(s => s?.score != null);
+      const avg   = calculateAverage(valid);
+      const grade = getGradeFromScore(avg);
+      const best6pts = calculateTotalPoints(calculateBestSubjects(valid));
+      const overallDesc = getOverallGradeFromPoints(best6pts).description;
+
+      return (
+        <div className={`rounded-xl border shadow-sm overflow-hidden transition-all ${
+          isActive
+            ? 'border-[#2A9D8F] ring-2 ring-[#2A9D8F]/20 bg-white'
+            : 'border-[#e2e8f0] bg-white'
+        }`}>
+          {/* Card header */}
+          <div className={`px-4 py-3 flex items-center justify-between ${
+            isActive ? 'bg-[#2A9D8F]' : 'bg-[#F5F2EB] border-b border-[#e2e8f0]'
+          }`}>
+            <div className="flex items-center gap-2 flex-wrap min-w-0">
+              {isActive && (
+                <span className="px-2 py-0.5 bg-white/25 text-white text-[9px] font-black rounded-full uppercase tracking-wide flex-shrink-0">
+                  Current
+                </span>
+              )}
+              <span className={`font-bold text-sm truncate ${isActive ? 'text-white' : 'text-[#0A2540]'}`}>
+                {report.term || 'Report'}
+              </span>
+              <span className={`px-2 py-0.5 text-[10px] rounded-full flex-shrink-0 ${
+                isActive ? 'bg-white/20 text-white/90' : 'bg-[#2A9D8F]/10 text-[#2A9D8F]'
+              }`}>
+                {report.form || user?.form}
+              </span>
+              <span className={`px-2 py-0.5 text-[10px] rounded-full flex-shrink-0 ${
+                isActive ? 'bg-white/15 text-white/75' : 'bg-gray-100 text-gray-500'
+              }`}>
+                {report.academic_year}
+              </span>
+            </div>
+            <span className={`text-xs font-bold flex-shrink-0 ml-2 ${isActive ? 'text-white' : ''}`}
+              style={isActive ? {} : { color: grade.color }}>
+              {avg}% · {grade.letter}
+            </span>
+          </div>
+
+          {/* Body — full detail for active, compact summary for previous */}
+          <div className="p-4">
+            {isActive ? (
+              <>
+                {/* Subject score bars */}
+                <div className="space-y-1.5 mb-4">
+                  {valid.map((s, i) => {
                     const g = getGradeFromScore(s.score);
                     return (
-                      <div key={i} className="flex justify-between text-xs">
-                        <span className="text-gray-600 truncate w-32">{s.name}</span>
-                        <span className="font-mono font-semibold" style={{ color: g.color }}>{s.score}% ({g.letter})</span>
+                      <div key={i} className="flex items-center gap-2">
+                        <span className="text-[11px] text-gray-600 w-28 truncate flex-shrink-0">{s.name}</span>
+                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-full rounded-full transition-all"
+                            style={{ width: `${s.score}%`, backgroundColor: g.color }} />
+                        </div>
+                        <span className="text-[11px] font-bold font-mono w-16 text-right flex-shrink-0"
+                          style={{ color: g.color }}>
+                          {s.score}% {g.letter}
+                        </span>
                       </div>
                     );
                   })}
-                  {valid.length > 5 && <p className="text-[10px] text-gray-400 text-center">+{valid.length - 5} more</p>}
                 </div>
-                {/* Points summary */}
-                <div className="flex items-center justify-between px-3 py-2 bg-[#F5F2EB] rounded-lg border border-[#e2e8f0] mb-3">
+
+                {/* Points summary strip */}
+                <div className="flex items-center justify-between px-3 py-2 bg-[#F5F2EB] rounded-lg border border-[#e2e8f0] mb-4">
                   <span className="text-xs font-medium text-gray-500">Best 6 Points</span>
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-[#003B46]">{calculateTotalPoints(calculateBestSubjects(valid))} pts</span>
+                    <span className="text-sm font-bold text-[#003B46]">{best6pts} pts</span>
                     <span className="px-2 py-0.5 bg-[#2A9D8F]/10 text-[#2A9D8F] text-[10px] rounded-full font-semibold">
-                      {getOverallGradeFromPoints(calculateTotalPoints(calculateBestSubjects(valid))).description}
+                      {overallDesc}
                     </span>
                   </div>
                 </div>
+              </>
+            ) : (
+              /* Previous term — compact: just avg bar + points */
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full rounded-full" style={{ width: `${avg}%`, backgroundColor: grade.color }} />
+                </div>
+                <span className="text-xs text-gray-500 flex-shrink-0">{best6pts} pts · {overallDesc}</span>
+              </div>
+            )}
+
+            {/* Action buttons — both for active and previous */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setSelectedReport(report); setShowReportModal(true); }}
+                className="flex-1 py-2 rounded-lg text-xs font-semibold border transition flex items-center justify-center gap-1.5 border-[#2A9D8F] text-[#2A9D8F] hover:bg-[#2A9D8F]/10"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                View
+              </button>
+              <button
+                onClick={() => downloadReportPDF(report)}
+                className={`flex-1 py-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 ${
+                  isActive
+                    ? 'bg-[#003B46] text-white hover:bg-[#005060]'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <ArrowDownTrayIcon className="w-3.5 h-3.5" /> Download PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    return (
+      <div className="space-y-4">
+        {filteredReports.length === 0 ? (
+          <div className="text-center py-10 bg-white rounded-xl border border-[#e2e8f0]">
+            <DocumentTextIcon className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+            <p className="text-sm text-gray-400">No reports available</p>
+          </div>
+        ) : (
+          <>
+            {/* Active / current term — always shown fully expanded */}
+            {activeReport && <ReportCard report={activeReport} isActive={true} />}
+
+            {/* Previous terms */}
+            {previousReports.length > 0 && (
+              <>
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pt-1">
+                  Previous Terms
+                </p>
+                {previousReports.map(report => (
+                  <ReportCard key={report.id} report={report} isActive={false} />
+                ))}
+              </>
+            )}
+          </>
+        )}
+
+        {/* View modal */}
+        {showReportModal && selectedReport && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+              {/* Modal header */}
+              <div className="flex items-center justify-between px-5 py-4 bg-[#003B46] flex-shrink-0">
+                <div className="flex items-center gap-2 min-w-0">
+                  <DocumentTextIcon className="w-4 h-4 text-[#2A9D8F] flex-shrink-0" />
+                  <span className="text-sm font-bold text-white truncate">
+                    {selectedReport.term} — {selectedReport.form || user?.form}
+                  </span>
+                  <span className="text-[10px] text-white/60 flex-shrink-0">{selectedReport.academic_year}</span>
+                </div>
                 <button
-                  onClick={() => downloadReportPDF(report)}
-                  className="w-full py-1.5 bg-[#003B46] text-white rounded-lg text-xs font-medium hover:bg-[#005060] transition flex items-center justify-center gap-1.5"
+                  onClick={() => setShowReportModal(false)}
+                  className="w-7 h-7 rounded-lg bg-white/10 hover:bg-red-500 flex items-center justify-center transition flex-shrink-0 ml-2"
                 >
-                  <ArrowDownTrayIcon className="w-3.5 h-3.5" /> Download PDF
+                  <XMarkIcon className="w-4 h-4 text-white" />
+                </button>
+              </div>
+
+              {/* Modal body */}
+              <div className="overflow-y-auto flex-1 p-5">
+                {(() => {
+                  const valid = (selectedReport.subjects || []).filter(s => s?.score != null);
+                  const avg   = calculateAverage(valid);
+                  const grade = getGradeFromScore(avg);
+                  const best6 = calculateBestSubjects(valid);
+                  const pts   = calculateTotalPoints(best6);
+                  return (
+                    <div className="space-y-4">
+                      {/* Summary row */}
+                      <div className="grid grid-cols-3 gap-3">
+                        {[
+                          { label: 'Average', value: `${avg}%` },
+                          { label: 'Grade',   value: grade.letter },
+                          { label: 'Points',  value: `${pts} pts` },
+                        ].map(c => (
+                          <div key={c.label} className="text-center bg-[#F5F2EB] rounded-xl p-3 border border-[#e2e8f0]">
+                            <p className="text-lg font-black text-[#003B46]">{c.value}</p>
+                            <p className="text-[10px] text-gray-400 font-semibold uppercase">{c.label}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* All subjects */}
+                      <div className="space-y-1.5">
+                        {valid.map((s, i) => {
+                          const g = getGradeFromScore(s.score);
+                          return (
+                            <div key={i} className="flex items-center gap-2">
+                              <span className="text-xs text-gray-600 w-32 truncate flex-shrink-0">{s.name}</span>
+                              <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div className="h-full rounded-full" style={{ width: `${s.score}%`, backgroundColor: g.color }} />
+                              </div>
+                              <span className="text-xs font-bold font-mono w-16 text-right flex-shrink-0"
+                                style={{ color: g.color }}>
+                                {s.score}% {g.letter}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Best 6 strip */}
+                      <div className="flex items-center justify-between px-3 py-2.5 bg-[#F5F2EB] rounded-lg border border-[#e2e8f0]">
+                        <span className="text-xs font-medium text-gray-500">Best 6 Aggregate</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-[#003B46]">{pts} pts</span>
+                          <span className="px-2 py-0.5 bg-[#2A9D8F]/10 text-[#2A9D8F] text-[10px] rounded-full font-semibold">
+                            {getOverallGradeFromPoints(pts).description}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Modal footer */}
+              <div className="px-5 py-4 border-t border-[#e2e8f0] flex gap-2 flex-shrink-0">
+                <button
+                  onClick={() => setShowReportModal(false)}
+                  className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition font-medium"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => { downloadReportPDF(selectedReport); setShowReportModal(false); }}
+                  className="flex-1 py-2.5 bg-[#003B46] text-white rounded-xl text-sm font-semibold hover:bg-[#005060] transition flex items-center justify-center gap-2"
+                >
+                  <ArrowDownTrayIcon className="w-4 h-4" /> Download PDF
                 </button>
               </div>
             </div>
-          );
-        })
-      )}
-    </div>
-  );
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const AttendancePanelContent = () => (
     <div className="space-y-4">

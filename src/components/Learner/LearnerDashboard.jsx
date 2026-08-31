@@ -1347,74 +1347,151 @@ toast.error('Failed to generate PDF');
         )}
 
         {/* Reports Tab */}
-        {activeTab === 'reports' && (
-          <div className="space-y-5">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        {activeTab === 'reports' && (() => {
+          // Sort newest first — index 0 is the active/current term
+          const sortedReports = [...(filteredReports || [])].sort(
+            (a, b) => new Date(b.created_at) - new Date(a.created_at)
+          );
+          const activeRep   = sortedReports[0] || null;
+          const previousRep = sortedReports.slice(1);
+
+          const ReportCard = ({ report, isActive }) => {
+            const valid = (report.subjects || []).filter(s => s && s.score != null);
+            const avg   = calculateAverage(valid);
+            const grade = getGradeFromScore(avg, report.form);
+            return (
+              <div className={`rounded-xl border shadow-sm overflow-hidden ${
+                isActive
+                  ? 'border-[#2A9D8F] ring-2 ring-[#2A9D8F]/20 bg-white'
+                  : 'border-[#e2e8f0] bg-white'
+              }`}>
+                {/* Header */}
+                <div className={`px-4 py-3 flex items-center justify-between ${
+                  isActive ? 'bg-[#2A9D8F]' : 'bg-[#F5F2EB] border-b border-[#e2e8f0]'
+                }`}>
+                  <div className="flex items-center gap-2 flex-wrap min-w-0">
+                    {isActive && (
+                      <span className="px-2 py-0.5 bg-white/25 text-white text-[9px] font-black rounded-full uppercase tracking-wide flex-shrink-0">
+                        Current
+                      </span>
+                    )}
+                    <span className={`font-bold text-sm truncate ${isActive ? 'text-white' : 'text-[#0A2540]'}`}>
+                      {report.term || 'Report'}
+                    </span>
+                    <span className={`px-2 py-0.5 text-[10px] rounded-full flex-shrink-0 ${
+                      isActive ? 'bg-white/20 text-white/90' : 'bg-[#2A9D8F]/10 text-[#2A9D8F]'
+                    }`}>
+                      {report.form || user?.form}
+                    </span>
+                    <span className={`px-2 py-0.5 text-[10px] rounded-full flex-shrink-0 ${
+                      isActive ? 'bg-white/15 text-white/75' : 'bg-gray-100 text-gray-500'
+                    }`}>
+                      {report.academic_year}
+                    </span>
+                  </div>
+                  <span className={`text-xs font-bold flex-shrink-0 ml-2 ${isActive ? 'text-white' : ''}`}
+                    style={isActive ? {} : { color: grade.color }}>
+                    {avg}% · {grade.letter}
+                  </span>
+                </div>
+
+                {/* Body */}
+                <div className="p-4">
+                  {isActive ? (
+                    /* Active — full subject score bars */
+                    <div className="space-y-1.5 mb-4">
+                      {valid.map((s, i) => {
+                        const g = getGradeFromScore(s.score, report.form);
+                        return (
+                          <div key={i} className="flex items-center gap-2">
+                            <span className="text-[11px] text-gray-600 w-28 truncate flex-shrink-0">{s.name}</span>
+                            <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <div className="h-full rounded-full"
+                                style={{ width: `${s.score}%`, backgroundColor: g.color }} />
+                            </div>
+                            <span className="text-[11px] font-bold font-mono w-16 text-right flex-shrink-0"
+                              style={{ color: g.color }}>
+                              {s.score}% {g.letter}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    /* Previous — compact single progress bar */
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full"
+                          style={{ width: `${avg}%`, backgroundColor: grade.color }} />
+                      </div>
+                      <span className="text-xs text-gray-500 flex-shrink-0">{avg}% avg</span>
+                    </div>
+                  )}
+
+                  {/* Buttons — both View and Download PDF */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleViewReport(report)}
+                      className="flex-1 py-2 rounded-lg border border-[#2A9D8F] text-[#2A9D8F] text-xs font-semibold hover:bg-[#2A9D8F]/10 transition flex items-center justify-center gap-1.5"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      View
+                    </button>
+                    <button
+                      onClick={() => downloadReportPDF(report)}
+                      className={`flex-1 py-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 ${
+                        isActive
+                          ? 'bg-[#0A2540] text-white hover:bg-[#1E3A5F]'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      <ArrowDownTrayIcon className="w-3.5 h-3.5" />
+                      Download PDF
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          };
+
+          return (
+            <div className="space-y-4">
               <div>
                 <h1 className="text-2xl font-bold text-[#0A2540]">Report Cards</h1>
                 <p className="text-sm text-gray-500">Your academic performance overview</p>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {availableYears.length > 0 && (
-                  <select value={selectedYear || ''} onChange={(e) => setSelectedYear(e.target.value ? parseInt(e.target.value) : null)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#2A9D8F] focus:border-transparent">
-                    <option value="">All Years</option>
-                    {availableYears.map(year => <option key={year} value={year}>{year}</option>)}
-                  </select>
-                )}
-                {availableAssessments.length > 0 && (
-                  <select value={selectedAssessment || ''} onChange={(e) => setSelectedAssessment(e.target.value || null)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#2A9D8F] focus:border-transparent">
-                    <option value="">All Assessments</option>
-                    {availableAssessments.map(assessment => <option key={assessment} value={assessment}>{assessment}</option>)}
-                  </select>
-                )}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              {filteredReports && filteredReports.length > 0 ? (
-                filteredReports.map(report => {
-                  const validSubjects = (report.subjects || []).filter(s => s && s.score !== undefined && s.score !== null);
-                  const avg = calculateAverage(validSubjects);
-                  const grade = getGradeFromScore(avg, report.form);
-                  return (
-                    <div key={report.id} className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm overflow-hidden hover:shadow transition">
-                      <div className="p-4 border-b border-[#e2e8f0] flex justify-between items-center">
-                        <div>
-                          <span className="font-bold text-[#0A2540]">{report.term || 'Report'}</span>
-                          <span className="ml-2 px-2 py-0.5 bg-[#2A9D8F]/10 text-[#2A9D8F] text-xs rounded-full">{report.form || user?.form}</span>
-                          <span className="ml-2 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full">{report.academic_year}</span>
-                        </div>
-                        <span className="text-sm font-bold" style={{ color: grade.color }}>{avg}% ({grade.letter})</span>
-                      </div>
-                      <div className="p-4">
-                        <div className="space-y-2">
-                          {validSubjects.slice(0, 4).map((s, idx) => {
-                            const g = getGradeFromScore(s.score, report.form);
-                            return (
-                              <div key={idx} className="flex justify-between text-sm">
-                                <span>{s.name}</span>
-                                <span style={{ color: g.color }} className="font-mono font-medium">{s.score}% ({g.letter})</span>
-                              </div>
-                            );
-                          })}
-                          {validSubjects.length > 4 && <div className="text-xs text-gray-400 text-center">+{validSubjects.length - 4} more</div>}
-                        </div>
-                        <div className="mt-4 flex gap-2">
-                          <button onClick={() => handleViewReport(report)} className="flex-1 px-3 py-1.5 border border-[#2A9D8F] text-[#2A9D8F] rounded-lg text-sm hover:bg-[#2A9D8F]/10 transition">Preview</button>
-                          <button onClick={() => downloadReportPDF(report)} className="flex-1 px-3 py-1.5 bg-[#0A2540] text-white rounded-lg text-sm hover:bg-[#1E3A5F] transition">PDF</button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="col-span-2 text-center py-10 bg-white rounded-xl border border-[#e2e8f0]">
+
+              {sortedReports.length === 0 ? (
+                <div className="text-center py-10 bg-white rounded-xl border border-[#e2e8f0]">
                   <DocumentTextIcon className="w-12 h-12 text-gray-300 mx-auto mb-2" />
                   <p className="text-gray-500">No reports available</p>
                 </div>
+              ) : (
+                <>
+                  {/* Active term */}
+                  {activeRep && <ReportCard report={activeRep} isActive={true} />}
+
+                  {/* Previous terms */}
+                  {previousRep.length > 0 && (
+                    <>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pt-1">
+                        Previous Terms
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {previousRep.map(report => (
+                          <ReportCard key={report.id} report={report} isActive={false} />
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </>
               )}
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* Attendance Tab */}
         {activeTab === 'attendance' && (
