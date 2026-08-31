@@ -34,6 +34,7 @@ export const AuthProvider = ({ children }) => {
           reg_number: parsedUser.reg_number || parsedUser.reg,
           form: parsedUser.form || parsedUser.grade,
           grade: parsedUser.grade,
+          phone: parsedUser.phone,
           is_active: parsedUser.is_active
         });
         
@@ -101,14 +102,17 @@ return await login(userData, response.data.token);
     try {
 const response = await api.post('/api/auth/learner/login', credentials);
 if (response.data.success) {
+        const u = response.data.user;
         const userData = {
-          id: response.data.user?.id,
-          name: response.data.user?.name,
-          email: response.data.user?.email,
+          id: u?.id,
+          name: u?.name,
+          email: u?.email,
           role: 'learner', // Force role to learner
-          reg: response.data.user?.reg,
-          reg_number: response.data.user?.reg_number,
-          form: response.data.user?.form
+          reg: u?.reg,
+          reg_number: u?.reg_number,
+          form: u?.form || u?.grade,
+          grade: u?.grade,
+          phone: u?.phone,
         };
         
         return await login(userData, response.data.token);

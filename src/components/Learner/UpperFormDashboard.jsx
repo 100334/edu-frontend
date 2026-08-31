@@ -512,6 +512,33 @@ toast.error('Failed to generate PDF');
 
   const OverviewPanelContent = () => (
     <div className="space-y-5">
+      {/* Profile card */}
+      <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm overflow-hidden">
+        <div className="h-1.5 w-full" style={{ background: `linear-gradient(90deg, ${TEAL_ACCENT}, ${AZURE_ACCENT})` }} />
+        <div className="p-4 flex items-center gap-4">
+          <div className="w-12 h-12 rounded-full bg-[#2A9D8F]/15 flex items-center justify-center flex-shrink-0">
+            <UserCircleIcon className="w-7 h-7 text-[#2A9D8F]" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-[#0A2540] truncate">{getUserName()}</p>
+            <p className="text-[10px] text-gray-500 mt-0.5">{user?.reg_number || user?.regNumber || '—'}</p>
+            <div className="flex flex-wrap items-center gap-2 mt-1.5">
+              <span className="px-2 py-0.5 bg-[#2A9D8F]/10 text-[#2A9D8F] text-[10px] font-semibold rounded-full">
+                {user?.form || 'Upper Form'}
+              </span>
+              {user?.phone ? (
+                <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                  <span>📱</span>
+                  <span className="font-medium text-[#0A2540]">{user.phone}</span>
+                </span>
+              ) : (
+                <span className="text-[10px] text-gray-400 italic">No phone on record</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Stats row */}
       <div className="grid grid-cols-2 gap-3">
         <StatCard icon={<DocumentTextIcon className="w-5 h-5" />} value={stats.reportsCount}      label="Reports"    color={TEAL_ACCENT} />
@@ -841,7 +868,12 @@ toast.error('Failed to generate PDF');
                 </div>
                 <div>
                   <div className="text-xs font-semibold text-white truncate max-w-[110px]">{getUserName()}</div>
-                  <div className="text-[9px] text-white/60">{user?.form || 'Student'}</div>
+                  <div className="text-[9px] text-white/60">
+                    {user?.form || 'Student'}
+                    {user?.phone && (
+                      <span className="ml-1.5 text-white/50">· 📱 {user.phone}</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -898,10 +930,16 @@ toast.error('Failed to generate PDF');
             </div>
           </div>
 
-          {/* Greeting */}
+          {/* Greeting + phone (always visible, including mobile) */}
           <div className="mt-1.5">
             <p className="text-[10px] font-extrabold tracking-wider" style={{ color: AZURE_ACCENT }}>LEARNER PORTAL</p>
             <h2 className="text-lg font-bold text-white leading-tight">{getGreeting()}, {getUserName()}</h2>
+            {user?.phone && (
+              <p className="text-[10px] text-white/50 mt-0.5 flex items-center gap-1">
+                <span>📱</span>
+                <span>{user.phone}</span>
+              </p>
+            )}
           </div>
         </div>
 
@@ -953,15 +991,21 @@ toast.error('Failed to generate PDF');
           <div className="absolute inset-0 bg-black/50" onClick={() => setMobileMenuOpen(false)} />
           <div className="absolute top-0 right-0 h-full w-60 bg-white shadow-xl flex flex-col">
             <div className="p-4 border-b border-gray-100">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <img
                   src="/schoologo.png"
                   alt="Progress Secondary School logo"
-                  className="w-10 h-10 object-contain rounded-xl bg-white p-1"
+                  className="w-10 h-10 object-contain rounded-xl bg-white p-1 flex-shrink-0"
                 />
-                <div>
-                  <p className="font-bold text-[#003B46] text-sm">PROGRESS</p>
+                <div className="min-w-0">
+                  <p className="font-bold text-[#003B46] text-sm truncate">{getUserName()}</p>
                   <p className="text-[10px] text-gray-400">{user?.form || 'Upper Form'}</p>
+                  {user?.phone && (
+                    <p className="text-[10px] text-gray-500 flex items-center gap-1 mt-0.5">
+                      <span>📱</span>
+                      <span className="font-medium">{user.phone}</span>
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
