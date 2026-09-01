@@ -69,7 +69,8 @@ const LessonManagement = () => {
   const [expandedSubjects, setExpandedSubjects] = useState({});
 
   const emptyForm = {
-    title: '', description: '', video_url: '', pdf_url: '',
+    title: '', description: '', objectives: '', instructions: '',
+    video_url: '', pdf_url: '',
     subject_id: '', target_form: 'All', quiz_id: '',
     display_order: 0, resource_type: 'video',
     week_number: 1, is_weekend_exam: false,
@@ -215,6 +216,8 @@ const LessonManagement = () => {
       const payload = {
         title:           formData.title.trim(),
         description:     formData.description || '',
+        objectives:      formData.objectives  || '',
+        instructions:    formData.instructions || '',
         subject_id:      parseInt(formData.subject_id),
         target_form:     formData.target_form,
         display_order:   parseInt(formData.display_order) || 0,
@@ -253,6 +256,8 @@ const LessonManagement = () => {
     setFormData(lesson ? {
       title:           lesson.title           || '',
       description:     lesson.description     || '',
+      objectives:      lesson.objectives      || '',
+      instructions:    lesson.instructions    || '',
       video_url:       lesson.video_url       || '',
       pdf_url:         lesson.pdf_url         || '',
       subject_id:      lesson.subject_id      || '',
@@ -704,6 +709,32 @@ const LessonManagement = () => {
                 <textarea value={formData.description}
                   onChange={e => setFormData(p => ({ ...p, description: e.target.value }))}
                   rows={2} placeholder="Brief description…" className={inp} />
+              </div>
+
+              {/* Objectives */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  Learning Objectives <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <textarea value={formData.objectives}
+                  onChange={e => setFormData(p => ({ ...p, objectives: e.target.value }))}
+                  rows={3}
+                  placeholder="What will learners be able to do after this lesson? (one per line)"
+                  className={inp} />
+                <p className="text-[10px] text-gray-400 mt-1">Shown to learners at the start of the lesson.</p>
+              </div>
+
+              {/* Instructions */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  Instructions <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <textarea value={formData.instructions}
+                  onChange={e => setFormData(p => ({ ...p, instructions: e.target.value }))}
+                  rows={3}
+                  placeholder="How should learners approach this lesson? Any specific guidance…"
+                  className={inp} />
+                <p className="text-[10px] text-gray-400 mt-1">Guidance shown before learners begin reading notes.</p>
               </div>
 
               {/* Footer */}
