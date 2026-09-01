@@ -106,7 +106,7 @@ const LearningSpace = ({ onStartQuiz }) => {
       if (qr.status === 'fulfilled' && qr.value.data.success) {
         setQuizItems((qr.value.data.quizzes || []).map(q => ({
           id: q.id, quiz_id: q.id, title: q.title, description: q.description,
-          resource_type: 'quiz', subject_name: q.subject_name || 'Uncategorized',
+          resource_type: 'quiz', subject_name: q.subject_name || q.subject || null,
           week_number: q.week_number || null, is_weekend_exam: q.is_weekend_exam || false,
           disabled: q.disabled || false, attempt_status: q.attempt_status || null,
           allow_retake: q.allow_retake || false,
