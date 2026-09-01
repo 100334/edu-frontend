@@ -441,12 +441,12 @@ const LearningSpace = ({ onStartQuiz }) => {
         {activeWeek !== null && activeSubject && !activeLesson && !activeFolderId && (() => {
           const subjectTopics = weekTopics.filter(t => (t.subject_name || 'General') === activeSubject);
 
-          // Flatten into resource rows: each topic can contribute a note row, a video row, a quiz row
+          // Flatten into resource rows: each topic can contribute a note, video, and quiz row
           const rows = [];
           subjectTopics.forEach(topic => {
-            if (topic.pdf_url)   rows.push({ type: 'notes', label: topic.title + ' — Notes',  emoji: '📄', topic });
-            if (topic.video_url) rows.push({ type: 'video', label: topic.title + ' — Video',  emoji: '🎬', topic });
-            if (topic.linkedQuiz) rows.push({ type: 'quiz',  label: topic.linkedQuiz.title,    emoji: '📝', topic, quiz: topic.linkedQuiz });
+            if (topic.pdf_url)    rows.push({ type: 'notes', title: topic.title, sub: 'Lesson Notes',   emoji: '📄', topic });
+            if (topic.video_url)  rows.push({ type: 'video', title: topic.title, sub: 'Lesson Video',   emoji: '🎬', topic });
+            if (topic.linkedQuiz) rows.push({ type: 'quiz',  title: topic.linkedQuiz.title, sub: 'Assessment', emoji: '📝', topic, quiz: topic.linkedQuiz });
           });
 
           const openAt = (row) => {
@@ -487,7 +487,8 @@ const LearningSpace = ({ onStartQuiz }) => {
                   >
                     <span className="text-xl flex-shrink-0">{row.emoji}</span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-[#003B46] truncate">{row.label}</p>
+                      <p className="text-sm font-semibold text-[#003B46] truncate">{row.title}</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">{row.sub}</p>
                       {isQuiz && (start || end) && (
                         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                           {start && <span className="text-[10px] text-slate-400">🕐 Opens {start.toLocaleString('en', { dateStyle: 'short', timeStyle: 'short' })}</span>}
