@@ -625,154 +625,114 @@ toast.error('Failed to generate PDF');
   );
 
   const ReportsPanelContent = () => {
-    // Sort newest first — the first entry is the active/current term
+  const ReportsPanelContent = () => {
     const sorted = [...filteredReports].sort(
       (a, b) => new Date(b.created_at) - new Date(a.created_at)
     );
-    const activeReport = sorted[0] || null;
-    const previousReports = sorted.slice(1);
+    const [selectedId, setSelectedId] = React.useState(sorted[0]?.id ?? null);
+    const report = sorted.find(r => r.id === selectedId) || sorted[0] || null;
 
-    const ReportCard = ({ report, isActive }) => {
-      const valid = (report.subjects || []).filter(s => s?.score != null);
-      const avg   = calculateAverage(valid);
-      const grade = getGradeFromScore(avg);
-      const best6pts = calculateTotalPoints(calculateBestSubjects(valid));
-      const overallDesc = getOverallGradeFromPoints(best6pts).description;
+    if (sorted.length === 0) return (
+      <div className="text-center py-12 bg-white rounded-xl border border-[#e2e8f0]">
+        <DocumentTextIcon className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+        <p className="text-sm text-gray-400">No reports available</p>
+      </div>
+    );
 
-      return (
-        <div className={`rounded-xl border shadow-sm overflow-hidden transition-all ${
-          isActive
-            ? 'border-[#2A9D8F] ring-2 ring-[#2A9D8F]/20 bg-white'
-            : 'border-[#e2e8f0] bg-white'
-        }`}>
-          {/* Card header */}
-          <div className={`px-4 py-3 flex items-center justify-between ${
-            isActive ? 'bg-[#2A9D8F]' : 'bg-[#F5F2EB] border-b border-[#e2e8f0]'
-          }`}>
-            <div className="flex items-center gap-2 flex-wrap min-w-0">
-              {isActive && (
-                <span className="px-2 py-0.5 bg-white/25 text-white text-[9px] font-black rounded-full uppercase tracking-wide flex-shrink-0">
-                  Current
-                </span>
-              )}
-              <span className={`font-bold text-sm truncate ${isActive ? 'text-white' : 'text-[#0A2540]'}`}>
-                {report.term || 'Report'}
-              </span>
-              <span className={`px-2 py-0.5 text-[10px] rounded-full flex-shrink-0 ${
-                isActive ? 'bg-white/20 text-white/90' : 'bg-[#2A9D8F]/10 text-[#2A9D8F]'
-              }`}>
+    const valid       = (report.subjects || []).filter(s => s?.score != null);
+    const avg         = calculateAverage(valid);
+    const grade       = getGradeFromScore(avg);
+    const best6pts    = calculateTotalPoints(calculateBestSubjects(valid));
+    const overallDesc = getOverallGradeFromPoints(best6pts).description;
+
+    return (
+      <div className="space-y-4">
+
+        {/* Term selector — pill tabs */}
+        {sorted.length > 1 && (
+          <div className="flex flex-wrap gap-2">
+            {sorted.map((r, idx) => {
+              const isSelected = r.id === selectedId;
+              return (
+                <button
+                  key={r.id}
+                  onClick={() => setSelectedId(r.id)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                    isSelected
+                      ? 'bg-[#003B46] text-white border-[#003B46]'
+                      : 'bg-white text-gray-500 border-gray-200 hover:border-[#2A9D8F] hover:text-[#2A9D8F]'
+                  }`}
+                >
+                  {r.term || `Report ${idx + 1}`}
+                  {idx === 0 && (
+                    <span className={`ml-1.5 text-[9px] ${isSelected ? 'text-white/70' : 'text-[#2A9D8F]'}`}>
+                      ●
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Single active card */}
+        <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm overflow-hidden">
+          {/* Header */}
+          <div className="px-4 py-3 border-b border-[#e2e8f0] flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-sm font-bold text-[#003B46] truncate">{report.term || 'Report'}</span>
+              <span className="text-[10px] text-gray-400">{report.academic_year}</span>
+              <span className="px-2 py-0.5 bg-[#2A9D8F]/10 text-[#2A9D8F] text-[10px] rounded-full">
                 {report.form || user?.form}
               </span>
-              <span className={`px-2 py-0.5 text-[10px] rounded-full flex-shrink-0 ${
-                isActive ? 'bg-white/15 text-white/75' : 'bg-gray-100 text-gray-500'
-              }`}>
-                {report.academic_year}
-              </span>
             </div>
-            <span className={`text-xs font-bold flex-shrink-0 ml-2 ${isActive ? 'text-white' : ''}`}
-              style={isActive ? {} : { color: grade.color }}>
+            <span className="text-xs font-bold flex-shrink-0 ml-2" style={{ color: grade.color }}>
               {avg}% · {grade.letter}
             </span>
           </div>
 
-          {/* Body — full detail for active, compact summary for previous */}
-          <div className="p-4">
-            {isActive ? (
-              <>
-                {/* Subject score bars */}
-                <div className="space-y-1.5 mb-4">
-                  {valid.map((s, i) => {
-                    const g = getGradeFromScore(s.score);
-                    return (
-                      <div key={i} className="flex items-center gap-2">
-                        <span className="text-[11px] text-gray-600 w-28 truncate flex-shrink-0">{s.name}</span>
-                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full transition-all"
-                            style={{ width: `${s.score}%`, backgroundColor: g.color }} />
-                        </div>
-                        <span className="text-[11px] font-bold font-mono w-16 text-right flex-shrink-0"
-                          style={{ color: g.color }}>
-                          {s.score}% {g.letter}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* Points summary strip */}
-                <div className="flex items-center justify-between px-3 py-2 bg-[#F5F2EB] rounded-lg border border-[#e2e8f0] mb-4">
-                  <span className="text-xs font-medium text-gray-500">Best 6 Points</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-[#003B46]">{best6pts} pts</span>
-                    <span className="px-2 py-0.5 bg-[#2A9D8F]/10 text-[#2A9D8F] text-[10px] rounded-full font-semibold">
-                      {overallDesc}
-                    </span>
+          {/* Subject score bars */}
+          <div className="px-4 pt-4 pb-3 space-y-2">
+            {valid.map((s, i) => {
+              const g = getGradeFromScore(s.score);
+              return (
+                <div key={i} className="flex items-center gap-2">
+                  <span className="text-[11px] text-gray-500 w-28 truncate flex-shrink-0">{s.name}</span>
+                  <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${s.score}%`, backgroundColor: g.color }} />
                   </div>
+                  <span className="text-[11px] font-bold font-mono w-16 text-right flex-shrink-0" style={{ color: g.color }}>
+                    {s.score}% {g.letter}
+                  </span>
                 </div>
-              </>
-            ) : (
-              /* Previous term — compact: just avg bar + points */
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full" style={{ width: `${avg}%`, backgroundColor: grade.color }} />
-                </div>
-                <span className="text-xs text-gray-500 flex-shrink-0">{best6pts} pts · {overallDesc}</span>
-              </div>
-            )}
+              );
+            })}
+          </div>
 
-            {/* Action buttons — both for active and previous */}
-            <div className="flex gap-2">
-              <button
-                onClick={() => { setSelectedReport(report); setShowReportModal(true); }}
-                className="flex-1 py-2 rounded-lg text-xs font-semibold border transition flex items-center justify-center gap-1.5 border-[#2A9D8F] text-[#2A9D8F] hover:bg-[#2A9D8F]/10"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.964-7.178z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                View
-              </button>
-              <button
-                onClick={() => downloadReportPDF(report)}
-                className={`flex-1 py-2 rounded-lg text-xs font-semibold transition flex items-center justify-center gap-1.5 ${
-                  isActive
-                    ? 'bg-[#003B46] text-white hover:bg-[#005060]'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                <ArrowDownTrayIcon className="w-3.5 h-3.5" /> Download PDF
-              </button>
-            </div>
+          {/* Best 6 strip */}
+          <div className="mx-4 mb-4 px-3 py-2 bg-[#F5F2EB] rounded-lg flex items-center justify-between">
+            <span className="text-[11px] text-gray-500">
+              Best 6: <span className="font-semibold text-[#003B46]">{best6pts} pts</span>
+            </span>
+            <span className="text-[11px] font-semibold text-[#2A9D8F]">{overallDesc}</span>
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex border-t border-[#e2e8f0]">
+            <button
+              onClick={() => { setSelectedReport(report); setShowReportModal(true); }}
+              className="flex-1 py-2.5 text-xs font-semibold text-[#2A9D8F] hover:bg-[#2A9D8F]/5 transition border-r border-[#e2e8f0] flex items-center justify-center gap-1.5"
+            >
+              👁 View Report
+            </button>
+            <button
+              onClick={() => downloadReportPDF(report)}
+              className="flex-1 py-2.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition flex items-center justify-center gap-1.5"
+            >
+              <ArrowDownTrayIcon className="w-3.5 h-3.5" /> Download PDF
+            </button>
           </div>
         </div>
-      );
-    };
-
-    return (
-      <div className="space-y-4">
-        {filteredReports.length === 0 ? (
-          <div className="text-center py-10 bg-white rounded-xl border border-[#e2e8f0]">
-            <DocumentTextIcon className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-            <p className="text-sm text-gray-400">No reports available</p>
-          </div>
-        ) : (
-          <>
-            {/* Active / current term — always shown fully expanded */}
-            {activeReport && <ReportCard report={activeReport} isActive={true} />}
-
-            {/* Previous terms */}
-            {previousReports.length > 0 && (
-              <>
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest pt-1">
-                  Previous Terms
-                </p>
-                {previousReports.map(report => (
-                  <ReportCard key={report.id} report={report} isActive={false} />
-                ))}
-              </>
-            )}
-          </>
-        )}
 
         {/* View modal */}
         {showReportModal && selectedReport && (

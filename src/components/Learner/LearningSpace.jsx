@@ -531,7 +531,11 @@ const LearningSpace = ({ onStartQuiz }) => {
         {/* ══ My Results ═════════════════════════════════════════════════════ */}
         {activeFolderId === 'results' && (
           <div className="p-4">
-            <QuizResults />
+            <QuizResults onRetake={(quizId) => {
+              setActiveFolderId(null);
+              setActiveWeek(null);
+              if (onStartQuiz) onStartQuiz(quizId);
+            }} />
           </div>
         )}
       </div>

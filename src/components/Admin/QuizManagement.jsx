@@ -56,6 +56,7 @@ const QuizManagement = () => {
     exam_year: new Date().getFullYear(),
     exam_type: 'SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION',
     scheduled_start: '', scheduled_end: '',
+    allow_retake: false,
   });
 
   const [qForm, setQForm] = useState({
@@ -145,6 +146,7 @@ const QuizManagement = () => {
     exam_year:       parseInt(form.exam_year),
     scheduled_start: form.scheduled_start ? new Date(form.scheduled_start).toISOString() : null,
     scheduled_end:   form.scheduled_end   ? new Date(form.scheduled_end).toISOString()   : null,
+    allow_retake:    !!form.allow_retake,
   });
 
   const handleCreateQuiz = async () => {
@@ -277,6 +279,7 @@ const QuizManagement = () => {
     exam_year: new Date().getFullYear(),
     exam_type: 'SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION',
     scheduled_start: '', scheduled_end: '',
+    allow_retake: false,
   });
 
   const resetQForm = () => setQForm({
@@ -302,6 +305,7 @@ const QuizManagement = () => {
       exam_type:       quiz.exam_type       || 'SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION',
       scheduled_start: quiz.scheduled_start ? new Date(quiz.scheduled_start).toISOString().slice(0, 16) : '',
       scheduled_end:   quiz.scheduled_end   ? new Date(quiz.scheduled_end).toISOString().slice(0, 16)   : '',
+      allow_retake:    !!quiz.allow_retake,
     });
     setShowQuizModal(true);
   };
@@ -839,6 +843,16 @@ const QuizManagement = () => {
                   <p className="text-[10px] text-gray-400">Uncheck to keep as a draft</p>
                 </div>
                 <CheckCircleIcon className={`w-4 h-4 ml-auto ${quizForm.is_active ? 'text-[#006770]' : 'text-gray-200'}`} />
+              </label>
+
+              {/* Allow retake */}
+              <label className={`flex items-center gap-3 px-4 py-3 rounded-lg border cursor-pointer transition ${quizForm.allow_retake ? 'bg-amber-50 border-amber-300' : 'bg-white border-gray-200 hover:border-amber-200'}`}>
+                <input type="checkbox" checked={quizForm.allow_retake} onChange={e => setQuizForm(p => ({ ...p, allow_retake: e.target.checked }))} className="w-4 h-4 accent-amber-500 cursor-pointer" />
+                <div>
+                  <p className={`text-xs font-semibold ${quizForm.allow_retake ? 'text-amber-700' : 'text-gray-700'}`}>Allow Retake</p>
+                  <p className="text-[10px] text-gray-400">Learners can re-attempt this quiz after completion</p>
+                </div>
+                <span className={`ml-auto text-base ${quizForm.allow_retake ? 'opacity-100' : 'opacity-20'}`}>🔁</span>
               </label>
             </div>
 
