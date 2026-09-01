@@ -75,9 +75,10 @@ const LearningSpace = ({ onStartQuiz }) => {
   const [currentWeek,   setCurrentWeek]   = useState(1);
 
   // Navigation state
-  const [activeWeek,    setActiveWeek]    = useState(null);  // null = week list
-  const [activeLesson,  setActiveLesson]  = useState(null);  // null = topic list
-  const [activeFolderId, setActiveFolderId] = useState(null); // 'results' only
+  const [activeWeek,     setActiveWeek]     = useState(null);  // null = week list
+  const [activeSubject,  setActiveSubject]  = useState(null);  // null = subject folders
+  const [activeLesson,   setActiveLesson]   = useState(null);  // null = folder contents
+  const [activeFolderId, setActiveFolderId] = useState(null);  // 'results' only
 
   // Lesson stepper
   const [currentStep,    setCurrentStep]    = useState('intro');
@@ -175,6 +176,7 @@ const LearningSpace = ({ onStartQuiz }) => {
 
   // ── Navigation helpers ─────────────────────────────────────────────────────
   const openLesson = (lesson) => {
+    if (!activeSubject) setActiveSubject(lesson.subject_name || 'General');
     setActiveLesson(lesson);
     setCurrentStep('intro');
     setCompletedSteps([]);
@@ -193,13 +195,14 @@ const LearningSpace = ({ onStartQuiz }) => {
   };
 
   const goBack = () => {
-    if (viewerSrc)        { setViewerSrc(null); return; }
-    if (activeLesson)     { setActiveLesson(null); setCurrentStep('intro'); setCompletedSteps([]); return; }
-    if (activeFolderId)   { setActiveFolderId(null); return; }
-    if (activeWeek !== null) { setActiveWeek(null); }
+    if (viewerSrc)           { setViewerSrc(null); return; }
+    if (activeLesson)        { setActiveLesson(null); setCurrentStep('intro'); setCompletedSteps([]); return; }
+    if (activeSubject)       { setActiveSubject(null); return; }
+    if (activeFolderId)      { setActiveFolderId(null); return; }
+    if (activeWeek !== null) { setActiveWeek(null); setActiveSubject(null); }
   };
 
-  const canGoBack = viewerSrc || activeLesson || activeFolderId || activeWeek !== null;
+  const canGoBack = viewerSrc || activeLesson || activeSubject || activeFolderId || activeWeek !== null;
 
   // ── Quiz click logic ───────────────────────────────────────────────────────
   const handleQuizClick = (quiz) => {
@@ -223,6 +226,7 @@ const LearningSpace = ({ onStartQuiz }) => {
   const breadcrumb = () => {
     const p = ['Curriculum'];
     if (activeWeek !== null) p.push(activeWeek === 0 ? 'Unscheduled' : `Week ${activeWeek}`);
+    if (activeSubject) p.push(activeSubject);
     if (activeLesson) p.push(activeLesson.title);
     if (activeFolderId === 'results') p.push('My Results');
     return p.join(' › ');
@@ -278,6 +282,8 @@ const LearningSpace = ({ onStartQuiz }) => {
               const isPast    = week < currentWeek && week !== 0;
               const topicCount = wL.filter(l => l.resource_type !== 'quiz').length;
               const examCount  = wE.length;
+              // Count unique subjects for this week
+              const subjectCount = new Set(wL.filter(l => l.resource_type !== 'quiz').map(l => l.subject_name || 'General')).size;
               return (
                 <div
                   key={week}
@@ -314,8 +320,8 @@ const LearningSpace = ({ onStartQuiz }) => {
                       </div>
                       {!isLocked && (
                         <div className="flex items-center gap-3 mt-0.5 flex-wrap">
-                          {topicCount > 0 && <span className="text-[10px] text-slate-400">📚 {topicCount} topic{topicCount !== 1 ? 's' : ''}</span>}
-                          {examCount  > 0 && <span className="text-[10px] text-amber-500 font-semibold">🏆 Weekend exam</span>}
+                          {subjectCount > 0 && <span className="text-[10px] text-slate-400">📁 {subjectCount} subject{subjectCount !== 1 ? 's' : ''}</span>}
+                          {examCount    > 0 && <span className="text-[10px] text-amber-500 font-semibold">🏆 Weekend exam</span>}
                           {topicCount === 0 && examCount === 0 && <span className="text-[10px] text-gray-400">No content yet</span>}
                         </div>
                       )}
@@ -344,8 +350,8 @@ const LearningSpace = ({ onStartQuiz }) => {
           </div>
         )}
 
-        {/* ════ LEVEL 2 — Topic list ════════════════════════════════════════ */}
-        {activeWeek !== null && !activeLesson && !activeFolderId && (
+        {/* ════ LEVEL 2 — Subject folders ══════════════════════════════════ */}
+        {activeWeek !== null && !activeSubject && !activeLesson && !activeFolderId && (
           <div className="p-4 space-y-4">
 
             {/* Weekend exam card */}
@@ -374,7 +380,7 @@ const LearningSpace = ({ onStartQuiz }) => {
                     <p className="text-sm font-bold text-white truncate">{exam.title}</p>
                     <p className="text-[10px] text-white/70">{exam.subject_name}</p>
                   </div>
-                  <div className="flex-shrink-0 text-right">
+                  <div className="flex-shrink-0">
                     {isClosed    && <span className="text-white/70 text-xs">Closed</span>}
                     {isUpcoming  && <span className="text-white/70 text-xs">⏰ {start.toLocaleDateString()}</span>}
                     {isTaken     && !isClosed && <span className="text-white text-xs">✓ Done</span>}
@@ -385,66 +391,127 @@ const LearningSpace = ({ onStartQuiz }) => {
               );
             })}
 
-            {/* Topics grouped by subject */}
+            {/* Subject folders */}
             {weekTopics.length === 0 ? (
               <div className="text-center py-12 text-slate-400 text-sm">No topics for this week yet.</div>
             ) : (() => {
-              // Group topics by subject_name
+              // Group by subject
               const subjectMap = {};
               weekTopics.forEach(t => {
                 const s = t.subject_name || 'General';
                 if (!subjectMap[s]) subjectMap[s] = [];
                 subjectMap[s].push(t);
               });
-              return Object.entries(subjectMap).map(([subject, topics]) => (
-                <div key={subject}>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">{subject}</p>
-                  <div className="space-y-2">
-                    {topics.map((topic, idx) => {
-                      const hasPdf   = !!topic.pdf_url;
-                      const hasVideo = !!topic.video_url;
-                      const hasQuiz  = !!topic.linkedQuiz;
-                      const quizDone = topic.linkedQuiz?.disabled && !topic.linkedQuiz?.allow_retake;
-                      return (
-                        <div
-                          key={topic.id}
-                          onClick={() => openLesson(topic)}
-                          className="bg-white rounded-xl border border-slate-200 hover:border-[#006770]/40 hover:shadow-sm cursor-pointer transition-all overflow-hidden"
-                        >
-                          <div className="flex items-center gap-3 px-4 py-3">
-                            {/* Topic number */}
-                            <div className="w-8 h-8 rounded-lg bg-[#006770]/10 text-[#006770] flex items-center justify-center font-black text-sm flex-shrink-0">
-                              {idx + 1}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-[#003B46] truncate">{topic.title}</p>
-                              {topic.description && (
-                                <p className="text-[11px] text-slate-400 truncate mt-0.5">{topic.description}</p>
-                              )}
-                              {/* Step chips */}
-                              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                {hasPdf   && <span className="text-[10px] text-slate-500">📄 Notes</span>}
-                                {hasVideo && <span className="text-[10px] text-slate-500">🎬 Video</span>}
-                                {hasQuiz  && (
-                                  <span className={`text-[10px] font-semibold ${quizDone ? 'text-green-600' : 'text-amber-600'}`}>
-                                    {quizDone ? '✓ Quiz done' : '📝 Quiz'}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <ChevronRightIcon className="w-4 h-4 text-slate-300 flex-shrink-0" />
-                          </div>
+
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {Object.entries(subjectMap).map(([subject, topics]) => {
+                    // Count resources inside this subject folder
+                    const noteCount  = topics.filter(t => !!t.pdf_url).length;
+                    const videoCount = topics.filter(t => !!t.video_url).length;
+                    const quizCount  = topics.filter(t => !!t.linkedQuiz).length;
+                    const total = noteCount + videoCount + quizCount;
+                    return (
+                      <button
+                        key={subject}
+                        onClick={() => setActiveSubject(subject)}
+                        className="group flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-200 bg-white hover:border-[#006770]/40 hover:shadow-sm transition-all duration-200 active:scale-95"
+                      >
+                        {/* OS-style folder SVG */}
+                        <svg viewBox="0 0 56 44" fill="none" xmlns="http://www.w3.org/2000/svg"
+                          className="w-14 h-11 flex-shrink-0 transition-transform group-hover:scale-105">
+                          <rect x="0" y="0" width="20" height="7" rx="3" fill="#F5C842" />
+                          <rect x="0" y="5" width="56" height="36" rx="4" fill="#F5C842" />
+                          <rect x="0" y="5" width="56" height="8" rx="4" fill="#F9D85A" opacity="0.6" />
+                        </svg>
+                        <div className="text-center w-full">
+                          <p className="text-xs font-bold text-slate-700 leading-tight truncate">{subject}</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">{total} item{total !== 1 ? 's' : ''}</p>
                         </div>
-                      );
-                    })}
-                  </div>
+                      </button>
+                    );
+                  })}
                 </div>
-              ));
+              );
             })()}
           </div>
         )}
 
-        {/* ════ LEVEL 3 — Lesson stepper ═══════════════════════════════════ */}
+        {/* ════ LEVEL 3 — Folder contents (Notes, Video, Quiz) ════════════ */}
+        {activeWeek !== null && activeSubject && !activeLesson && !activeFolderId && (() => {
+          const subjectTopics = weekTopics.filter(t => (t.subject_name || 'General') === activeSubject);
+
+          // Flatten into resource rows: each topic can contribute a note row, a video row, a quiz row
+          const rows = [];
+          subjectTopics.forEach(topic => {
+            if (topic.pdf_url)   rows.push({ type: 'notes', label: topic.title + ' — Notes',  emoji: '📄', topic });
+            if (topic.video_url) rows.push({ type: 'video', label: topic.title + ' — Video',  emoji: '🎬', topic });
+            if (topic.linkedQuiz) rows.push({ type: 'quiz',  label: topic.linkedQuiz.title,    emoji: '📝', topic, quiz: topic.linkedQuiz });
+          });
+
+          const openAt = (row) => {
+            if (row.type === 'quiz') {
+              handleQuizClick(row.quiz);
+            } else {
+              openLesson(row.topic);
+              // jump straight to the right step
+              setCurrentStep(row.type === 'notes' ? 'notes' : 'video');
+            }
+          };
+
+          return (
+            <div className="p-4 space-y-2">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">📂 {activeSubject}</p>
+              {rows.length === 0 ? (
+                <div className="text-center py-10 text-slate-400 text-sm">No resources in this folder yet.</div>
+              ) : rows.map((row, i) => {
+                const quiz = row.quiz;
+                const isQuiz = row.type === 'quiz';
+                const start = isQuiz && quiz?.scheduled_start ? new Date(quiz.scheduled_start) : null;
+                const end   = isQuiz && quiz?.scheduled_end   ? new Date(quiz.scheduled_end)   : null;
+                const now   = new Date();
+                const isUpcoming  = isQuiz && start && now < start;
+                const isClosed    = isQuiz && end   && now > end;
+                const isDone      = isQuiz && quiz?.disabled && !quiz?.allow_retake;
+                const isResumable = isQuiz && quiz?.attempt_status === 'in-progress';
+
+                return (
+                  <div
+                    key={i}
+                    onClick={() => !isClosed ? openAt(row) : undefined}
+                    className={`flex items-center gap-3 px-4 py-3 bg-white rounded-xl border transition-all ${
+                      isClosed
+                        ? 'border-gray-100 opacity-50 cursor-not-allowed'
+                        : 'border-slate-200 hover:border-[#006770]/40 hover:shadow-sm cursor-pointer'
+                    }`}
+                  >
+                    <span className="text-xl flex-shrink-0">{row.emoji}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[#003B46] truncate">{row.label}</p>
+                      {isQuiz && (start || end) && (
+                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                          {start && <span className="text-[10px] text-slate-400">🕐 Opens {start.toLocaleString('en', { dateStyle: 'short', timeStyle: 'short' })}</span>}
+                          {end   && <span className="text-[10px] text-slate-400">⏳ Closes {end.toLocaleString('en', { dateStyle: 'short', timeStyle: 'short' })}</span>}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0">
+                      {isClosed    && <span className="text-[10px] text-red-400 font-semibold">Closed</span>}
+                      {isUpcoming  && <span className="text-[10px] text-amber-500 font-semibold">⏰ Soon</span>}
+                      {isDone      && <span className="text-[10px] text-green-600 font-semibold">✓ Done</span>}
+                      {isResumable && <span className="text-[10px] text-amber-600 font-semibold">Resume</span>}
+                      {!isClosed && !isUpcoming && !isDone && !isResumable && (
+                        <ChevronRightIcon className="w-4 h-4 text-slate-300" />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+
+        {/* ════ LEVEL 4 — Lesson stepper ═══════════════════════════════════ */}
         {activeLesson && !viewerSrc && (
           <div className="p-4 space-y-4">
 
