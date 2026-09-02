@@ -176,7 +176,7 @@ const LearningSpace = ({ onStartQuiz }) => {
 
   // ── Navigation helpers ─────────────────────────────────────────────────────
   const openLesson = (lesson) => {
-    if (!activeSubject) setActiveSubject(lesson.subject_name || 'General');
+    if (!activeSubject) setActiveSubject(lesson.subject_name || 'No Subject');
     setActiveLesson(lesson);
     setCurrentStep('intro');
     setCompletedSteps([]);
@@ -283,7 +283,7 @@ const LearningSpace = ({ onStartQuiz }) => {
               const topicCount = wL.filter(l => l.resource_type !== 'quiz').length;
               const examCount  = wE.length;
               // Count unique subjects for this week
-              const subjectCount = new Set(wL.filter(l => l.resource_type !== 'quiz').map(l => l.subject_name || 'General')).size;
+              const subjectCount = new Set(wL.filter(l => l.resource_type !== 'quiz').map(l => l.subject_name || 'No Subject')).size;
               return (
                 <div
                   key={week}
@@ -398,7 +398,7 @@ const LearningSpace = ({ onStartQuiz }) => {
               // Group by subject
               const subjectMap = {};
               weekTopics.forEach(t => {
-                const s = t.subject_name || 'General';
+                const s = t.subject_name || 'No Subject';
                 if (!subjectMap[s]) subjectMap[s] = [];
                 subjectMap[s].push(t);
               });
@@ -439,7 +439,7 @@ const LearningSpace = ({ onStartQuiz }) => {
 
         {/* ════ LEVEL 3 — Folder contents (Notes, Video, Quiz) ════════════ */}
         {activeWeek !== null && activeSubject && !activeLesson && !activeFolderId && (() => {
-          const subjectTopics = weekTopics.filter(t => (t.subject_name || 'General') === activeSubject);
+          const subjectTopics = weekTopics.filter(t => (t.subject_name || 'No Subject') === activeSubject);
 
           // Flatten into resource rows: each topic can contribute a note, video, and quiz row
           const rows = [];
