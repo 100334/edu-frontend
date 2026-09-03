@@ -135,16 +135,15 @@ const LearningSpace = ({ onStartQuiz }) => {
   }, [lessons, quizItems]);
 
   // ── Derived: topics for the active week ───────────────────────────────────
-  // A "topic" = one lesson (with pdf + video) plus its linked quiz (if any).
-  // We build topic objects from lessons, attaching the matching quiz.
   const weekTopics = React.useMemo(() => {
     if (activeWeek === null) return [];
     const wd = weekGroups.find(g => g.week === activeWeek);
     if (!wd) return [];
-    // regular lessons only (no standalone quiz items — they're linked via quiz_id)
-    const lessonItems = wd.lessons.filter(l => l.resource_type !== 'quiz');
+    // Only lessons that have a real subject assigned
+    const lessonItems = wd.lessons.filter(l =>
+      l.resource_type !== 'quiz' && l.subject_name
+    );
     return lessonItems.map(lesson => {
-      // find a matching quiz from quizItems by quiz_id link OR same subject+week
       const linkedQuiz = lesson.quiz_id
         ? quizItems.find(q => String(q.quiz_id) === String(lesson.quiz_id))
         : quizItems.find(q =>
@@ -176,7 +175,7 @@ const LearningSpace = ({ onStartQuiz }) => {
 
   // ── Navigation helpers ─────────────────────────────────────────────────────
   const openLesson = (lesson) => {
-    if (!activeSubject) setActiveSubject(lesson.subject_name || 'No Subject');
+    if (!activeSubject) setActiveSubject(lesson.subject_name);
     setActiveLesson(lesson);
     setCurrentStep('intro');
     setCompletedSteps([]);
@@ -280,10 +279,9 @@ const LearningSpace = ({ onStartQuiz }) => {
               const isLocked  = week > currentWeek;
               const isCurrent = week === currentWeek;
               const isPast    = week < currentWeek && week !== 0;
-              const topicCount = wL.filter(l => l.resource_type !== 'quiz').length;
+              const topicCount = wL.filter(l => l.resource_type !== 'quiz' && l.subject_name).length;
               const examCount  = wE.length;
-              // Count unique subjects for this week
-              const subjectCount = new Set(wL.filter(l => l.resource_type !== 'quiz').map(l => l.subject_name || 'No Subject')).size;
+              const subjectCount = new Set(wL.filter(l => l.resource_type !== 'quiz' && l.subject_name).map(l => l.subject_name)).size;
               return (
                 <div
                   key={week}
@@ -395,17 +393,23 @@ const LearningSpace = ({ onStartQuiz }) => {
             {weekTopics.length === 0 ? (
               <div className="text-center py-12 text-slate-400 text-sm">No topics for this week yet.</div>
             ) : (() => {
-              // Group by subject
+              // Group by real subject name only — lessons without a subject are excluded upstream
               const subjectMap = {};
               weekTopics.forEach(t => {
-                const s = t.subject_name || 'No Subject';
+                const s = t.subject_name;
+                if (!s) return; // skip (already filtered, but belt-and-suspenders)
                 if (!subjectMap[s]) subjectMap[s] = [];
                 subjectMap[s].push(t);
               });
 
+              const subjects = Object.entries(subjectMap);
+              if (subjects.length === 0) {
+                return <div className="text-center py-12 text-slate-400 text-sm">No topics for this week yet.</div>;
+              }
+
               return (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {Object.entries(subjectMap).map(([subject, topics]) => {
+                  {subjects.map(([subject, topics]) => {
                     // Count resources inside this subject folder
                     const noteCount  = topics.filter(t => !!t.pdf_url).length;
                     const videoCount = topics.filter(t => !!t.video_url).length;
@@ -439,7 +443,7 @@ const LearningSpace = ({ onStartQuiz }) => {
 
         {/* ════ LEVEL 3 — Folder contents (Notes, Video, Quiz) ════════════ */}
         {activeWeek !== null && activeSubject && !activeLesson && !activeFolderId && (() => {
-          const subjectTopics = weekTopics.filter(t => (t.subject_name || 'No Subject') === activeSubject);
+          const subjectTopics = weekTopics.filter(t => t.subject_name === activeSubject);
 
           // Flatten into resource rows: each topic can contribute a note, video, and quiz row
           const rows = [];
