@@ -3,7 +3,7 @@ import {
   PlusIcon, PencilIcon, TrashIcon, XMarkIcon,
   VideoCameraIcon, DocumentTextIcon, BookOpenIcon, ArchiveBoxIcon,
   AcademicCapIcon, ExclamationTriangleIcon, CalendarDaysIcon,
-  TrophyIcon, ChevronLeftIcon,
+  TrophyIcon, ChevronLeftIcon, ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline';
 import {
   ChevronRightIcon as ChevronRightIconSolid,
@@ -63,6 +63,58 @@ const LessonManagement = () => {
   const [uploadStatus,  setUploadStatus]  = useState({ video: false, pdf: false });
   const [confirmLesson, setConfirmLesson] = useState(null);
 
+  // ── Feedback inbox ────────────────────────────────────────────────────────
+  const [showInbox,      setShowInbox]      = useState(false);
+  const [inboxItems,     setInboxItems]     = useState([]);
+  const [inboxLoading,   setInboxLoading]   = useState(false);
+  const [replyText,      setReplyText]      = useState({});   // { [id]: string }
+  const [replySending,   setReplySending]   = useState({});   // { [id]: bool }
+  const [unreadCount,    setUnreadCount]    = useState(0);
+
+  const loadInbox = useCallback(async () => {
+    setInboxLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await api.get('/api/admin/lesson-feedback', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data.success) {
+        const items = res.data.feedback || [];
+        setInboxItems(items);
+        setUnreadCount(items.filter(f => !f.is_read).length);
+      }
+    } catch { toast.error('Could not load feedback inbox'); }
+    finally { setInboxLoading(false); }
+  }, []);
+
+  const sendReply = async (id) => {
+    const text = replyText[id]?.trim();
+    if (!text) return;
+    setReplySending(p => ({ ...p, [id]: true }));
+    try {
+      const token = localStorage.getItem('token');
+      const res = await api.put(`/api/admin/lesson-feedback/${id}/reply`, { reply: text }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data.success) {
+        toast.success('Reply sent.');
+        setReplyText(p => ({ ...p, [id]: '' }));
+        loadInbox();
+      } else toast.error(res.data.message || 'Failed to send reply');
+    } catch { toast.error('Failed to send reply'); }
+    finally { setReplySending(p => ({ ...p, [id]: false })); }
+  };
+
+  const markRead = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      await api.put(`/api/admin/lesson-feedback/${id}/reply`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      loadInbox();
+    } catch { /* silent */ }
+  };
+
   // ── navigation state (mirrors LearningSpace) ─────────────────────────────
   const [activeWeek,       setActiveWeek]       = useState(null);   // null | number
   const [activeFolderId,   setActiveFolderId]   = useState(null);   // null | 'videos' | 'pdfs' | ...
@@ -114,7 +166,7 @@ const LessonManagement = () => {
     finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { loadDashboardData(); }, [loadDashboardData]);
+  useEffect(() => { loadDashboardData(); loadInbox(); }, [loadDashboardData, loadInbox]);
 
   // reset subject expansion when navigating levels
   useEffect(() => { setExpandedSubjects({}); }, [activeFolderId, activeWeek]);
@@ -365,12 +417,26 @@ const LessonManagement = () => {
         <span className="text-xs text-gray-400 font-medium">
           {lessons.length} lesson{lessons.length !== 1 ? 's' : ''} across {weekGroups.length} week{weekGroups.length !== 1 ? 's' : ''}
         </span>
-        <button
-          onClick={() => openModal()}
-          className="flex items-center gap-1.5 px-4 py-2 bg-[#006770] text-white rounded-lg text-sm font-medium hover:bg-[#005a62] transition"
-        >
-          <PlusIcon className="w-4 h-4" /> Add Lesson
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Feedback inbox button */}
+          <button
+            onClick={() => { setShowInbox(true); loadInbox(); }}
+            className="relative flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 text-[#003B46] rounded-lg text-sm font-medium hover:bg-gray-50 transition"
+          >
+            <ChatBubbleLeftRightIcon className="w-4 h-4" /> Inbox
+            {unreadCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => openModal()}
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#006770] text-white rounded-lg text-sm font-medium hover:bg-[#005a62] transition"
+          >
+            <PlusIcon className="w-4 h-4" /> Add Lesson
+          </button>
+        </div>
       </div>
 
       {/* ── MAIN TREE (mirrors LearningSpace) ── */}
@@ -795,6 +861,117 @@ const LessonManagement = () => {
               >
                 Delete
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── FEEDBACK INBOX PANEL ── */}
+      {showInbox && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" onClick={() => setShowInbox(false)} />
+          <div className="relative z-50 w-full max-w-lg h-full bg-[#F5F2EB] shadow-2xl flex flex-col overflow-hidden">
+
+            {/* Panel header */}
+            <div className="flex items-center justify-between px-5 py-4 bg-[#003B46] flex-shrink-0">
+              <div className="flex items-center gap-2 text-white">
+                <ChatBubbleLeftRightIcon className="w-4 h-4 text-[#2A9D8F]" />
+                <h2 className="text-sm font-bold">Learner Questions</h2>
+                {unreadCount > 0 && (
+                  <span className="px-2 py-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full">
+                    {unreadCount} unread
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={() => setShowInbox(false)}
+                className="w-7 h-7 rounded-lg bg-white/10 hover:bg-red-500 flex items-center justify-center transition"
+              >
+                <XMarkIcon className="w-4 h-4 text-white" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {inboxLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="w-7 h-7 border-4 border-[#006770]/20 border-t-[#006770] rounded-full animate-spin" />
+                </div>
+              ) : inboxItems.length === 0 ? (
+                <div className="text-center py-16">
+                  <span className="text-5xl">💬</span>
+                  <p className="text-sm text-slate-400 mt-3">No questions from learners yet.</p>
+                </div>
+              ) : inboxItems.map(item => (
+                <div
+                  key={item.id}
+                  className={`bg-white rounded-xl border overflow-hidden shadow-sm ${!item.is_read ? 'border-[#2A9D8F]/40' : 'border-slate-200'}`}
+                >
+                  {/* Message header */}
+                  <div className={`flex items-start justify-between px-4 py-3 ${!item.is_read ? 'bg-[#2A9D8F]/5' : 'bg-gray-50'} border-b border-slate-100`}>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-bold text-[#003B46]">{item.learner_name || 'Learner'}</span>
+                        {!item.is_read && (
+                          <span className="px-1.5 py-0.5 bg-[#2A9D8F] text-white text-[9px] font-bold rounded-full uppercase">New</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-0.5">
+                        {item.lesson_title && <span className="font-medium text-slate-500">{item.lesson_title}</span>}
+                        {item.subject && <span> · {item.subject}</span>}
+                        <span> · {new Date(item.created_at).toLocaleString('en', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                      </p>
+                    </div>
+                    {!item.is_read && !item.reply && (
+                      <button
+                        onClick={() => markRead(item.id)}
+                        className="text-[10px] text-slate-400 hover:text-slate-600 ml-2 flex-shrink-0"
+                      >
+                        Mark read
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Learner message */}
+                  <div className="px-4 py-3">
+                    <p className="text-sm text-slate-700 leading-relaxed">{item.message}</p>
+                  </div>
+
+                  {/* Existing reply */}
+                  {item.reply && (
+                    <div className="mx-4 mb-3 bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2.5">
+                      <p className="text-[10px] font-bold text-emerald-600 mb-1">Your reply</p>
+                      <p className="text-xs text-slate-700 leading-relaxed">{item.reply}</p>
+                      <p className="text-[9px] text-slate-400 mt-1">
+                        {new Date(item.replied_at).toLocaleString('en', { dateStyle: 'short', timeStyle: 'short' })}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Reply form */}
+                  {!item.reply && (
+                    <div className="px-4 pb-4 space-y-2">
+                      <textarea
+                        value={replyText[item.id] || ''}
+                        onChange={e => setReplyText(p => ({ ...p, [item.id]: e.target.value }))}
+                        placeholder="Type your reply…"
+                        rows={2}
+                        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#2A9D8F] focus:border-[#2A9D8F] transition resize-none"
+                      />
+                      <button
+                        onClick={() => sendReply(item.id)}
+                        disabled={!replyText[item.id]?.trim() || replySending[item.id]}
+                        className="w-full py-2 bg-[#006770] text-white rounded-xl text-xs font-bold hover:bg-[#005a62] transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+                      >
+                        {replySending[item.id]
+                          ? <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Sending…</>
+                          : '📤 Send Reply'
+                        }
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </div>

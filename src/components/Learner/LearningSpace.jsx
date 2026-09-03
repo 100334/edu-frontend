@@ -179,6 +179,10 @@ const LearningSpace = ({ onStartQuiz }) => {
     setActiveLesson(lesson);
     setCurrentStep('intro');
     setCompletedSteps([]);
+    setFeedbackThread([]);
+    setFeedbackMsg('');
+    setFeedbackOpen(false);
+    loadFeedback(lesson.id);
   };
 
   const completeStep = (stepId) => {
@@ -221,7 +225,42 @@ const LearningSpace = ({ onStartQuiz }) => {
     if (onStartQuiz) onStartQuiz(quiz.quiz_id);
   };
 
-  // ── Breadcrumb ─────────────────────────────────────────────────────────────
+  // ── Feedback state ────────────────────────────────────────────────────────
+  const [feedbackThread,  setFeedbackThread]  = useState([]);
+  const [feedbackMsg,     setFeedbackMsg]     = useState('');
+  const [feedbackSending, setFeedbackSending] = useState(false);
+  const [feedbackOpen,    setFeedbackOpen]    = useState(false);
+
+  const loadFeedback = async (lessonId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await api.get(`/api/learner/lesson-feedback/${lessonId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data.success) setFeedbackThread(res.data.feedback || []);
+    } catch { /* silent */ }
+  };
+
+  const sendFeedback = async () => {
+    if (!feedbackMsg.trim() || !activeLesson) return;
+    setFeedbackSending(true);
+    try {
+      const token = localStorage.getItem('token');
+      await api.post('/api/learner/lesson-feedback', {
+        lesson_id:    activeLesson.id,
+        lesson_title: activeLesson.title,
+        subject:      activeLesson.subject_name,
+        message:      feedbackMsg.trim(),
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      setFeedbackMsg('');
+      toast.success('Message sent to your teacher.');
+      loadFeedback(activeLesson.id);
+    } catch {
+      toast.error('Could not send message. Please try again.');
+    } finally {
+      setFeedbackSending(false);
+    }
+  };
   const breadcrumb = () => {
     const p = ['Curriculum'];
     if (activeWeek !== null) p.push(activeWeek === 0 ? 'Unscheduled' : `Week ${activeWeek}`);
@@ -585,6 +624,94 @@ const LearningSpace = ({ onStartQuiz }) => {
                       </div>
                     ))}
                   </div>
+                </div>
+
+                {/* ── Ask a Question / Feedback ── */}
+                <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">
+                  {/* Header — toggle */}
+                  <button
+                    onClick={() => setFeedbackOpen(o => !o)}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-base">💬</span>
+                      <span className="text-xs font-bold text-[#003B46] uppercase tracking-wide">Ask a Question</span>
+                      {feedbackThread.length > 0 && (
+                        <span className="px-1.5 py-0.5 bg-[#2A9D8F]/10 text-[#2A9D8F] text-[10px] font-bold rounded-full">
+                          {feedbackThread.length}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-gray-400 text-sm">{feedbackOpen ? '▾' : '▸'}</span>
+                  </button>
+
+                  {feedbackOpen && (
+                    <div className="border-t border-[#e2e8f0] p-4 space-y-3">
+
+                      {/* Hint */}
+                      <p className="text-[11px] text-slate-400 leading-relaxed">
+                        Didn't understand a concept? Send a message to your teacher — they'll reply here.
+                      </p>
+
+                      {/* Previous thread */}
+                      {feedbackThread.length > 0 && (
+                        <div className="space-y-2">
+                          {feedbackThread.map((item) => (
+                            <div key={item.id} className="space-y-1.5">
+                              {/* Learner message */}
+                              <div className="flex justify-end">
+                                <div className="max-w-[85%] bg-[#003B46] text-white rounded-2xl rounded-tr-sm px-3 py-2">
+                                  <p className="text-xs leading-relaxed">{item.message}</p>
+                                  <p className="text-[9px] text-white/40 mt-1 text-right">
+                                    {new Date(item.created_at).toLocaleString('en', { dateStyle: 'short', timeStyle: 'short' })}
+                                  </p>
+                                </div>
+                              </div>
+                              {/* Teacher reply */}
+                              {item.reply && (
+                                <div className="flex justify-start">
+                                  <div className="max-w-[85%] bg-emerald-50 border border-emerald-100 rounded-2xl rounded-tl-sm px-3 py-2">
+                                    <p className="text-[9px] font-bold text-emerald-600 mb-1">Teacher replied</p>
+                                    <p className="text-xs text-slate-700 leading-relaxed">{item.reply}</p>
+                                    <p className="text-[9px] text-slate-400 mt-1">
+                                      {new Date(item.replied_at).toLocaleString('en', { dateStyle: 'short', timeStyle: 'short' })}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                              {/* Awaiting reply */}
+                              {!item.reply && (
+                                <div className="flex justify-start">
+                                  <span className="text-[10px] text-slate-400 italic px-1">⏳ Awaiting reply…</span>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* New message form */}
+                      <div className="space-y-2">
+                        <textarea
+                          value={feedbackMsg}
+                          onChange={e => setFeedbackMsg(e.target.value)}
+                          placeholder="Type your question or describe what you didn't understand…"
+                          rows={3}
+                          className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#2A9D8F] focus:border-[#2A9D8F] transition resize-none"
+                        />
+                        <button
+                          onClick={sendFeedback}
+                          disabled={!feedbackMsg.trim() || feedbackSending}
+                          className="w-full py-2.5 bg-[#003B46] text-white rounded-xl text-xs font-bold hover:bg-[#005060] transition disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          {feedbackSending
+                            ? <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Sending…</>
+                            : '📤 Send Message to Teacher'
+                          }
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
