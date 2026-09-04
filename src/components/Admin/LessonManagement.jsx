@@ -270,7 +270,7 @@ const LessonManagement = () => {
         description:     formData.description || '',
         objectives:      formData.objectives  || '',
         instructions:    formData.instructions || '',
-        subject_id:      parseInt(formData.subject_id),
+        subject_id:      formData.subject_id || null,
         target_form:     formData.target_form,
         display_order:   parseInt(formData.display_order) || 0,
         resource_type:   formData.resource_type,
