@@ -184,7 +184,7 @@ const LearningSpace = ({ onStartQuiz }) => {
 
   // ── Navigation helpers ─────────────────────────────────────────────────────
   const openLesson = (lesson) => {
-    if (!activeSubject) setActiveSubject(lesson.subject_name || lesson.title || 'General');
+    if (!activeSubject) setActiveSubject(lesson.subject_name || 'General');
     setActiveLesson(lesson);
     setCurrentStep('intro');
     setCompletedSteps([]);
@@ -329,7 +329,7 @@ const LearningSpace = ({ onStartQuiz }) => {
               const isPast    = week < currentWeek && week !== 0;
               const topicCount   = wL.filter(l => l.resource_type !== 'quiz').length;
               const examCount    = wE.length;
-              const subjectCount = new Set(wL.filter(l => l.resource_type !== 'quiz').map(l => l.subject_name || l.title || 'General')).size;
+              const subjectCount = new Set(wL.filter(l => l.resource_type !== 'quiz').map(l => l.subject_name || 'General')).size;
               return (
                 <div
                   key={week}
@@ -443,8 +443,7 @@ const LearningSpace = ({ onStartQuiz }) => {
             ) : (() => {
               const subjectMap = {};
               weekTopics.forEach(t => {
-                // Fall back to lesson title if no subject assigned
-                const s = t.subject_name || t.title || 'General';
+                const s = t.subject_name || 'General';
                 if (!subjectMap[s]) subjectMap[s] = [];
                 subjectMap[s].push(t);
               });
@@ -488,7 +487,7 @@ const LearningSpace = ({ onStartQuiz }) => {
         {/* ════ LEVEL 3 — Folder contents (Notes, Video, Quiz) ════════════ */}
         {activeWeek !== null && activeSubject && !activeLesson && !activeFolderId && (() => {
           const subjectTopics = weekTopics.filter(t =>
-            (t.subject_name || t.title || 'General') === activeSubject
+            (t.subject_name || 'General') === activeSubject
           );
 
           // Flatten into resource rows: each topic can contribute a note, video, and quiz row
