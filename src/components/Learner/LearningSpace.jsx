@@ -150,10 +150,8 @@ const LearningSpace = ({ onStartQuiz }) => {
     if (activeWeek === null) return [];
     const wd = weekGroups.find(g => g.week === activeWeek);
     if (!wd) return [];
-    // Only lessons that have a real subject assigned
-    const lessonItems = wd.lessons.filter(l =>
-      l.resource_type !== 'quiz' && l.subject_name
-    );
+    // Include all non-quiz lessons — with OR without a subject name
+    const lessonItems = wd.lessons.filter(l => l.resource_type !== 'quiz');
     return lessonItems.map(lesson => {
       const linkedQuiz = lesson.quiz_id
         ? quizItems.find(q => String(q.quiz_id) === String(lesson.quiz_id))
@@ -186,7 +184,7 @@ const LearningSpace = ({ onStartQuiz }) => {
 
   // ── Navigation helpers ─────────────────────────────────────────────────────
   const openLesson = (lesson) => {
-    if (!activeSubject) setActiveSubject(lesson.subject_name);
+    if (!activeSubject) setActiveSubject(lesson.subject_name || lesson.title || 'General');
     setActiveLesson(lesson);
     setCurrentStep('intro');
     setCompletedSteps([]);
@@ -329,9 +327,9 @@ const LearningSpace = ({ onStartQuiz }) => {
               const isLocked  = week > currentWeek;
               const isCurrent = week === currentWeek;
               const isPast    = week < currentWeek && week !== 0;
-              const topicCount = wL.filter(l => l.resource_type !== 'quiz' && l.subject_name).length;
-              const examCount  = wE.length;
-              const subjectCount = new Set(wL.filter(l => l.resource_type !== 'quiz' && l.subject_name).map(l => l.subject_name)).size;
+              const topicCount   = wL.filter(l => l.resource_type !== 'quiz').length;
+              const examCount    = wE.length;
+              const subjectCount = new Set(wL.filter(l => l.resource_type !== 'quiz').map(l => l.subject_name || l.title || 'General')).size;
               return (
                 <div
                   key={week}
@@ -443,19 +441,15 @@ const LearningSpace = ({ onStartQuiz }) => {
             {weekTopics.length === 0 ? (
               <div className="text-center py-12 text-slate-400 text-sm">No topics for this week yet.</div>
             ) : (() => {
-              // Group by real subject name only — lessons without a subject are excluded upstream
               const subjectMap = {};
               weekTopics.forEach(t => {
-                const s = t.subject_name;
-                if (!s) return; // skip (already filtered, but belt-and-suspenders)
+                // Fall back to lesson title if no subject assigned
+                const s = t.subject_name || t.title || 'General';
                 if (!subjectMap[s]) subjectMap[s] = [];
                 subjectMap[s].push(t);
               });
 
               const subjects = Object.entries(subjectMap);
-              if (subjects.length === 0) {
-                return <div className="text-center py-12 text-slate-400 text-sm">No topics for this week yet.</div>;
-              }
 
               return (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -493,7 +487,9 @@ const LearningSpace = ({ onStartQuiz }) => {
 
         {/* ════ LEVEL 3 — Folder contents (Notes, Video, Quiz) ════════════ */}
         {activeWeek !== null && activeSubject && !activeLesson && !activeFolderId && (() => {
-          const subjectTopics = weekTopics.filter(t => t.subject_name === activeSubject);
+          const subjectTopics = weekTopics.filter(t =>
+            (t.subject_name || t.title || 'General') === activeSubject
+          );
 
           // Flatten into resource rows: each topic can contribute a note, video, and quiz row
           const rows = [];
