@@ -41,6 +41,7 @@ const QuizManagement = () => {
   const [submissions,         setSubmissions]         = useState([]);
   const [selectedSub,         setSelectedSub]         = useState(null);
   const [gradingModal,        setGradingModal]        = useState(false);
+  const [aiGrading,           setAiGrading]           = useState(false);
   const [loadingSubs,         setLoadingSubs]         = useState(false);
   const [gradingQuizId,       setGradingQuizId]       = useState(null);
   const [allSubmissions,      setAllSubmissions]      = useState([]);
@@ -259,6 +260,41 @@ const QuizManagement = () => {
       if (res.data.success) { toast.success('Grades saved!'); setGradingModal(false); loadSubmissions(gradingQuizId); }
       else toast.error(res.data.message);
     } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+  };
+
+  const runAiGrade = async () => {
+    if (!selectedSub) return;
+    setAiGrading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await api.post('/api/admin/ai-grade',
+        { attempt_id: selectedSub.id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.data.success) {
+        // Map AI-graded answers back onto the selectedSub answers list
+        const aiAnswers = res.data.answers;
+        const merged = selectedSub.answers.map(ans => {
+          const ai = aiAnswers.find(a => a.question_id === ans.question_id);
+          if (ai && ai.points_obtained != null) {
+            return {
+              ...ans,
+              given_marks: ai.points_obtained,
+              feedback:    ai.feedback || ans.feedback || '',
+            };
+          }
+          return ans;
+        });
+        setSelectedSub({ ...selectedSub, answers: merged });
+        toast.success(res.data.message || 'AI grading complete. Review and submit.');
+      } else {
+        toast.error(res.data.message || 'AI grading failed');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'AI grading failed');
+    } finally {
+      setAiGrading(false);
+    }
   };
 
   const handleResetAttempt = async () => {
@@ -1013,6 +1049,19 @@ const QuizManagement = () => {
                 Reset — Allow Retake
               </button>
               <div className="flex gap-2">
+                {/* AI Grade button */}
+                <button
+                  onClick={runAiGrade}
+                  disabled={aiGrading}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-semibold hover:bg-violet-700 transition disabled:opacity-60"
+                  title="Use Gemini AI to auto-mark short-answer questions"
+                >
+                  {aiGrading ? (
+                    <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Grading…</>
+                  ) : (
+                    <>✨ AI Grade</>
+                  )}
+                </button>
                 <button onClick={() => setGradingModal(false)} className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition">Cancel</button>
                 <button onClick={saveGrades} className="px-5 py-2 bg-[#006770] text-white rounded-lg text-sm font-semibold hover:bg-[#005a62] transition">Submit Marks</button>
               </div>

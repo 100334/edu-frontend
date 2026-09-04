@@ -28,6 +28,12 @@ const STEPS = [
   { id: 'quiz',   emoji: '📝', label: 'Assessment'    },
 ];
 
+const normalizeLesson = (lesson) => ({
+  ...lesson,
+  subject_name: lesson.subject_name || lesson.subject?.name ||
+    (typeof lesson.subject === 'string' ? lesson.subject : null),
+});
+
 // ── Stepper bar ───────────────────────────────────────────────────────────────
 const StepperBar = ({ steps, currentStep, completedSteps, onStepClick }) => (
   <div className="flex items-center gap-0 w-full">
@@ -101,8 +107,13 @@ const LearningSpace = ({ onStartQuiz }) => {
         api.get('/api/learner/lessons',  { headers }),
         api.get('/api/quiz/quizzes',     { headers }),
       ]);
-      if (lr.status === 'fulfilled' && lr.value.data.success)
-        setLessons(lr.value.data.lessons || []);
+      if (lr.status === 'fulfilled') {
+        const payload = lr.value.data;
+        const lessonData = Array.isArray(payload)
+          ? payload
+          : payload?.lessons || (Array.isArray(payload?.data) ? payload.data : payload?.data?.lessons) || [];
+        if (payload?.success !== false) setLessons(lessonData.map(normalizeLesson));
+      }
       if (qr.status === 'fulfilled' && qr.value.data.success) {
         setQuizItems((qr.value.data.quizzes || []).map(q => ({
           id: q.id, quiz_id: q.id, title: q.title, description: q.description,
