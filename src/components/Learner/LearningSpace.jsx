@@ -552,29 +552,25 @@ const LearningSpace = ({ onStartQuiz }) => {
             {currentStep === 'intro' && (
               <div className="space-y-4">
 
-                {/* Title card */}
-                <div className="bg-[#003B46] rounded-2xl p-5 text-white">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-1">
-                    {activeLesson.subject_name || activeSubject}
-                  </p>
-                  <h2 className="text-lg font-black leading-tight">{activeLesson.title}</h2>
-                  {activeLesson.description && (
-                    <p className="text-sm text-white/70 mt-2 leading-relaxed">{activeLesson.description}</p>
-                  )}
-                </div>
-
-                {/* Objectives — always prominent */}
+                {/* Objectives — teal header with white lesson title */}
                 {activeLesson.objectives ? (
-                  <div className="bg-white rounded-xl border border-emerald-100 overflow-hidden shadow-sm">
-                    <div className="px-4 py-3 bg-emerald-50 border-b border-emerald-100 flex items-center gap-2">
-                      <span className="text-base">🎯</span>
-                      <span className="text-xs font-bold text-emerald-800 uppercase tracking-wide">Learning Objectives</span>
-                      <span className="text-[10px] text-emerald-600 ml-1">— By the end of this lesson you will be able to:</span>
+                  <div className="rounded-xl overflow-hidden shadow-sm border border-[#003B46]">
+                    {/* Teal header */}
+                    <div className="px-4 py-4 bg-[#003B46]">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-1">
+                        {activeLesson.subject_name || activeSubject}
+                      </p>
+                      <h2 className="text-base font-black text-white leading-tight">{activeLesson.title}</h2>
+                      {activeLesson.description && (
+                        <p className="text-xs text-white/60 mt-1 leading-relaxed">{activeLesson.description}</p>
+                      )}
+                      <p className="text-[10px] text-white/40 mt-2 uppercase tracking-wide">By the end of this lesson you will be able to:</p>
                     </div>
-                    <div className="px-4 py-3 space-y-2">
+                    {/* Objectives list */}
+                    <div className="bg-white px-4 py-3 space-y-2">
                       {activeLesson.objectives.split('\n').filter(l => l.trim()).map((line, i) => (
                         <div key={i} className="flex items-start gap-2.5">
-                          <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 text-xs font-black flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="w-5 h-5 rounded-full bg-[#003B46] text-white text-xs font-black flex items-center justify-center flex-shrink-0 mt-0.5">
                             {i + 1}
                           </span>
                           <p className="text-sm text-slate-700 leading-relaxed">{line.trim()}</p>
@@ -583,8 +579,15 @@ const LearningSpace = ({ onStartQuiz }) => {
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 text-center">
-                    <p className="text-sm text-emerald-700">Work through the steps below to complete this lesson.</p>
+                  /* No objectives — still show title on teal */
+                  <div className="rounded-xl overflow-hidden shadow-sm bg-[#003B46] px-4 py-4">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-1">
+                      {activeLesson.subject_name || activeSubject}
+                    </p>
+                    <h2 className="text-base font-black text-white leading-tight">{activeLesson.title}</h2>
+                    {activeLesson.description && (
+                      <p className="text-xs text-white/60 mt-1 leading-relaxed">{activeLesson.description}</p>
+                    )}
                   </div>
                 )}
 
@@ -890,34 +893,36 @@ const LearningSpace = ({ onStartQuiz }) => {
 
       {/* ── Full-screen viewer modal ── */}
       {viewerSrc && (
-        <div className="fixed inset-0 bg-black/90 z-50 flex flex-col">
-          <div className="flex items-center gap-3 px-4 py-3 bg-[#003B46] flex-shrink-0">
-            <span className="text-sm font-medium text-white truncate flex-1">{viewerTitle}</span>
-            {/* Download in full-screen */}
-            <a
-              href={viewerSrc}
-              download
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold transition flex-shrink-0"
-            >
-              ⬇ Download
-            </a>
-            <button
-              onClick={() => setViewerSrc(null)}
-              className="w-7 h-7 rounded-lg bg-white/10 hover:bg-red-500 flex items-center justify-center transition flex-shrink-0"
-            >
-              <XMarkIcon className="w-4 h-4 text-white" />
-            </button>
-          </div>
-          <div className="flex-1">
-            <iframe
-              src={viewerSrc}
-              className="w-full h-full border-none"
-              title={viewerTitle}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 sm:p-8">
+          <div className="w-full h-full max-w-4xl max-h-[85vh] bg-black rounded-xl overflow-hidden shadow-2xl flex flex-col">
+            <div className="flex items-center gap-3 px-4 py-3 bg-[#003B46] flex-shrink-0">
+              <span className="text-sm font-medium text-white truncate flex-1">{viewerTitle}</span>
+              {/* Download in full-screen */}
+              <a
+                href={viewerSrc}
+                download
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold transition flex-shrink-0"
+              >
+                ⬇ Download
+              </a>
+              <button
+                onClick={() => setViewerSrc(null)}
+                className="w-7 h-7 rounded-lg bg-white/10 hover:bg-red-500 flex items-center justify-center transition flex-shrink-0"
+              >
+                <XMarkIcon className="w-4 h-4 text-white" />
+              </button>
+            </div>
+            <div className="flex-1">
+              <iframe
+                src={viewerSrc}
+                className="w-full h-full border-none"
+                title={viewerTitle}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
           </div>
         </div>
       )}
