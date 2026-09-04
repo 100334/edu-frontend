@@ -484,79 +484,62 @@ const LearningSpace = ({ onStartQuiz }) => {
           </div>
         )}
 
-        {/* ════ LEVEL 3 — Folder contents (Notes, Video, Quiz) ════════════ */}
+        {/* ════ LEVEL 3 — Lesson list within subject ════════════════════ */}
         {activeWeek !== null && activeSubject && !activeLesson && !activeFolderId && (() => {
           const subjectTopics = weekTopics.filter(t =>
             (t.subject_name || 'General') === activeSubject
           );
 
-          // Flatten into resource rows: each topic can contribute a note, video, and quiz row
-          const rows = [];
-          subjectTopics.forEach(topic => {
-            if (topic.pdf_url)    rows.push({ type: 'notes', title: topic.title, sub: 'Lesson Notes',   emoji: '📄', topic });
-            if (topic.video_url)  rows.push({ type: 'video', title: topic.title, sub: 'Lesson Video',   emoji: '🎬', topic });
-            if (topic.linkedQuiz) rows.push({ type: 'quiz',  title: topic.linkedQuiz.title, sub: 'Assessment', emoji: '📝', topic, quiz: topic.linkedQuiz });
-          });
+          if (subjectTopics.length === 0) {
+            return (
+              <div className="p-4 text-center py-12 text-slate-400 text-sm">
+                No lessons in this folder yet.
+              </div>
+            );
+          }
 
-          const openAt = (row) => {
-            if (row.type === 'quiz') {
-              handleQuizClick(row.quiz);
-            } else {
-              openLesson(row.topic);
-              // jump straight to the right step
-              setCurrentStep(row.type === 'notes' ? 'notes' : 'video');
+          // Single lesson — go straight to stepper
+          if (subjectTopics.length === 1) {
+            const lesson = subjectTopics[0];
+            // Auto-open on first render
+            if (!activeLesson) {
+              // Use setTimeout to avoid setState during render
+              setTimeout(() => openLesson(lesson), 0);
             }
-          };
+            return (
+              <div className="p-4 flex flex-col items-center justify-center py-16 gap-2 text-slate-400">
+                <div className="w-7 h-7 border-4 border-[#006770]/20 border-t-[#006770] rounded-full animate-spin" />
+                <p className="text-sm">Opening lesson…</p>
+              </div>
+            );
+          }
 
+          // Multiple lessons — show a clean list
           return (
             <div className="p-4 space-y-2">
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">📂 {activeSubject}</p>
-              {rows.length === 0 ? (
-                <div className="text-center py-10 text-slate-400 text-sm">No resources in this folder yet.</div>
-              ) : rows.map((row, i) => {
-                const quiz = row.quiz;
-                const isQuiz = row.type === 'quiz';
-                const start = isQuiz && quiz?.scheduled_start ? new Date(quiz.scheduled_start) : null;
-                const end   = isQuiz && quiz?.scheduled_end   ? new Date(quiz.scheduled_end)   : null;
-                const now   = new Date();
-                const isUpcoming  = isQuiz && start && now < start;
-                const isClosed    = isQuiz && end   && now > end;
-                const isDone      = isQuiz && quiz?.disabled && !quiz?.allow_retake;
-                const isResumable = isQuiz && quiz?.attempt_status === 'in-progress';
-
-                return (
-                  <div
-                    key={i}
-                    onClick={() => !isClosed ? openAt(row) : undefined}
-                    className={`flex items-center gap-3 px-4 py-3 bg-white rounded-xl border transition-all ${
-                      isClosed
-                        ? 'border-gray-100 opacity-50 cursor-not-allowed'
-                        : 'border-slate-200 hover:border-[#006770]/40 hover:shadow-sm cursor-pointer'
-                    }`}
-                  >
-                    <span className="text-xl flex-shrink-0">{row.emoji}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-[#003B46] truncate">{row.title}</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">{row.sub}</p>
-                      {isQuiz && (start || end) && (
-                        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                          {start && <span className="text-[10px] text-slate-400">🕐 Opens {start.toLocaleString('en', { dateStyle: 'short', timeStyle: 'short' })}</span>}
-                          {end   && <span className="text-[10px] text-slate-400">⏳ Closes {end.toLocaleString('en', { dateStyle: 'short', timeStyle: 'short' })}</span>}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-shrink-0">
-                      {isClosed    && <span className="text-[10px] text-red-400 font-semibold">Closed</span>}
-                      {isUpcoming  && <span className="text-[10px] text-amber-500 font-semibold">⏰ Soon</span>}
-                      {isDone      && <span className="text-[10px] text-green-600 font-semibold">✓ Done</span>}
-                      {isResumable && <span className="text-[10px] text-amber-600 font-semibold">Resume</span>}
-                      {!isClosed && !isUpcoming && !isDone && !isResumable && (
-                        <ChevronRightIcon className="w-4 h-4 text-slate-300" />
-                      )}
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+                📂 {activeSubject} — {subjectTopics.length} lessons
+              </p>
+              {subjectTopics.map((topic, idx) => (
+                <button
+                  key={topic.id}
+                  onClick={() => openLesson(topic)}
+                  className="w-full flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-slate-200 hover:border-[#006770]/40 hover:shadow-sm transition-all text-left"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-[#006770]/10 text-[#006770] flex items-center justify-center font-black text-sm flex-shrink-0">
+                    {idx + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-[#003B46] truncate">{topic.title}</p>
+                    <div className="flex items-center gap-3 mt-0.5">
+                      {topic.pdf_url   && <span className="text-[10px] text-slate-400">📄 Notes</span>}
+                      {topic.video_url && <span className="text-[10px] text-slate-400">🎬 Video</span>}
+                      {topic.linkedQuiz && <span className="text-[10px] text-amber-600">📝 Quiz</span>}
                     </div>
                   </div>
-                );
-              })}
+                  <ChevronRightIcon className="w-4 h-4 text-slate-300 flex-shrink-0" />
+                </button>
+              ))}
             </div>
           );
         })()}
@@ -568,10 +551,11 @@ const LearningSpace = ({ onStartQuiz }) => {
             {/* ── STEP: Introduction ── */}
             {currentStep === 'intro' && (
               <div className="space-y-4">
+
                 {/* Title card */}
                 <div className="bg-[#003B46] rounded-2xl p-5 text-white">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-1">
-                    {activeLesson.subject_name}
+                    {activeLesson.subject_name || activeSubject}
                   </p>
                   <h2 className="text-lg font-black leading-tight">{activeLesson.title}</h2>
                   {activeLesson.description && (
@@ -579,62 +563,62 @@ const LearningSpace = ({ onStartQuiz }) => {
                   )}
                 </div>
 
-                {/* Objectives */}
-                {activeLesson.objectives && (
-                  <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">
-                    <div className="px-4 py-2.5 bg-emerald-50 border-b border-emerald-100 flex items-center gap-2">
+                {/* Objectives — always prominent */}
+                {activeLesson.objectives ? (
+                  <div className="bg-white rounded-xl border border-emerald-100 overflow-hidden shadow-sm">
+                    <div className="px-4 py-3 bg-emerald-50 border-b border-emerald-100 flex items-center gap-2">
                       <span className="text-base">🎯</span>
                       <span className="text-xs font-bold text-emerald-800 uppercase tracking-wide">Learning Objectives</span>
+                      <span className="text-[10px] text-emerald-600 ml-1">— By the end of this lesson you will be able to:</span>
                     </div>
-                    <div className="px-4 py-3 space-y-1.5">
+                    <div className="px-4 py-3 space-y-2">
                       {activeLesson.objectives.split('\n').filter(l => l.trim()).map((line, i) => (
-                        <div key={i} className="flex items-start gap-2">
-                          <span className="text-emerald-500 font-bold text-sm mt-0.5 flex-shrink-0">✓</span>
+                        <div key={i} className="flex items-start gap-2.5">
+                          <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 text-xs font-black flex items-center justify-center flex-shrink-0 mt-0.5">
+                            {i + 1}
+                          </span>
                           <p className="text-sm text-slate-700 leading-relaxed">{line.trim()}</p>
                         </div>
                       ))}
                     </div>
                   </div>
+                ) : (
+                  <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 text-center">
+                    <p className="text-sm text-emerald-700">Work through the steps below to complete this lesson.</p>
+                  </div>
                 )}
 
                 {/* Instructions */}
                 {activeLesson.instructions && (
-                  <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">
+                  <div className="bg-white rounded-xl border border-blue-100 overflow-hidden">
                     <div className="px-4 py-2.5 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
                       <span className="text-base">📋</span>
                       <span className="text-xs font-bold text-blue-800 uppercase tracking-wide">Instructions</span>
                     </div>
                     <div className="px-4 py-3">
-                      <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">
-                        {activeLesson.instructions}
-                      </p>
+                      <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{activeLesson.instructions}</p>
                     </div>
                   </div>
                 )}
 
-                {/* Placeholder when neither is set */}
-                {!activeLesson.objectives && !activeLesson.instructions && (
-                  <div className="bg-white rounded-xl border border-[#e2e8f0] px-4 py-6 text-center">
-                    <p className="text-sm text-slate-400">Follow the steps above to work through this lesson.</p>
+                {/* Steps preview */}
+                <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">
+                  <div className="px-4 py-2.5 border-b border-[#e2e8f0]">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">What's in this lesson</p>
                   </div>
-                )}
-
-                {/* What's in this lesson */}
-                <div className="bg-white rounded-xl border border-[#e2e8f0] px-4 py-3">
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">This lesson includes</p>
-                  <div className="space-y-1.5">
-                    {availableSteps.filter(s => s.id !== 'intro').map(s => (
-                      <div key={s.id} className="flex items-center gap-2 text-sm text-slate-600">
-                        <span>{s.emoji}</span>
-                        <span>{s.label}</span>
+                  <div className="divide-y divide-gray-50">
+                    {availableSteps.filter(s => s.id !== 'intro').map((s, i) => (
+                      <div key={s.id} className="flex items-center gap-3 px-4 py-2.5">
+                        <span className="text-base">{s.emoji}</span>
+                        <span className="text-sm text-slate-600 font-medium">{s.label}</span>
+                        <span className="ml-auto text-[10px] text-slate-400">Step {i + 2}</span>
                       </div>
                     ))}
                   </div>
                 </div>
 
-                {/* ── Ask a Question / Feedback ── */}
+                {/* Ask a Question */}
                 <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">
-                  {/* Header — toggle */}
                   <button
                     onClick={() => setFeedbackOpen(o => !o)}
                     className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition"
@@ -650,21 +634,15 @@ const LearningSpace = ({ onStartQuiz }) => {
                     </div>
                     <span className="text-gray-400 text-sm">{feedbackOpen ? '▾' : '▸'}</span>
                   </button>
-
                   {feedbackOpen && (
                     <div className="border-t border-[#e2e8f0] p-4 space-y-3">
-
-                      {/* Hint */}
                       <p className="text-[11px] text-slate-400 leading-relaxed">
                         Didn't understand a concept? Send a message to your teacher — they'll reply here.
                       </p>
-
-                      {/* Previous thread */}
                       {feedbackThread.length > 0 && (
                         <div className="space-y-2">
                           {feedbackThread.map((item) => (
                             <div key={item.id} className="space-y-1.5">
-                              {/* Learner message */}
                               <div className="flex justify-end">
                                 <div className="max-w-[85%] bg-[#003B46] text-white rounded-2xl rounded-tr-sm px-3 py-2">
                                   <p className="text-xs leading-relaxed">{item.message}</p>
@@ -673,35 +651,25 @@ const LearningSpace = ({ onStartQuiz }) => {
                                   </p>
                                 </div>
                               </div>
-                              {/* Teacher reply */}
-                              {item.reply && (
+                              {item.reply ? (
                                 <div className="flex justify-start">
                                   <div className="max-w-[85%] bg-emerald-50 border border-emerald-100 rounded-2xl rounded-tl-sm px-3 py-2">
                                     <p className="text-[9px] font-bold text-emerald-600 mb-1">Teacher replied</p>
                                     <p className="text-xs text-slate-700 leading-relaxed">{item.reply}</p>
-                                    <p className="text-[9px] text-slate-400 mt-1">
-                                      {new Date(item.replied_at).toLocaleString('en', { dateStyle: 'short', timeStyle: 'short' })}
-                                    </p>
                                   </div>
                                 </div>
-                              )}
-                              {/* Awaiting reply */}
-                              {!item.reply && (
-                                <div className="flex justify-start">
-                                  <span className="text-[10px] text-slate-400 italic px-1">⏳ Awaiting reply…</span>
-                                </div>
+                              ) : (
+                                <span className="text-[10px] text-slate-400 italic px-1">⏳ Awaiting reply…</span>
                               )}
                             </div>
                           ))}
                         </div>
                       )}
-
-                      {/* New message form */}
                       <div className="space-y-2">
                         <textarea
                           value={feedbackMsg}
                           onChange={e => setFeedbackMsg(e.target.value)}
-                          placeholder="Type your question or describe what you didn't understand…"
+                          placeholder="Type your question…"
                           rows={3}
                           className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#2A9D8F] focus:border-[#2A9D8F] transition resize-none"
                         />
@@ -712,7 +680,7 @@ const LearningSpace = ({ onStartQuiz }) => {
                         >
                           {feedbackSending
                             ? <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Sending…</>
-                            : '📤 Send Message to Teacher'
+                            : '📤 Send to Teacher'
                           }
                         </button>
                       </div>
@@ -724,21 +692,37 @@ const LearningSpace = ({ onStartQuiz }) => {
 
             {/* ── STEP: Read Notes ── */}
             {currentStep === 'notes' && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
+              <div className="space-y-0 rounded-xl overflow-hidden border border-slate-200 shadow-sm flex flex-col" style={{ height: '75vh' }}>
+                {/* Toolbar bar */}
+                <div className="flex items-center justify-between px-4 py-2.5 bg-[#003B46] flex-shrink-0">
                   <div>
-                    <h3 className="text-sm font-bold text-[#003B46]">📄 Lesson Notes</h3>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Read through the notes carefully before moving on.</p>
+                    <p className="text-xs font-bold text-white">📄 Lesson Notes</p>
+                    <p className="text-[10px] text-white/50 truncate max-w-[180px]">{activeLesson.title}</p>
                   </div>
-                  <button
-                    onClick={() => { setViewerSrc(activeLesson.pdf_url); setViewerTitle(activeLesson.title + ' — Notes'); }}
-                    className="px-3 py-1.5 bg-[#003B46] text-white rounded-lg text-xs font-semibold hover:bg-[#005060] transition"
-                  >
-                    ⛶ Full Screen
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {/* Download button */}
+                    <a
+                      href={activeLesson.pdf_url}
+                      download
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[11px] font-semibold transition"
+                      title="Download PDF"
+                    >
+                      ⬇ Download
+                    </a>
+                    {/* Full screen button */}
+                    <button
+                      onClick={() => { setViewerSrc(activeLesson.pdf_url); setViewerTitle(activeLesson.title + ' — Notes'); }}
+                      className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[11px] font-semibold transition"
+                      title="Full screen"
+                    >
+                      ⛶ Full
+                    </button>
+                  </div>
                 </div>
-                {/* Inline PDF */}
-                <div className="rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-900" style={{ height: '60vh' }}>
+                {/* PDF viewer — takes remaining height */}
+                <div className="flex-1 bg-slate-900">
                   <iframe
                     src={activeLesson.pdf_url}
                     className="w-full h-full border-none"
@@ -849,32 +833,41 @@ const LearningSpace = ({ onStartQuiz }) => {
             })()}
 
             {/* ── Step navigation footer ── */}
-            <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-              {/* Back step */}
-              {availableSteps.findIndex(s => s.id === currentStep) > 0 ? (
-                <button
-                  onClick={() => {
-                    const idx = availableSteps.findIndex(s => s.id === currentStep);
+            <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+              {/* Back button — always shown */}
+              <button
+                onClick={() => {
+                  const idx = availableSteps.findIndex(s => s.id === currentStep);
+                  if (idx > 0) {
                     setCurrentStep(availableSteps[idx - 1].id);
-                  }}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-gray-200 text-sm text-slate-600 hover:bg-gray-50 transition"
-                >
-                  ← Back
-                </button>
-              ) : <div />}
+                  } else {
+                    // On intro step — go back to subject folder
+                    setActiveLesson(null);
+                    setCurrentStep('intro');
+                    setCompletedSteps([]);
+                  }
+                }}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-slate-600 hover:bg-gray-50 transition"
+              >
+                ← Back
+              </button>
 
-              {/* Next step or finish */}
+              {/* Next / Finish */}
               {availableSteps.findIndex(s => s.id === currentStep) < availableSteps.length - 1 ? (
                 <button
                   onClick={goNextStep}
-                  className="flex items-center gap-1.5 px-5 py-2 bg-[#003B46] text-white rounded-xl text-sm font-bold hover:bg-[#005060] transition"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-[#003B46] text-white rounded-xl text-sm font-bold hover:bg-[#005060] transition"
                 >
-                  Next →
+                  {(() => {
+                    const nextIdx = availableSteps.findIndex(s => s.id === currentStep) + 1;
+                    const next = availableSteps[nextIdx];
+                    return next ? `Next: ${next.label} ${next.emoji}` : 'Next →';
+                  })()}
                 </button>
               ) : (
                 <button
                   onClick={() => { completeStep(currentStep); setActiveLesson(null); setCurrentStep('intro'); setCompletedSteps([]); }}
-                  className="flex items-center gap-1.5 px-5 py-2 bg-[#006770] text-white rounded-xl text-sm font-bold hover:bg-[#005a62] transition"
+                  className="flex items-center gap-1.5 px-6 py-2.5 bg-[#006770] text-white rounded-xl text-sm font-bold hover:bg-[#005a62] transition"
                 >
                   ✓ Finish Lesson
                 </button>
@@ -900,9 +893,19 @@ const LearningSpace = ({ onStartQuiz }) => {
         <div className="fixed inset-0 bg-black/90 z-50 flex flex-col">
           <div className="flex items-center gap-3 px-4 py-3 bg-[#003B46] flex-shrink-0">
             <span className="text-sm font-medium text-white truncate flex-1">{viewerTitle}</span>
+            {/* Download in full-screen */}
+            <a
+              href={viewerSrc}
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold transition flex-shrink-0"
+            >
+              ⬇ Download
+            </a>
             <button
               onClick={() => setViewerSrc(null)}
-              className="w-7 h-7 rounded-lg bg-white/10 hover:bg-red-500 flex items-center justify-center transition"
+              className="w-7 h-7 rounded-lg bg-white/10 hover:bg-red-500 flex items-center justify-center transition flex-shrink-0"
             >
               <XMarkIcon className="w-4 h-4 text-white" />
             </button>
