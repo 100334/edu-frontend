@@ -851,13 +851,13 @@ const LessonManagement = () => {
             <div className="flex gap-2 px-5 pb-5">
               <button
                 onClick={() => setConfirmLesson(null)}
-                className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition"
+                className="flex-1 py-2.5 bg-gray-100 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-200 transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteLesson}
-                className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-semibold transition shadow-sm"
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition shadow-sm"
               >
                 Delete
               </button>
