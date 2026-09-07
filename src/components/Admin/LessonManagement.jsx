@@ -63,6 +63,23 @@ const LessonManagement = () => {
   const [uploadStatus,  setUploadStatus]  = useState({ video: false, pdf: false });
   const [confirmLesson, setConfirmLesson] = useState(null);
 
+  // ── Lesson progress ───────────────────────────────────────────────────────
+  const [showProgress,     setShowProgress]     = useState(false);
+  const [progressSummary,  setProgressSummary]  = useState([]);
+  const [progressLoading,  setProgressLoading]  = useState(false);
+
+  const loadProgress = useCallback(async () => {
+    setProgressLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await api.get('/api/admin/lesson-progress/summary', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data.success) setProgressSummary(res.data.summary || []);
+    } catch { toast.error('Could not load progress data'); }
+    finally { setProgressLoading(false); }
+  }, []);
+
   // ── Feedback inbox ────────────────────────────────────────────────────────
   const [showInbox,      setShowInbox]      = useState(false);
   const [inboxItems,     setInboxItems]     = useState([]);
@@ -439,6 +456,13 @@ const LessonManagement = () => {
           {lessons.length} lesson{lessons.length !== 1 ? 's' : ''} across {weekGroups.length} week{weekGroups.length !== 1 ? 's' : ''}
         </span>
         <div className="flex items-center gap-2">
+          {/* Progress button */}
+          <button
+            onClick={() => { setShowProgress(true); loadProgress(); }}
+            className="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 text-[#003B46] rounded-lg text-sm font-medium hover:bg-gray-50 transition"
+          >
+            👥 Progress
+          </button>
           {/* Feedback inbox button */}
           <button
             onClick={() => { setShowInbox(true); loadInbox(); }}
@@ -881,6 +905,124 @@ const LessonManagement = () => {
                 className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold transition shadow-sm"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── LESSON PROGRESS PANEL ── */}
+      {showProgress && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" onClick={() => setShowProgress(false)} />
+          <div className="relative z-50 w-full max-w-lg h-full bg-[#F5F2EB] shadow-2xl flex flex-col overflow-hidden">
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 bg-[#003B46] flex-shrink-0">
+              <div className="flex items-center gap-2 text-white">
+                <span className="text-base">👥</span>
+                <h2 className="text-sm font-bold">Lesson Progress</h2>
+                <span className="text-[10px] text-white/50">— who is attending</span>
+              </div>
+              <button
+                onClick={() => setShowProgress(false)}
+                className="w-7 h-7 rounded-lg bg-white/10 hover:bg-red-500 flex items-center justify-center transition"
+              >
+                <XMarkIcon className="w-4 h-4 text-white" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {progressLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="w-7 h-7 border-4 border-[#006770]/20 border-t-[#006770] rounded-full animate-spin" />
+                </div>
+              ) : progressSummary.length === 0 ? (
+                <div className="text-center py-16">
+                  <span className="text-5xl">👥</span>
+                  <p className="text-sm text-slate-400 mt-3">No learners have opened any lessons yet.</p>
+                  <p className="text-[11px] text-slate-400 mt-1">Progress appears here once learners start lessons.</p>
+                </div>
+              ) : progressSummary.map(lesson => {
+                const completedCount = lesson.learners.filter(l => l.completed).length;
+                const pct = lesson.total > 0 ? Math.round((completedCount / lesson.total) * 100) : 0;
+
+                // Step label map
+                const stepLabel = (step) => {
+                  const map = { intro: 'Opened', notes: 'Reading Notes', video: 'Watching Video', quiz: 'On Assessment', completed: 'Completed' };
+                  return map[step] || step;
+                };
+                const stepColor = (step) => {
+                  if (step === 'completed') return 'bg-green-100 text-green-700';
+                  if (step === 'quiz')      return 'bg-amber-100 text-amber-700';
+                  if (step === 'video')     return 'bg-blue-100 text-blue-700';
+                  if (step === 'notes')     return 'bg-purple-100 text-purple-700';
+                  return 'bg-gray-100 text-gray-600';
+                };
+
+                return (
+                  <div key={lesson.lesson_id} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                    {/* Lesson header */}
+                    <div className="px-4 py-3 bg-[#003B46]">
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0">
+                          {lesson.week_number && (
+                            <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+                              Week {lesson.week_number} · {lesson.subject_name || 'General'}
+                            </p>
+                          )}
+                          <p className="text-sm font-bold text-white truncate">{lesson.lesson_title || 'Lesson'}</p>
+                        </div>
+                        <div className="text-right flex-shrink-0 ml-3">
+                          <p className="text-lg font-black text-white leading-none">{lesson.total}</p>
+                          <p className="text-[9px] text-white/50">learner{lesson.total !== 1 ? 's' : ''}</p>
+                        </div>
+                      </div>
+                      {/* Completion bar */}
+                      <div className="mt-2.5 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-[#2A9D8F] rounded-full transition-all"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-white/40 mt-1">
+                        {completedCount}/{lesson.total} completed · {pct}%
+                      </p>
+                    </div>
+
+                    {/* Learner rows */}
+                    <div className="divide-y divide-gray-50">
+                      {lesson.learners.map((l, i) => (
+                        <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                          {/* Avatar initial */}
+                          <div className="w-7 h-7 rounded-full bg-[#006770]/10 text-[#006770] flex items-center justify-center font-bold text-xs flex-shrink-0">
+                            {(l.learner_name || '?')[0].toUpperCase()}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-[#003B46] truncate">{l.learner_name || 'Unknown'}</p>
+                            <p className="text-[10px] text-slate-400">
+                              Last seen {new Date(l.last_seen_at).toLocaleString('en', { dateStyle: 'short', timeStyle: 'short' })}
+                            </p>
+                          </div>
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${stepColor(l.step)}`}>
+                            {stepLabel(l.step)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Refresh footer */}
+            <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0">
+              <button
+                onClick={loadProgress}
+                className="w-full py-2 bg-[#003B46] text-white rounded-xl text-xs font-semibold hover:bg-[#005060] transition flex items-center justify-center gap-2"
+              >
+                🔄 Refresh
               </button>
             </div>
           </div>

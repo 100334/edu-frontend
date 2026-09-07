@@ -187,6 +187,21 @@ const LearningSpace = ({ onStartQuiz }) => {
   }, [activeLesson]);
 
   // ── Navigation helpers ─────────────────────────────────────────────────────
+
+  // Track lesson progress — fire-and-forget, never blocks the UI
+  const trackProgress = async (lesson, step) => {
+    try {
+      const token = localStorage.getItem('token');
+      await api.post('/api/learner/lesson-progress', {
+        lesson_id:    lesson.id,
+        lesson_title: lesson.title,
+        subject_name: lesson.subject_name || activeSubject || null,
+        week_number:  lesson.week_number  || activeWeek    || null,
+        step,
+      }, { headers: { Authorization: `Bearer ${token}` } });
+    } catch { /* silent — tracking should never break the lesson */ }
+  };
+
   const openLesson = (lesson, num = 1) => {
     if (!activeSubject) setActiveSubject(lesson.subject_name || 'General');
     setActiveLesson(lesson);
@@ -197,6 +212,7 @@ const LearningSpace = ({ onStartQuiz }) => {
     setFeedbackMsg('');
     setFeedbackOpen(false);
     loadFeedback(lesson.id);
+    trackProgress(lesson, 'intro');  // record that learner opened the lesson
   };
 
   const completeStep = (stepId) => {
@@ -207,7 +223,9 @@ const LearningSpace = ({ onStartQuiz }) => {
     const idx = availableSteps.findIndex(s => s.id === currentStep);
     completeStep(currentStep);
     if (idx < availableSteps.length - 1) {
-      setCurrentStep(availableSteps[idx + 1].id);
+      const nextStep = availableSteps[idx + 1];
+      setCurrentStep(nextStep.id);
+      trackProgress(activeLesson, nextStep.id);  // record step advancement
     }
   };
 
@@ -882,7 +900,13 @@ const LearningSpace = ({ onStartQuiz }) => {
                 </button>
               ) : (
                 <button
-                  onClick={() => { completeStep(currentStep); setActiveLesson(null); setCurrentStep('intro'); setCompletedSteps([]); }}
+                  onClick={() => {
+                    completeStep(currentStep);
+                    trackProgress(activeLesson, 'completed');  // record lesson completion
+                    setActiveLesson(null);
+                    setCurrentStep('intro');
+                    setCompletedSteps([]);
+                  }}
                   className="flex items-center gap-1.5 px-6 py-2.5 bg-[#006770] text-white rounded-xl text-sm font-bold hover:bg-[#005a62] transition"
                 >
                   ✓ Finish Lesson
