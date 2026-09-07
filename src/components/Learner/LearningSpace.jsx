@@ -20,7 +20,10 @@ const getCurrentCurriculumWeek = () => {
   return getISOWeek(new Date());
 };
 
-// ── Step definitions ───────────────────────────────────────────────────────────
+// ── Lesson number to word ─────────────────────────────────────────────────────
+const LESSON_WORDS = ['One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten',
+  'Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen','Twenty'];
+const lessonWord = (n) => LESSON_WORDS[n - 1] ? `Lesson ${LESSON_WORDS[n - 1]}` : `Lesson ${n}`;
 const STEPS = [
   { id: 'intro',  emoji: '📋', label: 'Introduction'  },
   { id: 'notes',  emoji: '📄', label: 'Read Notes'    },
@@ -83,7 +86,8 @@ const LearningSpace = ({ onStartQuiz }) => {
   // Navigation state
   const [activeWeek,     setActiveWeek]     = useState(null);  // null = week list
   const [activeSubject,  setActiveSubject]  = useState(null);  // null = subject folders
-  const [activeLesson,   setActiveLesson]   = useState(null);  // null = folder contents
+  const [activeLesson,   setActiveLesson]   = useState(null);
+  const [activeLessonNum, setActiveLessonNum] = useState(1);  // null = folder contents
   const [activeFolderId, setActiveFolderId] = useState(null);  // 'results' only
 
   // Lesson stepper
@@ -183,9 +187,10 @@ const LearningSpace = ({ onStartQuiz }) => {
   }, [activeLesson]);
 
   // ── Navigation helpers ─────────────────────────────────────────────────────
-  const openLesson = (lesson) => {
+  const openLesson = (lesson, num = 1) => {
     if (!activeSubject) setActiveSubject(lesson.subject_name || 'General');
     setActiveLesson(lesson);
+    setActiveLessonNum(num);
     setCurrentStep('intro');
     setCompletedSteps([]);
     setFeedbackThread([]);
@@ -274,7 +279,7 @@ const LearningSpace = ({ onStartQuiz }) => {
     const p = ['Curriculum'];
     if (activeWeek !== null) p.push(activeWeek === 0 ? 'Unscheduled' : `Week ${activeWeek}`);
     if (activeSubject) p.push(activeSubject);
-    if (activeLesson) p.push(activeLesson.title);
+    if (activeLesson) p.push(lessonWord(activeLessonNum));
     if (activeFolderId === 'results') p.push('My Results');
     return p.join(' › ');
   };
@@ -501,10 +506,8 @@ const LearningSpace = ({ onStartQuiz }) => {
           // Single lesson — go straight to stepper
           if (subjectTopics.length === 1) {
             const lesson = subjectTopics[0];
-            // Auto-open on first render
             if (!activeLesson) {
-              // Use setTimeout to avoid setState during render
-              setTimeout(() => openLesson(lesson), 0);
+              setTimeout(() => openLesson(lesson, 1), 0);
             }
             return (
               <div className="p-4 flex flex-col items-center justify-center py-16 gap-2 text-slate-400">
@@ -518,16 +521,20 @@ const LearningSpace = ({ onStartQuiz }) => {
           return (
             <div className="p-4 space-y-2">
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
-                📂 {activeSubject} — {subjectTopics.length} lessons
+                📂 {activeSubject} — {subjectTopics.length} lesson{subjectTopics.length !== 1 ? 's' : ''}
               </p>
               {subjectTopics.map((topic, idx) => (
                 <button
                   key={topic.id}
-                  onClick={() => openLesson(topic)}
+                  onClick={() => openLesson(topic, idx + 1)}
                   className="w-full flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-slate-200 hover:border-[#006770]/40 hover:shadow-sm transition-all text-left"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-[#006770]/10 text-[#006770] flex items-center justify-center font-black text-sm flex-shrink-0">
-                    {idx + 1}
+                  {/* Lesson number badge */}
+                  <div className="flex flex-col items-center justify-center w-14 h-12 rounded-xl bg-[#003B46] text-white flex-shrink-0">
+                    <span className="text-[8px] font-bold uppercase tracking-widest opacity-60 leading-none">Lesson</span>
+                    <span className="text-base font-black leading-none mt-0.5">
+                      {LESSON_WORDS[idx] || idx + 1}
+                    </span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-[#003B46] truncate">{topic.title}</p>
@@ -560,6 +567,9 @@ const LearningSpace = ({ onStartQuiz }) => {
                       <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-1">
                         {activeLesson.subject_name || activeSubject}
                       </p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[#2A9D8F] mb-1">
+                        {lessonWord(activeLessonNum)}
+                      </p>
                       <h2 className="text-base font-black text-white leading-tight">{activeLesson.title}</h2>
                       {activeLesson.description && (
                         <p className="text-xs text-white/60 mt-1 leading-relaxed">{activeLesson.description}</p>
@@ -583,6 +593,9 @@ const LearningSpace = ({ onStartQuiz }) => {
                   <div className="rounded-xl overflow-hidden shadow-sm bg-[#003B46] px-4 py-4">
                     <p className="text-[10px] font-bold uppercase tracking-widest text-white/50 mb-1">
                       {activeLesson.subject_name || activeSubject}
+                    </p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-[#2A9D8F] mb-1">
+                      {lessonWord(activeLessonNum)}
                     </p>
                     <h2 className="text-base font-black text-white leading-tight">{activeLesson.title}</h2>
                     {activeLesson.description && (

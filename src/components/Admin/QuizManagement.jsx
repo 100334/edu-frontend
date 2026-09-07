@@ -42,6 +42,15 @@ const QuizManagement = () => {
   const [selectedSub,         setSelectedSub]         = useState(null);
   const [gradingModal,        setGradingModal]        = useState(false);
   const [aiGrading,           setAiGrading]           = useState(false);
+
+  // ── Bulk import ──────────────────────────────────────────────────────────────
+  const [showBulkModal,    setShowBulkModal]    = useState(false);
+  const [bulkText,         setBulkText]         = useState('');
+  const [bulkParsed,       setBulkParsed]       = useState([]);
+  const [bulkParseError,   setBulkParseError]   = useState('');
+  const [bulkImporting,    setBulkImporting]    = useState(false);
+  const [bulkFileLoading,  setBulkFileLoading]  = useState(false);
+  const [bulkFileName,     setBulkFileName]     = useState('');
   const [loadingSubs,         setLoadingSubs]         = useState(false);
   const [gradingQuizId,       setGradingQuizId]       = useState(null);
   const [allSubmissions,      setAllSubmissions]      = useState([]);
@@ -263,7 +272,6 @@ const QuizManagement = () => {
   };
 
   const runAiGrade = async () => {
-    if (!selectedSub) return;
     setAiGrading(true);
     try {
       const token = localStorage.getItem('token');
@@ -294,6 +302,153 @@ const QuizManagement = () => {
       toast.error(err.response?.data?.message || 'AI grading failed');
     } finally {
       setAiGrading(false);
+    }
+  };
+
+  // ── Bulk import helpers ──────────────────────────────────────────────────
+  const parseBulk = (text) => {
+    setBulkParseError('');
+    const t = text.trim();
+    if (!t) { setBulkParsed([]); return; }
+
+    // Try JSON first
+    if (t.startsWith('[') || t.startsWith('{')) {
+      try {
+        const raw = JSON.parse(t);
+        const arr = Array.isArray(raw) ? raw : [raw];
+        setBulkParsed(arr);
+        return;
+      } catch (e) {
+        setBulkParseError('Invalid JSON: ' + e.message);
+        setBulkParsed([]);
+        return;
+      }
+    }
+
+    // CSV: question_text, option_a, option_b, option_c, option_d, correct(0-3), marks, section
+    const lines = t.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+    const parsed = [];
+    for (const line of lines) {
+      const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+      if (cols.length < 2) continue;
+      const [question_text, a, b, c, d, correct, marks, section] = cols;
+      if (!question_text) continue;
+      const hasOptions = a && b;
+      parsed.push({
+        question_text,
+        question_type:   hasOptions ? 'multiple_choice' : 'short_answer',
+        options:         hasOptions ? [a, b || '', c || '', d || ''] : null,
+        correct_answer:  hasOptions ? (parseInt(correct) || 0) : null,
+        expected_answer: !hasOptions ? (a || '') : null,
+        marks:           parseInt(marks) || 1,
+        section:         (section || 'A').toUpperCase() === 'B' ? 'B' : 'A',
+      });
+    }
+    if (parsed.length === 0) setBulkParseError('No valid questions found. Check the format.');
+    setBulkParsed(parsed);
+  };
+
+  const runBulkImport = async () => {
+    if (!selectedQuiz || bulkParsed.length === 0) return;
+    setBulkImporting(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await api.post(`/api/admin/quizzes/${selectedQuiz.id}/questions/bulk`,
+        { questions: bulkParsed },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.data.success) {
+        toast.success(res.data.message);
+        setShowBulkModal(false);
+        setBulkText('');
+        setBulkParsed([]);
+        setBulkFileName('');
+        const updated = await api.get(`/api/admin/quizzes/${selectedQuiz.id}/questions`, { headers: { Authorization: `Bearer ${token}` } });
+        setSelectedQuiz({ ...selectedQuiz, questions: updated.data.questions || [] });
+        loadQuizzes();
+      } else {
+        toast.error(res.data.message || 'Import failed');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Import failed');
+    } finally {
+      setBulkImporting(false);
+    }
+  };
+
+  // Extract text from PDF or DOCX then use AI to structure into questions
+  const handleBulkFile = async (file) => {
+    if (!file) return;
+    setBulkFileName(file.name);
+    setBulkFileLoading(true);
+    setBulkParseError('');
+    setBulkParsed([]);
+    setBulkText('');
+
+    try {
+      let rawText = '';
+      const ext = file.name.split('.').pop().toLowerCase();
+
+      if (ext === 'pdf') {
+        // Extract text using pdfjs-dist
+        const pdfjsLib = await import('pdfjs-dist');
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const pages = [];
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          pages.push(content.items.map(item => item.str).join(' '));
+        }
+        rawText = pages.join('\n');
+      } else if (ext === 'docx' || ext === 'doc') {
+        const mammoth = await import('mammoth');
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        rawText = result.value;
+      } else if (ext === 'csv' || ext === 'txt' || ext === 'json') {
+        rawText = await file.text();
+        // For plain CSV/JSON just parse directly
+        setBulkText(rawText);
+        parseBulk(rawText);
+        setBulkFileLoading(false);
+        return;
+      } else {
+        setBulkParseError('Unsupported file type. Use PDF, DOCX, CSV, or JSON.');
+        setBulkFileLoading(false);
+        return;
+      }
+
+      if (!rawText.trim()) {
+        setBulkParseError('Could not extract text from file. Try copy-pasting instead.');
+        setBulkFileLoading(false);
+        return;
+      }
+
+      // Use Gemini to parse the raw text into structured questions
+      toast('📄 Extracted text — using AI to structure questions…', { duration: 3000 });
+
+      const token = localStorage.getItem('token');
+      const res = await api.post('/api/admin/ai-parse-questions', {
+        text:    rawText.slice(0, 12000), // cap to avoid token limits
+        subject: selectedQuiz.subject_name || '',
+      }, { headers: { Authorization: `Bearer ${token}` } });
+
+      if (res.data.success && res.data.questions?.length > 0) {
+        setBulkParsed(res.data.questions);
+        setBulkText(JSON.stringify(res.data.questions, null, 2));
+        toast.success(`✅ AI extracted ${res.data.questions.length} questions from ${file.name}`);
+      } else {
+        // Fall back to raw text for manual editing
+        setBulkText(rawText.slice(0, 5000));
+        setBulkParseError('AI could not auto-structure the questions. The raw text is shown below — paste in CSV or JSON format manually.');
+      }
+    } catch (err) {
+      console.error('File parse error:', err);
+      setBulkParseError('Error reading file: ' + err.message);
+    } finally {
+      setBulkFileLoading(false);
     }
   };
 
@@ -728,9 +883,18 @@ const QuizManagement = () => {
               <h2 className="text-base font-bold text-white">{selectedQuiz.title}</h2>
               <p className="text-xs text-white/60">{selectedQuiz.subject_name} · {selectedQuiz.exam_year}</p>
             </div>
-            <button onClick={() => setSelectedQuiz(null)} className="p-1.5 hover:bg-white/10 rounded-lg transition">
-              <XMarkIcon className="w-5 h-5 text-white/70" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { setBulkText(''); setBulkParsed([]); setBulkParseError(''); setShowBulkModal(true); }}
+                className="flex items-center gap-1 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold transition"
+                title="Bulk import questions"
+              >
+                📥 Import
+              </button>
+              <button onClick={() => setSelectedQuiz(null)} className="p-1.5 hover:bg-white/10 rounded-lg transition">
+                <XMarkIcon className="w-5 h-5 text-white/70" />
+              </button>
+            </div>
           </div>
 
           {/* Meta strip */}
@@ -1065,6 +1229,151 @@ const QuizManagement = () => {
                 <button onClick={() => setGradingModal(false)} className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition">Cancel</button>
                 <button onClick={saveGrades} className="px-5 py-2 bg-[#006770] text-white rounded-lg text-sm font-semibold hover:bg-[#005a62] transition">Submit Marks</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── BULK IMPORT MODAL ────────────────────────────────────────────────── */}
+      {showBulkModal && selectedQuiz && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-xl w-full max-w-2xl shadow-xl flex flex-col max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-shrink-0">
+              <div>
+                <h3 className="text-sm font-bold text-[#003B46]">📥 Bulk Import Questions</h3>
+                <p className="text-[10px] text-gray-400 mt-0.5">{selectedQuiz.title}</p>
+              </div>
+              <button onClick={() => setShowBulkModal(false)} className="p-1 hover:bg-gray-100 rounded-lg transition">
+                <XMarkIcon className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-5 space-y-4">
+
+              {/* File upload zone */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-2">
+                  Upload a file <span className="text-gray-400 font-normal">(PDF, DOCX, CSV, JSON)</span>
+                </label>
+                <label className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-xl p-6 cursor-pointer transition ${
+                  bulkFileLoading ? 'border-violet-300 bg-violet-50' : 'border-gray-200 hover:border-[#006770]/40 hover:bg-gray-50'
+                }`}>
+                  {bulkFileLoading ? (
+                    <>
+                      <div className="w-7 h-7 border-4 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
+                      <p className="text-xs text-violet-600 font-semibold">Reading file…</p>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-3xl">📂</span>
+                      <p className="text-sm font-semibold text-slate-600">
+                        {bulkFileName || 'Click to upload or drag & drop'}
+                      </p>
+                      <p className="text-[10px] text-slate-400">PDF · DOCX · CSV · JSON</p>
+                      {bulkFileName && (
+                        <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-semibold rounded-full">
+                          ✓ {bulkFileName}
+                        </span>
+                      )}
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx,.csv,.txt,.json"
+                    className="hidden"
+                    onChange={e => handleBulkFile(e.target.files[0])}
+                  />
+                </label>
+                <p className="text-[10px] text-slate-400 mt-1.5">
+                  ✨ PDF and DOCX files are automatically parsed by AI into structured questions.
+                </p>
+              </div>
+
+              {/* Divider */}
+              <div className="flex items-center gap-3">
+                <div className="flex-1 h-px bg-gray-200" />
+                <span className="text-[10px] text-gray-400 font-semibold uppercase">or paste directly</span>
+                <div className="flex-1 h-px bg-gray-200" />
+              </div>
+
+              {/* Format guide */}
+              <div className="bg-[#F5F2EB] rounded-xl p-3 text-xs text-slate-600 space-y-1.5">
+                <p className="font-bold text-[#003B46] text-[11px]">Manual format</p>
+                <p className="font-semibold">📋 CSV:</p>
+                <code className="block bg-white rounded px-2 py-1.5 text-[10px] text-slate-500 font-mono">
+                  question, opt_a, opt_b, opt_c, opt_d, correct(0-3), marks, section
+                </code>
+                <p className="font-semibold mt-1">📄 JSON:</p>
+                <code className="block bg-white rounded px-2 py-1.5 text-[10px] text-slate-500 font-mono break-all">
+                  {`[{"question_text":"...","options":["A","B","C","D"],"correct_answer":0,"marks":1,"section":"A"}]`}
+                </code>
+              </div>
+
+              {/* Text input */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  Paste CSV or JSON
+                </label>
+                <textarea
+                  value={bulkText}
+                  onChange={e => { setBulkText(e.target.value); parseBulk(e.target.value); }}
+                  rows={7}
+                  placeholder={`What is photosynthesis?, Light energy, Heat, Sound, Gravity, 0, 2, A`}
+                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#006770] font-mono resize-none"
+                />
+                {bulkParseError && (
+                  <p className="text-xs text-red-500 mt-1">⚠ {bulkParseError}</p>
+                )}
+              </div>
+
+              {/* Preview */}
+              {bulkParsed.length > 0 && (
+                <div>
+                  <p className="text-xs font-semibold text-[#003B46] mb-2">
+                    ✅ {bulkParsed.length} question{bulkParsed.length !== 1 ? 's' : ''} ready to import
+                  </p>
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                    {bulkParsed.map((q, i) => (
+                      <div key={i} className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                        <div className="flex items-start gap-2">
+                          <span className="px-1.5 py-0.5 bg-[#006770] text-white text-[9px] font-bold rounded flex-shrink-0 mt-0.5">
+                            {q.section || 'A'}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-semibold text-[#003B46] truncate">{q.question_text}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5">
+                              {q.question_type === 'multiple_choice'
+                                ? `MCQ · correct: ${String.fromCharCode(65 + (q.correct_answer || 0))}`
+                                : 'Short answer'} · {q.marks || 1} mark{(q.marks || 1) !== 1 ? 's' : ''}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-2 px-5 py-4 border-t border-gray-100 flex-shrink-0">
+              <button
+                onClick={() => { setShowBulkModal(false); setBulkFileName(''); }}
+                className="flex-1 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={runBulkImport}
+                disabled={bulkParsed.length === 0 || bulkImporting || !!bulkParseError}
+                className="flex-1 py-2 bg-[#006770] text-white rounded-lg text-sm font-semibold hover:bg-[#005a62] transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {bulkImporting
+                  ? <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Importing…</>
+                  : `📥 Import ${bulkParsed.length > 0 ? bulkParsed.length + ' ' : ''}Question${bulkParsed.length !== 1 ? 's' : ''}`
+                }
+              </button>
             </div>
           </div>
         </div>

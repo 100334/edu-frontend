@@ -67,8 +67,9 @@ const LessonManagement = () => {
   const [showInbox,      setShowInbox]      = useState(false);
   const [inboxItems,     setInboxItems]     = useState([]);
   const [inboxLoading,   setInboxLoading]   = useState(false);
-  const [replyText,      setReplyText]      = useState({});   // { [id]: string }
-  const [replySending,   setReplySending]   = useState({});   // { [id]: bool }
+  const [replyText,      setReplyText]      = useState({});
+  const [replySending,   setReplySending]   = useState({});
+  const [aiReplying,     setAiReplying]     = useState({});   // { [id]: bool }
   const [unreadCount,    setUnreadCount]    = useState(0);
 
   const loadInbox = useCallback(async () => {
@@ -113,6 +114,26 @@ const LessonManagement = () => {
       });
       loadInbox();
     } catch { /* silent */ }
+  };
+
+  const generateAiReply = async (id) => {
+    setAiReplying(p => ({ ...p, [id]: true }));
+    try {
+      const token = localStorage.getItem('token');
+      const res = await api.post(`/api/admin/lesson-feedback/${id}/ai-reply`, {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data.success) {
+        setReplyText(p => ({ ...p, [id]: res.data.reply }));
+        toast.success('AI reply generated — review and send.');
+      } else {
+        toast.error(res.data.message || 'AI reply failed');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'AI reply failed');
+    } finally {
+      setAiReplying(p => ({ ...p, [id]: false }));
+    }
   };
 
   // ── navigation state (mirrors LearningSpace) ─────────────────────────────
@@ -951,10 +972,21 @@ const LessonManagement = () => {
                   {/* Reply form */}
                   {!item.reply && (
                     <div className="px-4 pb-4 space-y-2">
+                      {/* AI Reply button */}
+                      <button
+                        onClick={() => generateAiReply(item.id)}
+                        disabled={aiReplying[item.id]}
+                        className="w-full py-1.5 bg-violet-50 border border-violet-200 text-violet-700 rounded-xl text-xs font-semibold hover:bg-violet-100 transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+                      >
+                        {aiReplying[item.id]
+                          ? <><div className="w-3 h-3 border-2 border-violet-300 border-t-violet-700 rounded-full animate-spin" /> Generating…</>
+                          : '✨ AI Reply'
+                        }
+                      </button>
                       <textarea
                         value={replyText[item.id] || ''}
                         onChange={e => setReplyText(p => ({ ...p, [item.id]: e.target.value }))}
-                        placeholder="Type your reply…"
+                        placeholder="Type your reply or use ✨ AI Reply above…"
                         rows={2}
                         className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#2A9D8F] focus:border-[#2A9D8F] transition resize-none"
                       />
