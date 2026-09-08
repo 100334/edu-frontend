@@ -15,7 +15,8 @@ import {
   UserCircleIcon,
   AcademicCapIcon,
   BookOpenIcon,
-  ClipboardDocumentCheckIcon
+  ClipboardDocumentCheckIcon,
+  BellIcon
 } from '@heroicons/react/24/outline';
 
 const HEADER_BG = '#224248';
@@ -87,6 +88,9 @@ export default function MobileLearnerDashboard() {
   const [showQuiz, setShowQuiz] = useState(null);
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedAssessment, setSelectedAssessment] = useState('');
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -114,6 +118,34 @@ toast.error('Could not load dashboard data');
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const response = await api.get('/api/learner/notifications');
+      if (response.data.success) {
+        const nextNotifications = response.data.notifications || [];
+        setNotifications(nextNotifications);
+        setUnreadCount(nextNotifications.filter(notification => !notification.is_read).length);
+      }
+    } catch (error) {
+      toast.error('Could not load notifications');
+    }
+  }, []);
+
+  const markNotificationAsRead = async (id) => {
+    try {
+      await api.put(`/api/learner/notifications/${id}/read`);
+      await fetchNotifications();
+    } catch (error) {
+      toast.error('Could not mark notification as read');
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
 
   const handleLogout = () => {
     logout();
@@ -331,13 +363,50 @@ toast.error('Could not create PDF');
               </div>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="group flex items-center gap-1 rounded-xl bg-white/10 px-3 py-2 text-[10px] font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20"
-          >
-            <ArrowRightOnRectangleIcon className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-            <span>Exit</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifications(current => !current)}
+                aria-label="Notifications"
+                className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white backdrop-blur-sm transition-all hover:bg-white/20"
+              >
+                <BellIcon className="h-4 w-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              {showNotifications && (
+                <div className="absolute right-0 z-50 mt-2 w-72 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
+                  <div className="border-b border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700">
+                    Notifications
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-6 text-center text-sm text-gray-500">No notifications</div>
+                    ) : notifications.map(notification => (
+                      <button
+                        key={notification.id}
+                        onClick={() => markNotificationAsRead(notification.id)}
+                        className={`block w-full border-b border-gray-100 px-4 py-3 text-left hover:bg-gray-50 ${!notification.is_read ? 'bg-blue-50/60' : ''}`}
+                      >
+                        <div className="text-sm font-medium text-gray-800">{notification.title}</div>
+                        <div className="mt-0.5 text-xs text-gray-500">{notification.message}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={handleLogout}
+              className="group flex items-center gap-1 rounded-xl bg-white/10 px-3 py-2 text-[10px] font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20"
+            >
+              <ArrowRightOnRectangleIcon className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+              <span>Exit</span>
+            </button>
+          </div>
         </div>
 
         <div className="mt-3 border-t border-white/20 pt-2">
