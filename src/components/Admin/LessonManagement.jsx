@@ -163,7 +163,7 @@ const LessonManagement = () => {
     video_url: '', pdf_url: '',
     subject_id: '', target_form: 'All', quiz_id: '',
     display_order: 0, resource_type: 'video',
-    week_number: 1, is_weekend_exam: false,
+    week_number: 1, deadline_date: '', is_weekend_exam: false,
   };
   const [formData, setFormData] = useState(emptyForm);
 
@@ -313,7 +313,8 @@ const LessonManagement = () => {
         display_order:   parseInt(formData.display_order) || 0,
         resource_type:   formData.resource_type,
         week_number:     parseInt(formData.week_number) || 1,
-        is_weekend_exam: !!formData.is_weekend_exam,
+          deadline_date:   formData.deadline_date || null,
+          is_weekend_exam: !!formData.is_weekend_exam,
         ...(formData.quiz_id ? { quiz_id: parseInt(formData.quiz_id) } : {}),
         ...(formData.resource_type === 'video' ? { video_url: formData.video_url } : { pdf_url: formData.pdf_url }),
       };
@@ -356,6 +357,7 @@ const LessonManagement = () => {
       display_order:   lesson.display_order   || 0,
       resource_type:   lesson.resource_type   || 'video',
       week_number:     lesson.week_number     || 1,
+      deadline_date:   lesson.deadline_date   || '',
       is_weekend_exam: !!lesson.is_weekend_exam,
     } : emptyForm);
     setShowModal(true);
@@ -711,7 +713,7 @@ const LessonManagement = () => {
                 </div>
               </div>
 
-              {/* Week + Weekend exam */}
+              {/* Week + deadline */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">
@@ -724,6 +726,23 @@ const LessonManagement = () => {
                     {WEEKS.map(w => <option key={w} value={w}>Week {w}</option>)}
                   </select>
                 </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    <CalendarDaysIcon className="w-3.5 h-3.5 inline mr-1 text-[#006770]" />
+                    Week Deadline *
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.deadline_date}
+                    onChange={e => setFormData(p => ({ ...p, deadline_date: e.target.value }))}
+                    className={inp}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Weekend exam */}
+              <div className="grid grid-cols-2 gap-3">
                 <div className="flex flex-col justify-end">
                   <label className={`flex items-center gap-3 px-4 py-3 rounded-lg border cursor-pointer transition ${
                     formData.is_weekend_exam

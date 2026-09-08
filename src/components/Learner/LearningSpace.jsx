@@ -347,6 +347,7 @@ const LearningSpace = ({ onStartQuiz }) => {
                 <p className="text-sm">No lessons scheduled yet.</p>
               </div>
             ) : weekGroups.map(({ week, lessons: wL, exams: wE }) => {
+              const deadline = [...wL, ...wE].find(item => item.deadline_date)?.deadline_date;
               const isLocked  = week > currentWeek;
               const isCurrent = week === currentWeek;
               const isPast    = week < currentWeek && week !== 0;
@@ -391,6 +392,11 @@ const LearningSpace = ({ onStartQuiz }) => {
                         <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                           {subjectCount > 0 && <span className="text-[10px] text-slate-400">📁 {subjectCount} subject{subjectCount !== 1 ? 's' : ''}</span>}
                           {examCount    > 0 && <span className="text-[10px] text-amber-500 font-semibold">🏆 Weekend exam</span>}
+                          {deadline && (
+                            <span className="text-[10px] font-semibold text-red-500">
+                              ⏰ Due {new Date(`${deadline}T00:00:00`).toLocaleDateString()}
+                            </span>
+                          )}
                           {topicCount === 0 && examCount === 0 && <span className="text-[10px] text-gray-400">No content yet</span>}
                         </div>
                       )}
