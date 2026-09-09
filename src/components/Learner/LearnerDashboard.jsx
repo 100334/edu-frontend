@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import LearningSpace from './LearningSpace';
+import Library from '../Library';
 import QuizTaking from './QuizTaking';
 import UpperFormDashboard from './UpperFormDashboard';
 import {
@@ -1122,6 +1123,7 @@ toast.error('Failed to generate PDF');
             <div className="flex gap-1 py-2">
               <NavItem icon={<HomeIcon className="w-5 h-5" />} label="Overview" isActive={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
               <NavItem icon={<AcademicCapIcon className="w-5 h-5" />} label="Learning" isActive={activeTab === 'learning'} onClick={() => setActiveTab('learning')} />
+              <NavItem icon={<BookmarkIcon className="w-5 h-5" />} label="Library" isActive={activeTab === 'library'} onClick={() => setActiveTab('library')} />
               <NavItem icon={<DocumentTextIcon className="w-5 h-5" />} label="Reports" isActive={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
               <NavItem icon={<CalendarIcon className="w-5 h-5" />} label="Attendance" isActive={activeTab === 'attendance'} onClick={() => setActiveTab('attendance')} />
               <NavItem icon={<TrophyIcon className="w-5 h-5" />} label="Leaderboard" isActive={activeTab === 'leaderboard'} onClick={() => setActiveTab('leaderboard')} />
@@ -1154,6 +1156,9 @@ toast.error('Failed to generate PDF');
               </button>
               <button onClick={() => { setActiveTab('learning'); setMobileMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${activeTab === 'learning' ? 'bg-[#2A9D8F] text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
                 <AcademicCapIcon className="w-4 h-4 inline mr-2" /> Learning
+              </button>
+              <button onClick={() => { setActiveTab('library'); setMobileMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${activeTab === 'library' ? 'bg-[#2A9D8F] text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
+                <BookmarkIcon className="w-4 h-4 inline mr-2" /> Library
               </button>
               <button onClick={() => { setActiveTab('reports'); setMobileMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${activeTab === 'reports' ? 'bg-[#2A9D8F] text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
                 <DocumentTextIcon className="w-4 h-4 inline mr-2" /> Reports
@@ -1344,6 +1349,11 @@ toast.error('Failed to generate PDF');
         {/* Learning Space Tab */}
         {activeTab === 'learning' && (
           <LearningSpace onStartQuiz={(quizId) => setShowQuiz(quizId)} />
+        )}
+
+        {/* Library Tab */}
+        {activeTab === 'library' && (
+          <Library />
         )}
 
         {/* Reports Tab */}

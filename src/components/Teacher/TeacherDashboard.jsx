@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import Library from '../Library';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 
 // Theme constants
@@ -1029,7 +1030,7 @@ toast.error('Failed to record attendance');
               </div>
             </div>
             <div className="p-2">
-              {['overview', 'learners', 'reports', 'attendance', 'announcements'].map((tab) => (
+              {['overview', 'learners', 'library', 'reports', 'attendance', 'announcements'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => {
@@ -1043,12 +1044,14 @@ toast.error('Failed to record attendance');
                   <span className="mr-2">
                     {tab === 'overview' && '📊'}
                     {tab === 'learners' && '👥'}
+                    {tab === 'library' && '📚'}
                     {tab === 'reports' && '📋'}
                     {tab === 'attendance' && '📅'}
                     {tab === 'announcements' && '📢'}
                   </span>
                   {tab === 'overview' && 'Overview'}
                   {tab === 'learners' && 'My Learners'}
+                  {tab === 'library' && 'Library'}
                   {tab === 'reports' && 'Report Cards'}
                   {tab === 'attendance' && 'Attendance'}
                   {tab === 'announcements' && 'Announcements'}
@@ -1074,6 +1077,12 @@ toast.error('Failed to record attendance');
               label="Learners"
               isActive={activeTab === 'learners'}
               onClick={() => setActiveTab('learners')}
+            />
+            <NavItem
+              icon="📚"
+              label="Library"
+              isActive={activeTab === 'library'}
+              onClick={() => setActiveTab('library')}
             />
             <NavItem
               icon="📋"
@@ -1252,6 +1261,11 @@ toast.error('Failed to record attendance');
               </div>
             </div>
           </>
+        )}
+
+        {/* Library Tab */}
+        {activeTab === 'library' && (
+          <Library />
         )}
 
         {/* Reports Tab */}
