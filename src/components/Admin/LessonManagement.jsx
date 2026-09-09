@@ -55,6 +55,7 @@ const FolderCard = ({ name, itemCount, onClick }) => (
 const LessonManagement = () => {
   const [lessons,       setLessons]       = useState([]);
   const [subjects,      setSubjects]      = useState([]);
+  const [classes,       setClasses]       = useState([]);
   const [quizzes,       setQuizzes]       = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [showModal,     setShowModal]     = useState(false);
@@ -154,6 +155,7 @@ const LessonManagement = () => {
   };
 
   // ── navigation state (mirrors LearningSpace) ─────────────────────────────
+  const [activeClassId,    setActiveClassId]    = useState(null);   // null | class id (top folder level)
   const [activeWeek,       setActiveWeek]       = useState(null);   // null | number
   const [activeFolderId,   setActiveFolderId]   = useState(null);   // null | 'videos' | 'pdfs' | ...
   const [expandedSubjects, setExpandedSubjects] = useState({});
@@ -186,12 +188,24 @@ const LessonManagement = () => {
     } catch { setSubjects([]); }
   };
 
+  const loadClasses = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await api.get('/api/admin/classes', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data.success) setClasses(res.data.classes || []);
+      else setClasses([]);
+    } catch { setClasses([]); }
+  };
+
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
       const auth  = { headers: { Authorization: `Bearer ${token}` } };
       await loadSubjects();
+      await loadClasses();
       try {
         const r = await api.get('/api/admin/lessons', auth);
         setLessons(r.data.success ? (r.data.lessons || []) : []);
@@ -207,7 +221,7 @@ const LessonManagement = () => {
   useEffect(() => { loadDashboardData(); loadInbox(); }, [loadDashboardData, loadInbox]);
 
   // reset subject expansion when navigating levels
-  useEffect(() => { setExpandedSubjects({}); }, [activeFolderId, activeWeek]);
+  useEffect(() => { setExpandedSubjects({}); }, [activeFolderId, activeWeek, activeClassId]);
 
   // ── helpers ───────────────────────────────────────────────────────────────
   const getSubjectName  = (id) => {
@@ -215,11 +229,40 @@ const LessonManagement = () => {
     return s ? s.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '') : 'uncategorized';
   };
   const getSubjectLabel = (id) => subjects.find(s => String(s.id) === String(id))?.name || 'General';
+  const getClassLabel   = (id) => classes.find(c => String(c.id) === String(id))?.name || 'Unassigned';
+
+  // subjects scoped to the currently selected class (used in the Add/Edit modal)
+  const subjectsForClass = React.useMemo(() => {
+    if (!activeClassId) return subjects;
+    return subjects.filter(s => String(s.class_id) === String(activeClassId));
+  }, [subjects, activeClassId]);
+
+  // lessons scoped to the currently selected class folder
+  const lessonsInActiveClass = React.useMemo(() => {
+    if (activeClassId === null) return lessons;
+    return lessons.filter(l => String(l.class_id) === String(activeClassId));
+  }, [lessons, activeClassId]);
+
+  // classes that actually have lesson content, for the class folder grid
+  const classGroups = React.useMemo(() => {
+    const map = {};
+    lessons.forEach(l => {
+      const cid = l.class_id != null ? String(l.class_id) : 'unassigned';
+      if (!map[cid]) map[cid] = [];
+      map[cid].push(l);
+    });
+    return Object.entries(map).map(([classId, items]) => ({
+      classId: classId === 'unassigned' ? null : classId,
+      className: classId === 'unassigned' ? 'Unassigned' : getClassLabel(classId),
+      count: items.length,
+    })).sort((a, b) => a.className.localeCompare(b.className));
+  }, [lessons, classes]);
+
 
   // ── week grouping ─────────────────────────────────────────────────────────
   const weekGroups = React.useMemo(() => {
     const map = {};
-    lessons.forEach(l => {
+    lessonsInActiveClass.forEach(l => {
       const w = l.week_number ?? 0;
       if (!map[w]) map[w] = { lessons: [], exams: [] };
       if (l.is_weekend_exam) map[w].exams.push(l);
@@ -228,7 +271,7 @@ const LessonManagement = () => {
     return Object.entries(map)
       .map(([w, data]) => ({ week: parseInt(w), ...data }))
       .sort((a, b) => (a.week === 0 ? 1 : b.week === 0 ? -1 : a.week - b.week));
-  }, [lessons]);
+  }, [lessonsInActiveClass]);
 
   // items split by type for the active week's folder grid
   const weekFolderItems = React.useMemo(() => {
@@ -249,25 +292,27 @@ const LessonManagement = () => {
     if (!activeFolderId) return [];
     const type = folderConfig.find(f => f.id === activeFolderId)?.type;
     if (activeWeek !== null) return weekFolderItems[type] || [];
-    if (type === 'video')     return lessons.filter(l => l.resource_type === 'video');
-    if (type === 'pdf')       return lessons.filter(l => l.resource_type === 'pdf');
-    if (type === 'pastpaper') return lessons.filter(l => l.resource_type === 'pastpaper');
-    if (type === 'quiz')      return lessons.filter(l => l.resource_type === 'quiz');
+    if (type === 'video')     return lessonsInActiveClass.filter(l => l.resource_type === 'video');
+    if (type === 'pdf')       return lessonsInActiveClass.filter(l => l.resource_type === 'pdf');
+    if (type === 'pastpaper') return lessonsInActiveClass.filter(l => l.resource_type === 'pastpaper');
+    if (type === 'quiz')      return lessonsInActiveClass.filter(l => l.resource_type === 'quiz');
     return [];
-  }, [activeFolderId, activeWeek, weekFolderItems, lessons]);
+  }, [activeFolderId, activeWeek, weekFolderItems, lessonsInActiveClass]);
 
   // breadcrumb
   const breadcrumb = () => {
     const parts = ['Lessons'];
+    if (activeClassId !== null) parts.push(getClassLabel(activeClassId));
     if (activeWeek !== null) parts.push(activeWeek === 0 ? 'Unscheduled' : `Week ${activeWeek}`);
     if (activeFolderId) parts.push(folderConfig.find(f => f.id === activeFolderId)?.name || activeFolderId);
     return parts.join(' / ');
   };
 
-  const canGoBack = activeFolderId !== null || activeWeek !== null;
+  const canGoBack = activeFolderId !== null || activeWeek !== null || activeClassId !== null;
   const handleBack = () => {
     if (activeFolderId) { setActiveFolderId(null); return; }
-    if (activeWeek !== null) setActiveWeek(null);
+    if (activeWeek !== null) { setActiveWeek(null); return; }
+    if (activeClassId !== null) setActiveClassId(null);
   };
 
   // ── upload ────────────────────────────────────────────────────────────────
@@ -359,7 +404,7 @@ const LessonManagement = () => {
       week_number:     lesson.week_number     || 1,
       deadline_date:   lesson.deadline_date   || '',
       is_weekend_exam: !!lesson.is_weekend_exam,
-    } : emptyForm);
+    } : { ...emptyForm, week_number: activeWeek && activeWeek > 0 ? activeWeek : 1 });
     setShowModal(true);
   };
 
@@ -455,7 +500,9 @@ const LessonManagement = () => {
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-5">
         <span className="text-xs text-gray-400 font-medium">
-          {lessons.length} lesson{lessons.length !== 1 ? 's' : ''} across {weekGroups.length} week{weekGroups.length !== 1 ? 's' : ''}
+          {activeClassId === null
+            ? `${lessons.length} lesson${lessons.length !== 1 ? 's' : ''} across ${classGroups.length} class${classGroups.length !== 1 ? 'es' : ''}`
+            : `${lessonsInActiveClass.length} lesson${lessonsInActiveClass.length !== 1 ? 's' : ''} across ${weekGroups.length} week${weekGroups.length !== 1 ? 's' : ''}`}
         </span>
         <div className="flex items-center gap-2">
           {/* Progress button */}
@@ -511,13 +558,40 @@ const LessonManagement = () => {
         {/* ── Content ── */}
         <div className="flex-1 overflow-y-auto bg-[#F5F2EB]">
 
+          {/* ══ LEVEL 0 — Class folders ══════════════════════════════════════ */}
+          {activeClassId === null && !activeFolderId && (
+            <div className="p-4">
+              {classes.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                  <span className="text-5xl mb-3">🏫</span>
+                  <p className="text-sm font-medium">No classes found.</p>
+                  <p className="text-xs text-slate-400 mt-1">Create a class first under Class Management.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {classes.map(cls => {
+                    const count = classGroups.find(g => String(g.classId) === String(cls.id))?.count || 0;
+                    return (
+                      <FolderCard
+                        key={cls.id}
+                        name={cls.name}
+                        itemCount={count}
+                        onClick={() => setActiveClassId(cls.id)}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ══ LEVEL 1 — Weekly timeline ═══════════════════════════════════ */}
-          {activeWeek === null && !activeFolderId && (
+          {activeClassId !== null && activeWeek === null && !activeFolderId && (
             <div className="p-4 space-y-2.5">
-              {lessons.length === 0 ? (
+              {lessonsInActiveClass.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                   <span className="text-5xl mb-3">📅</span>
-                  <p className="text-sm font-medium">No lessons yet.</p>
+                  <p className="text-sm font-medium">No lessons yet for {getClassLabel(activeClassId)}.</p>
                   <button
                     onClick={() => openModal()}
                     className="mt-2 text-xs text-[#006770] hover:underline"
@@ -591,7 +665,7 @@ const LessonManagement = () => {
           )}
 
           {/* ══ LEVEL 2 — Week detail: exam card + folder grid ══════════════ */}
-          {activeWeek !== null && !activeFolderId && (
+          {activeClassId !== null && activeWeek !== null && !activeFolderId && (
             <div className="p-4">
               {/* Weekend exam card */}
               {(() => {
@@ -699,9 +773,13 @@ const LessonManagement = () => {
                     onChange={e => setFormData(p => ({ ...p, subject_id: e.target.value }))}
                     className={inp} required>
                     <option value="">Select subject…</option>
-                    {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                    {subjectsForClass.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
-                  {subjects.length === 0 && <p className="text-[10px] text-red-500 mt-1">No subjects found.</p>}
+                  {subjectsForClass.length === 0 && (
+                    <p className="text-[10px] text-red-500 mt-1">
+                      {activeClassId ? `No subjects found for ${getClassLabel(activeClassId)}.` : 'No subjects found.'}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-xs font-semibold text-gray-600 mb-1">Target Form</label>
@@ -880,7 +958,7 @@ const LessonManagement = () => {
                     className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition">
                     Cancel
                   </button>
-                  <button type="submit" disabled={submitting || subjects.length === 0}
+                  <button type="submit" disabled={submitting || subjectsForClass.length === 0}
                     className="px-5 py-2 bg-[#006770] text-white rounded-lg text-sm font-semibold hover:bg-[#005a62] transition disabled:opacity-50 flex items-center gap-2">
                     {submitting && <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
                     {editingLesson ? 'Update Lesson' : 'Create Lesson'}

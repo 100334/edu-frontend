@@ -1,7 +1,11 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import api from '../services/api';
 
 const AuthContext = createContext();
+
+// Auto-logout after this many milliseconds of inactivity (no clicks/keypresses/scroll).
+const IDLE_TIMEOUT_MS = 15 * 60 * 1000; // 15 minutes
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -158,6 +162,40 @@ localStorage.removeItem('token');
     delete api.defaults.headers.common['Authorization'];
     setUser(null);
   };
+
+  // ── Auto-logout on inactivity ────────────────────────────────────────────
+  const idleTimerRef = useRef(null);
+  const userRef = useRef(user);
+  userRef.current = user;
+
+  const handleIdleLogout = useCallback(() => {
+    if (!userRef.current) return;
+    logout();
+    toast.error('You were logged out due to inactivity.', { duration: 5000, icon: '⏰' });
+    window.location.href = '/';
+  }, []);
+
+  const resetIdleTimer = useCallback(() => {
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    if (!userRef.current) return;
+    idleTimerRef.current = setTimeout(handleIdleLogout, IDLE_TIMEOUT_MS);
+  }, [handleIdleLogout]);
+
+  useEffect(() => {
+    if (!user) {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      return;
+    }
+
+    const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+    activityEvents.forEach((event) => window.addEventListener(event, resetIdleTimer));
+    resetIdleTimer();
+
+    return () => {
+      activityEvents.forEach((event) => window.removeEventListener(event, resetIdleTimer));
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, [user, resetIdleTimer]);
 
   const value = {
     user,
