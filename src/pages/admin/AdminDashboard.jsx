@@ -14,6 +14,7 @@ import {
   UserGroupIcon,
   UsersIcon,
   BellIcon,
+  MegaphoneIcon,
   ArrowRightOnRectangleIcon,
   Bars3Icon,
   XMarkIcon,
@@ -33,6 +34,7 @@ import AdminSubjectManagement from '../../components/Admin/AdminSubjectManagemen
 import SecurityLogs from '../../components/Admin/SecurityLogs';
 import QuizManagement from '../../components/Admin/QuizManagement';
 import LessonManagement from '../../components/Admin/LessonManagement'; // NEW
+import AnnouncementManagement from '../../components/Admin/AnnouncementManagement';
 
 // Theme constants — aligned with LearnerDashboard
 const HEADER_BG = '#003B46';
@@ -261,6 +263,7 @@ export default function AdminDashboard() {
     { id: 'register-learner',  icon: UserPlusIcon,               label: 'Register Learner' },
     { id: 'register-teacher',  icon: AcademicCapIcon,            label: 'Register Teacher' },
     { id: 'lesson-management', icon: BookOpenIcon,               label: 'Lesson Management' },
+    { id: 'announcements',     icon: MegaphoneIcon,              label: 'Announcements' },
     { id: 'quiz-management',   icon: ClipboardDocumentListIcon,  label: 'Quiz Management' },
     { id: 'class-management',  icon: RectangleGroupIcon,         label: 'Class Management' },
     { id: 'subject-management',icon: BookmarkSquareIcon,         label: 'Subject Management' },
@@ -420,6 +423,8 @@ toast.error('Failed to load statistics');
         return <RegisterTeacher onSuccess={() => handleNavClick('teachers-list')} />;
       case 'lesson-management':
         return <LessonManagement />;
+      case 'announcements':
+        return <AnnouncementManagement />;
       case 'quiz-management':
         return <QuizManagement />;
       case 'class-management':
