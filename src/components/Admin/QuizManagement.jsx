@@ -87,7 +87,7 @@ const QuizManagement = () => {
       const token = localStorage.getItem('token');
       const res = await api.get('/api/admin/quiz-subjects', { headers: { Authorization: `Bearer ${token}` } });
       if (res.data.success) setSubjects(res.data.subjects || []);
-    } catch { toast.error('Failed to load subjects'); }
+    } catch { /* silent */ }
   };
 
   const loadQuizzes = async () => {
@@ -97,7 +97,7 @@ const QuizManagement = () => {
       const res = await api.get('/api/admin/quizzes', { headers: { Authorization: `Bearer ${token}` } });
       if (res.data.success) setQuizzes(res.data.quizzes || []);
       else toast.error(res.data.message || 'Failed');
-    } catch { toast.error('Failed to load quizzes'); }
+    } catch { /* silent */ }
     finally { setLoading(false); }
   };
 

@@ -63,8 +63,8 @@ const RegisterLearner = ({ onSuccess }) => {
       const res = await api.get('/api/admin/classes', { headers: { Authorization: `Bearer ${token}` } });
       if (res.data.success)      setClasses(res.data.classes || []);
       else if (Array.isArray(res.data)) setClasses(res.data);
-      else { toast.error('Failed to load classes'); setClasses([]); }
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed to load classes'); setClasses([]); }
+      else { setClasses([]); }
+    } catch (err) { setClasses([]); }
     finally { setLoadingClasses(false); }
   };
 

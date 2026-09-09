@@ -215,6 +215,12 @@ export default function TeacherDashboard() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState(null);
 
+  // Announcement states
+  const [announcements, setAnnouncements] = useState([]);
+  const [announcementTitle, setAnnouncementTitle] = useState('');
+  const [announcementMessage, setAnnouncementMessage] = useState('');
+  const [announcementForm, setAnnouncementForm] = useState('All');
+
   const getDraftKey = useCallback(() => {
     if (!selectedLearnerId) return null;
     return `teacher-report-draft:${selectedLearnerId}:${selectedAssessmentType || 'custom'}:${selectedYear}:${reportTerm}:${reportForm}`;
@@ -347,12 +353,13 @@ let teacherClassId = null;
         setTeacherClass(teacherInfoRes.data.assigned_class);
       }
       
-      const [myLearnersRes, allLearnersRes, reportsRes, attendanceRes, statsRes] = await Promise.all([
+      const [myLearnersRes, allLearnersRes, reportsRes, attendanceRes, statsRes, announcementsRes] = await Promise.all([
         api.get('/api/teacher/my-learners'),
         api.get('/api/teacher/all-learners'),
         api.get('/api/teacher/reports'),
         api.get('/api/teacher/attendance'),
-        api.get('/api/teacher/dashboard/stats')
+        api.get('/api/teacher/dashboard/stats'),
+        api.get('/api/teacher/announcements')
       ]);
       
       const myLearnersData = myLearnersRes.data?.learners || myLearnersRes.data || [];
@@ -360,11 +367,13 @@ let teacherClassId = null;
       const reportsData = reportsRes.data?.data || reportsRes.data || [];
       const attendanceData = attendanceRes.data?.data?.records || attendanceRes.data || [];
       const statsData = statsRes.data?.data || statsRes.data || {};
+      const announcementsData = announcementsRes.data?.announcements || [];
 setMyLearners(myLearnersData);
       setAllLearners(allLearnersData);
       setAvailableLearners(allLearnersData);
       setReports(reportsData);
       setAttendance(attendanceData);
+      setAnnouncements(announcementsData);
       
       setStats({
         totalLearners: statsData.totalLearners || myLearnersData.length,
@@ -704,6 +713,36 @@ toast.error('Failed to record attendance');
     }
   };
 
+  const handlePostAnnouncement = async () => {
+    if (!announcementTitle.trim() || !announcementMessage.trim()) {
+      toast.error('Please enter a title and message');
+      return;
+    }
+
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    try {
+      const response = await api.post('/api/teacher/announcements', {
+        title: announcementTitle.trim(),
+        message: announcementMessage.trim(),
+        target_form: announcementForm
+      });
+      if (response.data.success) {
+        toast.success(`Announcement sent to ${response.data.notified || 0} learner(s) ✔`);
+        setAnnouncementTitle('');
+        setAnnouncementMessage('');
+        loadDashboardData();
+      } else {
+        toast.error(response.data.message || 'Failed to post announcement');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to post announcement');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const formatDate = (dateStr) => {
     if (!dateStr) return 'N/A';
     try {
@@ -990,7 +1029,7 @@ toast.error('Failed to record attendance');
               </div>
             </div>
             <div className="p-2">
-              {['overview', 'learners', 'reports', 'attendance'].map((tab) => (
+              {['overview', 'learners', 'reports', 'attendance', 'announcements'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => {
@@ -1006,11 +1045,13 @@ toast.error('Failed to record attendance');
                     {tab === 'learners' && '👥'}
                     {tab === 'reports' && '📋'}
                     {tab === 'attendance' && '📅'}
+                    {tab === 'announcements' && '📢'}
                   </span>
                   {tab === 'overview' && 'Overview'}
                   {tab === 'learners' && 'My Learners'}
                   {tab === 'reports' && 'Report Cards'}
                   {tab === 'attendance' && 'Attendance'}
+                  {tab === 'announcements' && 'Announcements'}
                 </button>
               ))}
             </div>
@@ -1045,6 +1086,12 @@ toast.error('Failed to record attendance');
               label="Attendance"
               isActive={activeTab === 'attendance'}
               onClick={() => setActiveTab('attendance')}
+            />
+            <NavItem
+              icon="📢"
+              label="Announcements"
+              isActive={activeTab === 'announcements'}
+              onClick={() => setActiveTab('announcements')}
             />
           </div>
         </div>
@@ -1625,6 +1672,91 @@ toast.error('Failed to record attendance');
                       )}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Announcements Tab */}
+        {activeTab === 'announcements' && (
+          <>
+            <div className="mb-6">
+              <h1 className="font-serif text-2xl lg:text-3xl font-bold text-[#0f1923] mb-1">Announcements</h1>
+              <p className="text-sm text-gray-500">Send a message to your learners' notifications</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Post Announcement Form */}
+              <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
+                <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-[#d4cfc6]">
+                  <h2 className="font-semibold text-[#0f1923] text-sm lg:text-base">New Announcement</h2>
+                </div>
+                <div className="p-4 lg:p-6">
+                  <div className="mb-4">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Title</label>
+                    <input
+                      type="text"
+                      value={announcementTitle}
+                      onChange={(e) => setAnnouncementTitle(e.target.value)}
+                      placeholder="e.g. Test postponed to Friday"
+                      className="w-full px-3 lg:px-4 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Message</label>
+                    <textarea
+                      value={announcementMessage}
+                      onChange={(e) => setAnnouncementMessage(e.target.value)}
+                      placeholder="Write your announcement..."
+                      rows={5}
+                      className="w-full px-3 lg:px-4 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Send To</label>
+                    <select
+                      value={announcementForm}
+                      onChange={(e) => setAnnouncementForm(e.target.value)}
+                      className="w-full px-3 lg:px-4 py-2 border border-gray-300 rounded-lg text-sm"
+                    >
+                      <option value="All">My Class</option>
+                      <option value="Form 1">Form 1</option>
+                      <option value="Form 2">Form 2</option>
+                      <option value="Form 3">Form 3</option>
+                      <option value="Form 4">Form 4</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={handlePostAnnouncement}
+                    disabled={isSubmitting || !announcementTitle.trim() || !announcementMessage.trim()}
+                    className="w-full px-4 py-2 bg-[#1a6b6b] text-white rounded-lg hover:bg-[#2a9090] transition font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? 'Sending...' : '📢 Post Announcement'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Announcement History */}
+              <div className="bg-white rounded-xl border border-[#d4cfc6] shadow-sm overflow-hidden">
+                <div className="px-4 lg:px-6 py-3 lg:py-4 border-b border-[#d4cfc6]">
+                  <h2 className="font-semibold text-[#0f1923] text-sm lg:text-base">Sent Announcements</h2>
+                </div>
+                <div className="max-h-[500px] overflow-y-auto divide-y divide-gray-100">
+                  {announcements.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-sm text-gray-500">No announcements sent yet</div>
+                  ) : announcements.map((item) => (
+                    <div key={item.id} className="px-4 lg:px-6 py-3 lg:py-4">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-sm font-semibold text-gray-800">{item.title}</div>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#c9933a]/10 text-[#c9933a] whitespace-nowrap">
+                          {item.target_form || 'All'}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-sm text-gray-600">{item.message}</div>
+                      <div className="mt-1 text-xs text-gray-400">{formatDate(item.created_at)}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>

@@ -44,20 +44,13 @@ return response;
 
     // Handle network errors
     if (error.message === 'Network Error') {
-toast.error('Cannot connect to server. The server may be waking up from sleep. Please try again in a moment.', {
-        duration: 6000,
-        icon: '🔄'
-      });
+console.error('Cannot connect to server. The server may be waking up from sleep.');
       return Promise.reject(error);
     }
 
     // Handle timeouts (Render cold start)
     if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-toast.error('Server is waking up (cold start). Please wait 10-15 seconds and try again.', { 
-        id: 'timeout',
-        duration: 8000,
-        icon: '⏳'
-      });
+console.error('Server is waking up (cold start).');
       return Promise.reject(error);
     }
 

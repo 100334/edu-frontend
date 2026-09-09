@@ -40,9 +40,9 @@ const AdminClassManagement = ({ onManageSubjects }) => {
       const token = localStorage.getItem('token');
       const res = await api.get('/api/admin/classes', { headers: { Authorization: `Bearer ${token}` } });
       if (res.data.success) setClasses(res.data.classes || []);
-      else toast.error(res.data.message || 'Failed to load classes');
+      else { /* silent */ }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Failed to load classes');
+      /* silent */
     } finally { setLoading(false); }
   }, []);
 
