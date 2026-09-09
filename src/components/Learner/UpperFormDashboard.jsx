@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import LearningSpace from './LearningSpace';
+import Library from '../Library';
 import QuizTaking from './QuizTaking';
 import {
   DocumentTextIcon,
@@ -103,6 +104,7 @@ export default function UpperFormDashboard() {
   const navigate = useNavigate();
 
   const [openPanel,      setOpenPanel]      = useState(null);
+  const [mainView,       setMainView]       = useState('learning'); // 'learning' | 'library'
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showQuiz,       setShowQuiz]       = useState(null);
 
@@ -877,6 +879,30 @@ export default function UpperFormDashboard() {
           {/* Quick-action row — always visible, horizontal scroll on mobile */}
           <div className="flex gap-2 pb-3 overflow-x-auto scrollbar-none">
             {[
+              { id: 'learning',    emoji: '🎓', label: 'Learning',    sub: 'Weekly lessons' },
+              { id: 'library',     emoji: '📚', label: 'Library',     sub: 'All resources' },
+            ].map(item => (
+              <button
+                key={item.id}
+                onClick={() => setMainView(item.id)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl flex-shrink-0 transition-all ${
+                  mainView === item.id
+                    ? 'bg-white text-[#003B46] shadow-sm'
+                    : 'bg-white/10 text-white/80 hover:bg-white/20'
+                }`}
+              >
+                <span className="text-base">{item.emoji}</span>
+                <div className="text-left">
+                  <p className={`text-xs font-bold leading-none ${mainView === item.id ? 'text-[#003B46]' : 'text-white'}`}>
+                    {item.label}
+                  </p>
+                  <p className={`text-[9px] mt-0.5 ${mainView === item.id ? 'text-gray-400' : 'text-white/50'}`}>
+                    {item.sub}
+                  </p>
+                </div>
+              </button>
+            ))}
+            {[
               { id: 'overview',    emoji: '🏠', label: 'Overview',    sub: `Avg ${stats.averageScore}` },
               { id: 'reports',     emoji: '📄', label: 'Reports',     sub: `${stats.reportsCount} term${stats.reportsCount !== 1 ? 's' : ''}` },
               { id: 'attendance',  emoji: '📅', label: 'Attendance',  sub: stats.attendanceRate },
@@ -906,9 +932,13 @@ export default function UpperFormDashboard() {
         </div>
       </header>
 
-      {/* ── MAIN CONTENT — Learning Space ──────────────────────────────────── */}
+      {/* ── MAIN CONTENT — Learning Space / Library ─────────────────────────── */}
       <main className="flex-1 container mx-auto px-4 py-4 max-w-7xl">
-        <LearningSpace onStartQuiz={(quizId) => setShowQuiz(quizId)} />
+        {mainView === 'library' ? (
+          <Library />
+        ) : (
+          <LearningSpace onStartQuiz={(quizId) => setShowQuiz(quizId)} />
+        )}
       </main>
 
       {/* ── SLIDE-IN PANELS ─────────────────────────────────────────────────── */}
