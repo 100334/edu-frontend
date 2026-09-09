@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import LearningSpace from './LearningSpace';
+import Library from '../Library';
 import QuizTaking from './QuizTaking';
 import {
   ArrowRightOnRectangleIcon,
@@ -574,6 +575,18 @@ toast.error('Could not create PDF');
           </section>
         )}
 
+        {activeTab === 'library' && (
+          <section>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xl font-bold text-[#0A2540]">Library</h2>
+              <button onClick={() => setActiveTab('overview')} className="text-sm font-semibold text-[#005F7B]">
+                ← Back
+              </button>
+             </div>
+            <Library />
+          </section>
+        )}
+
         {activeTab === 'attendance' && (
           <section className="space-y-3">
             <div className="flex items-center justify-between">
@@ -604,6 +617,7 @@ toast.error('Could not create PDF');
           {[
             { id: 'overview', label: 'Home', icon: '/schoologo.png' },
             { id: 'learning', label: 'Learn', icon: '/open-book.png' },
+            { id: 'library', label: 'Library', icon: null },
             { id: 'reports', label: 'Reports', icon: '/results.png' },
             { id: 'attendance', label: 'Attendance', icon: '/attendance.png' }
           ].map(({ id, label, icon: Icon }) => (
@@ -615,7 +629,9 @@ toast.error('Could not create PDF');
                 activeTab === id ? 'text-slate-600' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
-              {typeof Icon === 'string' ? (
+              {Icon === null ? (
+                <span className="text-xl leading-none" role="img" aria-label={label}>📚</span>
+              ) : typeof Icon === 'string' ? (
                 <img src={Icon} alt={label} className="h-6 w-6 object-contain" />
               ) : (
                 <Icon className="h-6 w-6" />
