@@ -4,28 +4,16 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
-// ── Resource-type folder metadata ───────────────────────────────────────────
-const RESOURCE_TYPES = [
-  { id: 'video',     label: 'Videos',      emoji: '🎬' },
-  { id: 'pdf',       label: 'Notes',       emoji: '📄' },
-  { id: 'quiz',      label: 'Assessments', emoji: '📝' },
-  { id: 'pastpaper', label: 'Past Papers', emoji: '🗂️' },
-];
-const typeMeta = (id) => RESOURCE_TYPES.find(t => t.id === id) || { label: 'Other', emoji: '📁' };
-
 /**
- * Library — a simple, read-only, flat browsing space for ALL lesson
- * resources, organized as Subject → resource type. Unlike the Learning
- * Space, there is no week progression, deadlines, or quiz-taking stepper —
- * just folders you can open to view or download files.
- * Used by both the Learner and Teacher dashboards.
+ * Library — a simple, read-only space for comprehensive/summarised subject
+ * notes (merged booklets) uploaded by Admins. Organized as Subject → list
+ * of notes. No weeks, no deadlines, no quiz-taking stepper — just view or
+ * download. Used by both the Learner and Teacher dashboards.
  */
 const Library = () => {
   const [loading, setLoading] = useState(true);
-  const [lessons, setLessons] = useState([]);
-
-  const [activeSubject, setActiveSubject] = useState(null);   // subject name
-  const [activeType, setActiveType] = useState(null);         // resource type id
+  const [notes, setNotes] = useState([]);
+  const [activeSubject, setActiveSubject] = useState(null); // subject name
 
   const [viewerSrc, setViewerSrc] = useState(null);
   const [viewerTitle, setViewerTitle] = useState('');
@@ -35,10 +23,10 @@ const Library = () => {
       setLoading(true);
       try {
         const token = localStorage.getItem('token');
-        const res = await api.get('/api/library/lessons', {
+        const res = await api.get('/api/library/notes', {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (res.data.success) setLessons(res.data.lessons || []);
+        if (res.data.success) setNotes(res.data.notes || []);
       } catch (err) {
         toast.error('Could not load the Library.');
       } finally {
@@ -48,62 +36,40 @@ const Library = () => {
     load();
   }, []);
 
-  // ── Group lessons by subject ────────────────────────────────────────────
+  // ── Group notes by subject ──────────────────────────────────────────────
   const subjectGroups = useMemo(() => {
     const map = {};
-    lessons.forEach(l => {
-      const name = l.subject_name || 'Unassigned';
+    notes.forEach(n => {
+      const name = n.subject_name || 'Unassigned';
       if (!map[name]) map[name] = [];
-      map[name].push(l);
+      map[name].push(n);
     });
     return Object.entries(map)
       .map(([name, items]) => ({ name, items }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [lessons]);
+  }, [notes]);
 
-  const lessonsInSubject = useMemo(() => {
+  const notesInSubject = useMemo(() => {
     if (!activeSubject) return [];
-    return lessons.filter(l => (l.subject_name || 'Unassigned') === activeSubject);
-  }, [lessons, activeSubject]);
-
-  const typeGroups = useMemo(() => {
-    const map = {};
-    lessonsInSubject.forEach(l => {
-      const t = l.resource_type || 'other';
-      if (!map[t]) map[t] = [];
-      map[t].push(l);
-    });
-    return RESOURCE_TYPES
-      .map(t => ({ ...t, items: map[t.id] || [] }))
-      .filter(t => t.items.length > 0);
-  }, [lessonsInSubject]);
-
-  const lessonsInType = useMemo(() => {
-    if (!activeType) return [];
-    return lessonsInSubject.filter(l => (l.resource_type || 'other') === activeType);
-  }, [lessonsInSubject, activeType]);
+    return notes.filter(n => (n.subject_name || 'Unassigned') === activeSubject);
+  }, [notes, activeSubject]);
 
   // ── Navigation ───────────────────────────────────────────────────────────
-  const canGoBack = !!(activeSubject || activeType);
-  const goBack = () => {
-    if (activeType) return setActiveType(null);
-    if (activeSubject) return setActiveSubject(null);
-  };
+  const canGoBack = !!activeSubject;
+  const goBack = () => setActiveSubject(null);
   const breadcrumb = () => {
     const p = ['Library'];
     if (activeSubject) p.push(activeSubject);
-    if (activeType) p.push(typeMeta(activeType).label);
     return p.join(' › ');
   };
 
-  const openFile = (lesson) => {
-    const src = lesson.video_url || lesson.pdf_url;
-    if (!src) {
-      toast.error('No file attached to this resource.');
+  const openFile = (note) => {
+    if (!note.pdf_url) {
+      toast.error('No file attached to this note.');
       return;
     }
-    setViewerSrc(src);
-    setViewerTitle(lesson.title || 'Resource');
+    setViewerSrc(note.pdf_url);
+    setViewerTitle(note.title || 'Notes');
   };
 
   return (
@@ -126,8 +92,8 @@ const Library = () => {
       <div className="flex-1 p-5 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center h-64 text-slate-400 text-sm">Loading library…</div>
-        ) : lessons.length === 0 ? (
-          <div className="flex items-center justify-center h-64 text-slate-400 text-sm">No lessons have been uploaded yet.</div>
+        ) : notes.length === 0 ? (
+          <div className="flex items-center justify-center h-64 text-slate-400 text-sm">No comprehensive notes have been uploaded yet.</div>
 
         ) : !activeSubject ? (
           /* ── LEVEL 0: Subject folders ── */
@@ -140,65 +106,46 @@ const Library = () => {
               >
                 <span className="text-3xl">📁</span>
                 <span className="text-sm font-semibold text-slate-700 text-center">{group.name}</span>
-                <span className="text-[11px] text-slate-400">{group.items.length} item{group.items.length !== 1 ? 's' : ''}</span>
-              </button>
-            ))}
-          </div>
-
-        ) : !activeType ? (
-          /* ── LEVEL 1: Resource-type folders within a subject ── */
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {typeGroups.map(t => (
-              <button
-                key={t.id}
-                onClick={() => setActiveType(t.id)}
-                className="flex flex-col items-center gap-2 p-5 rounded-xl border border-slate-200 hover:border-[#003B46] hover:shadow-md transition bg-slate-50 hover:bg-white"
-              >
-                <span className="text-3xl">{t.emoji}</span>
-                <span className="text-sm font-semibold text-slate-700 text-center">{t.label}</span>
-                <span className="text-[11px] text-slate-400">{t.items.length} item{t.items.length !== 1 ? 's' : ''}</span>
+                <span className="text-[11px] text-slate-400">{group.items.length} note{group.items.length !== 1 ? 's' : ''}</span>
               </button>
             ))}
           </div>
 
         ) : (
-          /* ── LEVEL 2: Files within a resource type ── */
+          /* ── LEVEL 1: Notes within a subject ── */
           <div className="flex flex-col gap-2">
-            {lessonsInType.map(lesson => {
-              const src = lesson.video_url || lesson.pdf_url;
-              return (
-                <div
-                  key={lesson.id}
-                  className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-[#003B46] transition bg-slate-50 hover:bg-white"
-                >
-                  <span className="text-xl flex-shrink-0">{typeMeta(activeType).emoji}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-700 truncate">{lesson.title || 'Untitled resource'}</p>
-                    {lesson.week_number ? (
-                      <p className="text-[11px] text-slate-400">Week {lesson.week_number}</p>
-                    ) : null}
-                  </div>
-                  <button
-                    onClick={() => openFile(lesson)}
-                    disabled={!src}
-                    className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#003B46] text-white hover:bg-[#00505e] disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
-                  >
-                    View
-                  </button>
-                  {src && (
-                    <a
-                      href={src}
-                      download
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 flex-shrink-0"
-                    >
-                      ⬇
-                    </a>
-                  )}
+            {notesInSubject.map(note => (
+              <div
+                key={note.id}
+                className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-[#003B46] transition bg-slate-50 hover:bg-white"
+              >
+                <span className="text-xl flex-shrink-0">📄</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-700 truncate">{note.title || 'Untitled notes'}</p>
+                  {note.description ? (
+                    <p className="text-[11px] text-slate-400 truncate">{note.description}</p>
+                  ) : null}
                 </div>
-              );
-            })}
+                <button
+                  onClick={() => openFile(note)}
+                  disabled={!note.pdf_url}
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#003B46] text-white hover:bg-[#00505e] disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+                >
+                  View
+                </button>
+                {note.pdf_url && (
+                  <a
+                    href={note.pdf_url}
+                    download
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 flex-shrink-0"
+                  >
+                    ⬇
+                  </a>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>

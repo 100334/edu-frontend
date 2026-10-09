@@ -7,6 +7,11 @@ import {
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 
+const canAccessQuizForm = (learnerForm, targetForm) => {
+  if (!targetForm || targetForm === 'All' || targetForm === learnerForm) return true;
+  return learnerForm === 'Form 4' && targetForm === 'Form 3';
+};
+
 const QuizList = ({ onStartQuiz }) => {
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -137,7 +142,7 @@ setQuizzes([]);
           const attempted = quizHistory[quizId];
           const isCompleted = attempted?.status === 'completed';
           const score = Math.round(attempted?.percentage || 0);
-          const isRestricted = quiz.target_form && quiz.target_form !== 'All' && quiz.target_form !== learnerForm;
+          const isRestricted = !canAccessQuizForm(learnerForm, quiz.target_form);
           const startTime = quiz.scheduled_start ? new Date(quiz.scheduled_start) : null;
           const endTime = quiz.scheduled_end ? new Date(quiz.scheduled_end) : null;
           const now = new Date();
