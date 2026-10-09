@@ -82,6 +82,8 @@ const LearningSpace = ({ onStartQuiz }) => {
   const [lessons,       setLessons]       = useState([]);
   const [quizItems,     setQuizItems]     = useState([]);
   const [currentWeek,   setCurrentWeek]   = useState(1);
+  const [dataLoading,   setDataLoading]   = useState(true);
+  const [dataError,     setDataError]     = useState(false);
 
   // Navigation state
   const [activeWeek,     setActiveWeek]     = useState(null);  // null = week list
@@ -104,6 +106,8 @@ const LearningSpace = ({ onStartQuiz }) => {
   }, []);
 
   const loadData = async () => {
+    setDataLoading(true);
+    setDataError(false);
     try {
       const token   = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
@@ -117,6 +121,8 @@ const LearningSpace = ({ onStartQuiz }) => {
           ? payload
           : payload?.lessons || (Array.isArray(payload?.data) ? payload.data : payload?.data?.lessons) || [];
         if (payload?.success !== false) setLessons(lessonData.map(normalizeLesson));
+      } else {
+        setDataError(true);
       }
       if (qr.status === 'fulfilled' && qr.value.data.success) {
         setQuizItems((qr.value.data.quizzes || []).map(q => ({
@@ -130,7 +136,9 @@ const LearningSpace = ({ onStartQuiz }) => {
         })));
       }
     } catch {
-      toast.error('Could not load learning materials');
+      setDataError(true);
+    } finally {
+      setDataLoading(false);
     }
   };
 
@@ -305,6 +313,33 @@ const LearningSpace = ({ onStartQuiz }) => {
   // ════════════════════════════════════════════════════════════════════════════
   // RENDER
   // ════════════════════════════════════════════════════════════════════════════
+
+  // Loading state
+  if (dataLoading) return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[400px] items-center justify-center gap-3">
+      <div className="w-10 h-10 border-4 border-[#006770]/20 border-t-[#006770] rounded-full animate-spin" />
+      <p className="text-sm text-slate-400 font-medium">Loading learning materials…</p>
+      <p className="text-[11px] text-slate-300">This may take a moment if the server is starting up</p>
+    </div>
+  );
+
+  // Error state
+  if (dataError && lessons.length === 0) return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[400px] items-center justify-center gap-3 px-6 text-center">
+      <span className="text-5xl">📚</span>
+      <p className="text-sm font-bold text-[#003B46]">Could not load lessons</p>
+      <p className="text-[11px] text-slate-400 max-w-xs">
+        The server may be starting up. Please wait a moment and try again.
+      </p>
+      <button
+        onClick={() => loadData()}
+        className="mt-2 px-5 py-2.5 bg-[#006770] text-white rounded-xl text-sm font-semibold hover:bg-[#005a62] transition"
+      >
+        🔄 Try Again
+      </button>
+    </div>
+  );
+
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
 

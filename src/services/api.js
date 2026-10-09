@@ -17,7 +17,7 @@ const api = axios.create({
     'Accept': 'application/json',
   },
   withCredentials: false,
-  timeout: 60000, // Increased timeout for Render cold starts
+  timeout: 90000, // Generous timeout for Render cold starts (up to 90s)
 });
 
 // Request interceptor
@@ -44,13 +44,20 @@ return response;
 
     // Handle network errors
     if (error.message === 'Network Error') {
-console.error('Cannot connect to server. The server may be waking up from sleep.');
+      toast.error('Server is starting up — please wait a moment and try again.', {
+        duration: 7000,
+        icon: '⏳'
+      });
       return Promise.reject(error);
     }
 
     // Handle timeouts (Render cold start)
     if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-console.error('Server is waking up (cold start).');
+      toast.error('Server is taking longer than usual to respond. Please try again.', {
+        id: 'timeout',
+        duration: 8000,
+        icon: '⏳'
+      });
       return Promise.reject(error);
     }
 
@@ -296,6 +303,26 @@ export const adminAPI = {
   getAuditLogs: () => api.get('/api/admin/audit-logs'),
   clearAuditLogs: () => api.delete('/api/admin/audit-logs/clear'),
 };
+
+// ============================================
+// Keep-alive ping — prevents Render cold starts
+// Pings /health every 9 minutes so the server
+// never goes to sleep during an active session.
+// ============================================
+const startKeepAlive = () => {
+  const ping = () => {
+    axios.get(`${SERVER_URL}/health`, { timeout: 10000 })
+      .catch(() => { /* silent — just keeping it warm */ });
+  };
+  // Ping immediately on load, then every 9 minutes
+  ping();
+  setInterval(ping, 9 * 60 * 1000);
+};
+
+// Only run in browser, not during SSR
+if (typeof window !== 'undefined') {
+  startKeepAlive();
+}
 
 // Export the API instance and helper functions
 export { api };
