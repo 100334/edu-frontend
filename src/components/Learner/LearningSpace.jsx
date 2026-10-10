@@ -37,45 +37,82 @@ const normalizeLesson = (lesson) => ({
     (typeof lesson.subject === 'string' ? lesson.subject : null),
 });
 
-// ── Stepper bar ───────────────────────────────────────────────────────────────
-const StepperBar = ({ steps, currentStep, completedSteps, onStepClick }) => (
-  <div className="flex items-center gap-0 w-full">
-    {steps.map((step, i) => {
-      const isDone    = completedSteps.includes(step.id);
-      const isCurrent = step.id === currentStep;
-      const isLocked  = !isDone && !isCurrent && i > 0 && !completedSteps.includes(steps[i - 1]?.id);
-      return (
-        <React.Fragment key={step.id}>
-          <button
-            onClick={() => !isLocked && onStepClick(step.id)}
-            disabled={isLocked}
-            className={`flex flex-col items-center gap-1 flex-1 py-2 transition-all ${
-              isLocked ? 'opacity-30 cursor-not-allowed' : 'cursor-pointer'
-            }`}
-          >
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-              isDone    ? 'bg-[#006770] text-white' :
-              isCurrent ? 'bg-[#003B46] text-white ring-2 ring-[#2A9D8F] ring-offset-1' :
-                          'bg-gray-100 text-gray-400'
-            }`}>
-              {isDone ? '✓' : step.emoji}
-            </div>
-            <span className={`text-[9px] font-semibold hidden sm:block ${
-              isCurrent ? 'text-[#003B46]' : isDone ? 'text-[#006770]' : 'text-gray-400'
-            }`}>
-              {step.label}
-            </span>
-          </button>
-          {i < steps.length - 1 && (
-            <div className={`h-0.5 flex-1 mx-1 rounded transition-all ${
-              completedSteps.includes(step.id) ? 'bg-[#006770]' : 'bg-gray-200'
-            }`} />
-          )}
-        </React.Fragment>
-      );
-    })}
-  </div>
-);
+// ── Lesson progress bar ───────────────────────────────────────────────────────
+const StepperBar = ({ steps, currentStep, completedSteps, onStepClick }) => {
+  const currentIdx = steps.findIndex(s => s.id === currentStep);
+  const pct = steps.length > 1
+    ? Math.round((currentIdx / (steps.length - 1)) * 100)
+    : 0;
+
+  return (
+    <div className="px-4 pt-3 pb-3 bg-white border-b border-slate-100 flex-shrink-0">
+
+      {/* Step label + count */}
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-bold text-[#003B46] flex items-center gap-1.5">
+          <span>{steps[currentIdx]?.emoji}</span>
+          <span>{steps[currentIdx]?.label}</span>
+        </span>
+        <span className="text-[10px] text-slate-400 font-medium bg-slate-100 px-2 py-0.5 rounded-full">
+          {currentIdx + 1} / {steps.length}
+        </span>
+      </div>
+
+      {/* Progress track */}
+      <div className="relative h-2.5 bg-slate-100 rounded-full overflow-hidden mb-3">
+        {/* Completed fill */}
+        <div
+          className="absolute left-0 top-0 h-full bg-[#006770] rounded-full transition-all duration-500"
+          style={{ width: `${pct}%` }}
+        />
+        {/* Teal shimmer on active edge */}
+        {pct > 0 && pct < 100 && (
+          <div
+            className="absolute top-0 h-full w-3 bg-[#2A9D8F] rounded-full"
+            style={{ left: `calc(${pct}% - 6px)` }}
+          />
+        )}
+      </div>
+
+      {/* Step dots row */}
+      <div className="flex items-start justify-between">
+        {steps.map((step, i) => {
+          const isDone    = completedSteps.includes(step.id);
+          const isCurrent = step.id === currentStep;
+          const isLocked  = !isDone && !isCurrent && i > 0
+            && !completedSteps.includes(steps[i - 1]?.id);
+
+          return (
+            <button
+              key={step.id}
+              onClick={() => !isLocked && onStepClick(step.id)}
+              disabled={isLocked}
+              title={step.label}
+              className={`flex flex-col items-center gap-1 flex-1 transition-all ${
+                isLocked ? 'opacity-35 cursor-not-allowed' : 'cursor-pointer'
+              }`}
+            >
+              {/* Dot */}
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shadow-sm transition-all ${
+                isDone    ? 'bg-[#006770] text-white' :
+                isCurrent ? 'bg-[#003B46] text-white ring-2 ring-[#2A9D8F] ring-offset-1' :
+                            'bg-white border-2 border-slate-200 text-slate-300'
+              }`}>
+                {isDone ? '✓' : step.emoji}
+              </div>
+              {/* Label */}
+              <span className={`text-[9px] font-semibold leading-none text-center hidden sm:block ${
+                isCurrent ? 'text-[#003B46]' : isDone ? 'text-[#006770]' : 'text-slate-300'
+              }`}>
+                {step.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
 
 // ── Main component ─────────────────────────────────────────────────────────────
 const LearningSpace = ({ onStartQuiz }) => {
@@ -358,16 +395,14 @@ const LearningSpace = ({ onStartQuiz }) => {
         </div>
       </div>
 
-      {/* ── Stepper bar — only when inside a lesson ── */}
+      {/* ── Progress bar — only when inside a lesson ── */}
       {activeLesson && !viewerSrc && (
-        <div className="px-4 pt-3 pb-2 bg-white border-b border-slate-100 flex-shrink-0">
-          <StepperBar
-            steps={availableSteps}
-            currentStep={currentStep}
-            completedSteps={completedSteps}
-            onStepClick={setCurrentStep}
-          />
-        </div>
+        <StepperBar
+          steps={availableSteps}
+          currentStep={currentStep}
+          completedSteps={completedSteps}
+          onStepClick={setCurrentStep}
+        />
       )}
 
       {/* ── Content ── */}
@@ -767,15 +802,26 @@ const LearningSpace = ({ onStartQuiz }) => {
 
             {/* ── STEP: Read Notes ── */}
             {currentStep === 'notes' && (
-              <div className="space-y-0 rounded-xl overflow-hidden border border-slate-200 shadow-sm flex flex-col" style={{ height: '75vh' }}>
-                {/* Toolbar bar */}
+              <div className="space-y-0 rounded-xl overflow-hidden border border-slate-200 shadow-sm flex flex-col" style={{ height: '80vh' }}>
+
+                {/* Toolbar */}
                 <div className="flex items-center justify-between px-4 py-2.5 bg-[#003B46] flex-shrink-0">
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-xs font-bold text-white">📄 Lesson Notes</p>
                     <p className="text-[10px] text-white/50 truncate max-w-[180px]">{activeLesson.title}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {/* Download button */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* Open in new tab */}
+                    <a
+                      href={activeLesson.pdf_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[11px] font-semibold transition"
+                      title="Open in new tab"
+                    >
+                      🔗 Open
+                    </a>
+                    {/* Download */}
                     <a
                       href={activeLesson.pdf_url}
                       download
@@ -786,7 +832,7 @@ const LearningSpace = ({ onStartQuiz }) => {
                     >
                       ⬇ Download
                     </a>
-                    {/* Full screen button */}
+                    {/* Full screen */}
                     <button
                       onClick={() => { setViewerSrc(activeLesson.pdf_url); setViewerTitle(activeLesson.title + ' — Notes'); }}
                       className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[11px] font-semibold transition"
@@ -796,13 +842,41 @@ const LearningSpace = ({ onStartQuiz }) => {
                     </button>
                   </div>
                 </div>
-                {/* PDF viewer — takes remaining height */}
-                <div className="flex-1 bg-slate-900">
+
+                {/* PDF viewer — Google Docs viewer for cross-device compatibility */}
+                <div className="flex-1 bg-slate-900 relative">
                   <iframe
-                    src={activeLesson.pdf_url}
+                    src={`https://docs.google.com/viewer?url=${encodeURIComponent(activeLesson.pdf_url)}&embedded=true`}
                     className="w-full h-full border-none"
                     title="Lesson Notes"
+                    allow="fullscreen"
                   />
+                  {/* Fallback overlay — shown if Google Docs viewer fails to load */}
+                  <noscript>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-800 text-white p-6 text-center">
+                      <span className="text-4xl">📄</span>
+                      <p className="text-sm font-semibold">PDF viewer requires JavaScript</p>
+                      <a href={activeLesson.pdf_url} target="_blank" rel="noopener noreferrer"
+                        className="px-4 py-2 bg-[#006770] text-white rounded-lg text-sm font-semibold">
+                        Open PDF
+                      </a>
+                    </div>
+                  </noscript>
+                </div>
+
+                {/* Mobile fallback hint — if Google Docs doesn't load on phone */}
+                <div className="px-4 py-2 bg-[#003B46]/80 flex-shrink-0 flex items-center justify-between">
+                  <p className="text-[10px] text-white/40">
+                    If the PDF doesn't display, tap Open or Download above.
+                  </p>
+                  <a
+                    href={activeLesson.pdf_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] text-[#2A9D8F] font-semibold hover:text-white transition flex-shrink-0 ml-2"
+                  >
+                    Open PDF →
+                  </a>
                 </div>
               </div>
             )}
@@ -971,17 +1045,27 @@ const LearningSpace = ({ onStartQuiz }) => {
 
       {/* ── Full-screen viewer modal ── */}
       {viewerSrc && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 sm:p-8">
-          <div className="w-full h-full max-w-4xl max-h-[85vh] bg-black rounded-xl overflow-hidden shadow-2xl flex flex-col">
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-0 sm:p-6">
+          <div className="w-full h-full sm:max-w-4xl sm:max-h-[90vh] bg-black sm:rounded-xl overflow-hidden shadow-2xl flex flex-col">
+            {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 bg-[#003B46] flex-shrink-0">
               <span className="text-sm font-medium text-white truncate flex-1">{viewerTitle}</span>
-              {/* Download in full-screen */}
+              {/* Open in new tab */}
+              <a
+                href={viewerSrc}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold transition flex-shrink-0"
+              >
+                🔗 Open
+              </a>
+              {/* Download */}
               <a
                 href={viewerSrc}
                 download
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold transition flex-shrink-0"
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold transition flex-shrink-0"
               >
                 ⬇ Download
               </a>
@@ -992,14 +1076,36 @@ const LearningSpace = ({ onStartQuiz }) => {
                 <XMarkIcon className="w-4 h-4 text-white" />
               </button>
             </div>
-            <div className="flex-1">
-              <iframe
-                src={viewerSrc}
-                className="w-full h-full border-none"
-                title={viewerTitle}
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+
+            {/* Viewer — Google Docs for PDFs, direct for videos */}
+            <div className="flex-1 bg-slate-900 relative">
+              {viewerSrc && !viewerSrc.includes('youtube') && !viewerSrc.match(/\.(mp4|webm|ogg|mov)$/i) ? (
+                /* PDF — use Google Docs viewer */
+                <iframe
+                  src={`https://docs.google.com/viewer?url=${encodeURIComponent(viewerSrc)}&embedded=true`}
+                  className="w-full h-full border-none"
+                  title={viewerTitle}
+                  allow="fullscreen"
+                />
+              ) : (
+                /* Video — direct embed */
+                <iframe
+                  src={viewerSrc}
+                  className="w-full h-full border-none"
+                  title={viewerTitle}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              )}
+            </div>
+
+            {/* Mobile fallback */}
+            <div className="px-4 py-1.5 bg-[#003B46]/80 flex-shrink-0 flex items-center justify-between">
+              <p className="text-[10px] text-white/30">If the file doesn't display, tap Open above.</p>
+              <a href={viewerSrc} target="_blank" rel="noopener noreferrer"
+                className="text-[10px] text-[#2A9D8F] font-semibold flex-shrink-0 ml-2">
+                Open →
+              </a>
             </div>
           </div>
         </div>

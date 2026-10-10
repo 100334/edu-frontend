@@ -55,12 +55,12 @@ const FolderCard = ({ name, itemCount, onClick }) => (
 const LessonManagement = () => {
   const [lessons,       setLessons]       = useState([]);
   const [subjects,      setSubjects]      = useState([]);
-  const [classes,       setClasses]       = useState([]);
   const [quizzes,       setQuizzes]       = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [showModal,     setShowModal]     = useState(false);
   const [editingLesson, setEditingLesson] = useState(null);
   const [submitting,    setSubmitting]    = useState(false);
+  const [aiGenerating,  setAiGenerating]  = useState(false);
   const [uploadStatus,  setUploadStatus]  = useState({ video: false, pdf: false });
   const [confirmLesson, setConfirmLesson] = useState(null);
 
@@ -188,24 +188,12 @@ const LessonManagement = () => {
     } catch { setSubjects([]); }
   };
 
-  const loadClasses = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await api.get('/api/admin/classes', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.data.success) setClasses(res.data.classes || []);
-      else setClasses([]);
-    } catch { setClasses([]); }
-  };
-
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
       const auth  = { headers: { Authorization: `Bearer ${token}` } };
       await loadSubjects();
-      await loadClasses();
       try {
         const r = await api.get('/api/admin/lessons', auth);
         setLessons(r.data.success ? (r.data.lessons || []) : []);
@@ -229,34 +217,33 @@ const LessonManagement = () => {
     return s ? s.name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_-]/g, '') : 'uncategorized';
   };
   const getSubjectLabel = (id) => subjects.find(s => String(s.id) === String(id))?.name || 'General';
-  const getClassLabel   = (id) => classes.find(c => String(c.id) === String(id))?.name || 'Unassigned';
 
-  // subjects scoped to the currently selected class (used in the Add/Edit modal)
-  const subjectsForClass = React.useMemo(() => {
-    if (!activeClassId) return subjects;
-    return subjects.filter(s => String(s.class_id) === String(activeClassId));
-  }, [subjects, activeClassId]);
+  // subjects for the modal dropdown — always show all
+  const subjectsForClass = React.useMemo(() => subjects, [subjects]);
 
-  // lessons scoped to the currently selected class folder
+  // lessons scoped to the currently selected subject folder
   const lessonsInActiveClass = React.useMemo(() => {
     if (activeClassId === null) return lessons;
-    return lessons.filter(l => String(l.class_id) === String(activeClassId));
+    return lessons.filter(l => String(l.subject_id) === String(activeClassId));
   }, [lessons, activeClassId]);
 
-  // classes that actually have lesson content, for the class folder grid
+  // subjects that actually have lessons — used for the subject folder grid
   const classGroups = React.useMemo(() => {
     const map = {};
     lessons.forEach(l => {
-      const cid = l.class_id != null ? String(l.class_id) : 'unassigned';
-      if (!map[cid]) map[cid] = [];
-      map[cid].push(l);
+      const sid = l.subject_id != null ? String(l.subject_id) : '__none__';
+      if (!map[sid]) map[sid] = [];
+      map[sid].push(l);
     });
-    return Object.entries(map).map(([classId, items]) => ({
-      classId: classId === 'unassigned' ? null : classId,
-      className: classId === 'unassigned' ? 'Unassigned' : getClassLabel(classId),
-      count: items.length,
-    })).sort((a, b) => a.className.localeCompare(b.className));
-  }, [lessons, classes]);
+    return Object.entries(map).map(([subjectId, items]) => {
+      const subj = subjects.find(s => String(s.id) === subjectId);
+      return {
+        classId:   subjectId === '__none__' ? null : subjectId,
+        className: subj ? subj.name : 'General',
+        count:     items.length,
+      };
+    }).sort((a, b) => a.className.localeCompare(b.className));
+  }, [lessons, subjects]);
 
 
   // ── week grouping ─────────────────────────────────────────────────────────
@@ -302,7 +289,10 @@ const LessonManagement = () => {
   // breadcrumb
   const breadcrumb = () => {
     const parts = ['Lessons'];
-    if (activeClassId !== null) parts.push(getClassLabel(activeClassId));
+    if (activeClassId !== null) {
+      const subj = subjects.find(s => String(s.id) === String(activeClassId));
+      parts.push(subj?.name || 'Subject');
+    }
     if (activeWeek !== null) parts.push(activeWeek === 0 ? 'Unscheduled' : `Week ${activeWeek}`);
     if (activeFolderId) parts.push(folderConfig.find(f => f.id === activeFolderId)?.name || activeFolderId);
     return parts.join(' / ');
@@ -408,6 +398,37 @@ const LessonManagement = () => {
     setShowModal(true);
   };
 
+  // ── AI generate objectives + instructions ─────────────────────────────────
+  const generateLessonContent = async () => {
+    if (!formData.title.trim()) { toast.error('Enter a lesson title first'); return; }
+    setAiGenerating(true);
+    try {
+      const token = localStorage.getItem('token');
+      const subjectName = subjects.find(s => String(s.id) === String(formData.subject_id))?.name || '';
+      const res = await api.post('/api/admin/ai-generate-lesson-content', {
+        title:       formData.title.trim(),
+        subject:     subjectName,
+        target_form: formData.target_form,
+        description: formData.description || '',
+      }, { headers: { Authorization: `Bearer ${token}` } });
+
+      if (res.data.success) {
+        setFormData(p => ({
+          ...p,
+          objectives:   res.data.objectives   || p.objectives,
+          instructions: res.data.instructions || p.instructions,
+        }));
+        toast.success('✨ Objectives and instructions generated!');
+      } else {
+        toast.error(res.data.message || 'AI generation failed');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'AI generation failed');
+    } finally {
+      setAiGenerating(false);
+    }
+  };
+
   // ── grouped resource renderer (mirrors LearningSpace's renderGroupedResources)
   const renderGroupedResources = (items) => {
     if (!items || items.length === 0)
@@ -501,7 +522,7 @@ const LessonManagement = () => {
       <div className="flex items-center justify-between mb-5">
         <span className="text-xs text-gray-400 font-medium">
           {activeClassId === null
-            ? `${lessons.length} lesson${lessons.length !== 1 ? 's' : ''} across ${classGroups.length} class${classGroups.length !== 1 ? 'es' : ''}`
+            ? `${lessons.length} lesson${lessons.length !== 1 ? 's' : ''} across ${classGroups.length} subject${classGroups.length !== 1 ? 's' : ''}`
             : `${lessonsInActiveClass.length} lesson${lessonsInActiveClass.length !== 1 ? 's' : ''} across ${weekGroups.length} week${weekGroups.length !== 1 ? 's' : ''}`}
         </span>
         <div className="flex items-center gap-2">
@@ -558,28 +579,36 @@ const LessonManagement = () => {
         {/* ── Content ── */}
         <div className="flex-1 overflow-y-auto bg-[#F5F2EB]">
 
-          {/* ══ LEVEL 0 — Class folders ══════════════════════════════════════ */}
+          {/* ══ LEVEL 0 — Subject folders ══════════════════════════════════ */}
           {activeClassId === null && !activeFolderId && (
             <div className="p-4">
-              {classes.length === 0 ? (
+              {lessons.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                  <span className="text-5xl mb-3">🏫</span>
-                  <p className="text-sm font-medium">No classes found.</p>
-                  <p className="text-xs text-slate-400 mt-1">Create a class first under Class Management.</p>
+                  <span className="text-5xl mb-3">📚</span>
+                  <p className="text-sm font-medium">No lessons yet.</p>
+                  <button
+                    onClick={() => openModal()}
+                    className="mt-2 text-xs text-[#006770] hover:underline"
+                  >
+                    Add the first lesson →
+                  </button>
+                </div>
+              ) : classGroups.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+                  <span className="text-5xl mb-3">📁</span>
+                  <p className="text-sm font-medium">No subject categories yet.</p>
+                  <p className="text-xs text-slate-400 mt-1">Assign a subject to each lesson to see folders here.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {classes.map(cls => {
-                    const count = classGroups.find(g => String(g.classId) === String(cls.id))?.count || 0;
-                    return (
-                      <FolderCard
-                        key={cls.id}
-                        name={cls.name}
-                        itemCount={count}
-                        onClick={() => setActiveClassId(cls.id)}
-                      />
-                    );
-                  })}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {classGroups.map(group => (
+                    <FolderCard
+                      key={group.classId ?? '__none__'}
+                      name={group.className}
+                      itemCount={group.count}
+                      onClick={() => setActiveClassId(group.classId)}
+                    />
+                  ))}
                 </div>
               )}
             </div>
@@ -591,7 +620,7 @@ const LessonManagement = () => {
               {lessonsInActiveClass.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-slate-400">
                   <span className="text-5xl mb-3">📅</span>
-                  <p className="text-sm font-medium">No lessons yet for {getClassLabel(activeClassId)}.</p>
+                  <p className="text-sm font-medium">No lessons yet for this subject.</p>
                   <button
                     onClick={() => openModal()}
                     className="mt-2 text-xs text-[#006770] hover:underline"
@@ -776,9 +805,7 @@ const LessonManagement = () => {
                     {subjectsForClass.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                   {subjectsForClass.length === 0 && (
-                    <p className="text-[10px] text-red-500 mt-1">
-                      {activeClassId ? `No subjects found for ${getClassLabel(activeClassId)}.` : 'No subjects found.'}
-                    </p>
+                    <p className="text-[10px] text-red-500 mt-1">No subjects found.</p>
                   )}
                 </div>
                 <div>
@@ -921,9 +948,23 @@ const LessonManagement = () => {
 
               {/* Objectives */}
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">
-                  Learning Objectives <span className="text-gray-400 font-normal">(optional)</span>
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-semibold text-gray-600">
+                    Learning Objectives <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  {/* AI Generate button */}
+                  <button
+                    type="button"
+                    onClick={generateLessonContent}
+                    disabled={aiGenerating || !formData.title.trim()}
+                    className="flex items-center gap-1.5 px-3 py-1 bg-violet-600 text-white rounded-lg text-[11px] font-semibold hover:bg-violet-700 transition disabled:opacity-50"
+                  >
+                    {aiGenerating
+                      ? <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Generating…</>
+                      : '✨ AI Generate'
+                    }
+                  </button>
+                </div>
                 <textarea value={formData.objectives}
                   onChange={e => setFormData(p => ({ ...p, objectives: e.target.value }))}
                   rows={3}
