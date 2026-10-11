@@ -35,6 +35,7 @@ import SecurityLogs from '../../components/Admin/SecurityLogs';
 import QuizManagement from '../../components/Admin/QuizManagement';
 import LessonManagement from '../../components/Admin/LessonManagement'; // NEW
 import AnnouncementManagement from '../../components/Admin/AnnouncementManagement';
+import TokenManagement from '../../components/Admin/TokenManagement';
 
 // Theme constants — aligned with LearnerDashboard
 const HEADER_BG = '#003B46';
@@ -260,16 +261,17 @@ export default function AdminDashboard() {
 
   // Navigation items
   const navItems = [
-    { id: 'register-learner',  icon: UserPlusIcon,               label: 'Register Learner' },
-    { id: 'register-teacher',  icon: AcademicCapIcon,            label: 'Register Teacher' },
-    { id: 'lesson-management', icon: BookOpenIcon,               label: 'Lesson Management' },
-    { id: 'announcements',     icon: MegaphoneIcon,              label: 'Announcements' },
-    { id: 'quiz-management',   icon: ClipboardDocumentListIcon,  label: 'Quiz Management' },
-    { id: 'class-management',  icon: RectangleGroupIcon,         label: 'Class Management' },
+    { id: 'register-learner',  icon: UserPlusIcon,               label: 'Register Learner'   },
+    { id: 'register-teacher',  icon: AcademicCapIcon,            label: 'Register Teacher'   },
+    { id: 'lesson-management', icon: BookOpenIcon,               label: 'Lesson Management'  },
+    { id: 'token-management',  icon: BuildingLibraryIcon,        label: 'Access Tokens'      },
+    { id: 'announcements',     icon: MegaphoneIcon,              label: 'Announcements'      },
+    { id: 'quiz-management',   icon: ClipboardDocumentListIcon,  label: 'Quiz Management'    },
+    { id: 'class-management',  icon: RectangleGroupIcon,         label: 'Class Management'   },
     { id: 'subject-management',icon: BookmarkSquareIcon,         label: 'Subject Management' },
-    { id: 'security-logs',     icon: ShieldCheckIcon,            label: 'Security Logs' },
-    { id: 'teachers-list',     icon: UserGroupIcon,              label: 'Teachers List' },
-    { id: 'learners-list',     icon: UsersIcon,                  label: 'Learners List' },
+    { id: 'security-logs',     icon: ShieldCheckIcon,            label: 'Security Logs'      },
+    { id: 'teachers-list',     icon: UserGroupIcon,              label: 'Teachers List'      },
+    { id: 'learners-list',     icon: UsersIcon,                  label: 'Learners List'      },
   ];
 
   // Save active nav to sessionStorage
@@ -423,6 +425,8 @@ toast.error('Failed to load statistics');
         return <RegisterTeacher onSuccess={() => handleNavClick('teachers-list')} />;
       case 'lesson-management':
         return <LessonManagement />;
+      case 'token-management':
+        return <TokenManagement />;
       case 'announcements':
         return <AnnouncementManagement />;
       case 'quiz-management':

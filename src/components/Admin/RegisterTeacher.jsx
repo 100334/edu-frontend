@@ -3,30 +3,64 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import {
-  UserIcon,
-  EnvelopeIcon,
-  PhoneIcon,
-  MapPinIcon,
-  LockClosedIcon,
-  ShieldCheckIcon,
-  BuildingOfficeIcon,
-  BeakerIcon,
-  EyeIcon,
-  EyeSlashIcon,
-  ArrowRightIcon,
-  ArrowLeftIcon,
-  CheckCircleIcon,
+  UserIcon, EnvelopeIcon, PhoneIcon, MapPinIcon,
+  LockClosedIcon, ShieldCheckIcon, BuildingOfficeIcon, BeakerIcon,
+  EyeIcon, EyeSlashIcon, ArrowRightIcon, ArrowLeftIcon, CheckCircleIcon,
 } from '@heroicons/react/24/outline';
 
-const inp = (err) => `w-full px-3 py-2.5 border rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#00B4D8] focus:border-[#00B4D8] transition ${err ? 'border-red-300 bg-red-50' : 'border-gray-200'}`;
+const inp = (err) =>
+  `w-full px-3 py-2.5 border rounded-lg text-sm bg-white focus:outline-none focus:ring-1
+   focus:ring-[#00B4D8] focus:border-[#00B4D8] transition ${err ? 'border-red-300 bg-red-50' : 'border-gray-200'}`;
 
+// ── Field defined OUTSIDE the component so it is never remounted on re-render ──
+const Field = ({
+  label, field, type = 'text', placeholder, Icon: FieldIcon, required, autoFocus,
+  value, error, onChange,
+  showPassword, showConfirmPassword, onTogglePassword, onToggleConfirmPassword,
+}) => {
+  const isPass    = type === 'password';
+  const showState = field === 'password' ? showPassword : showConfirmPassword;
+  const toggle    = field === 'password' ? onTogglePassword : onToggleConfirmPassword;
+
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-gray-600 mb-1">
+        {label}{required && <span className="text-red-400 ml-0.5">*</span>}
+      </label>
+      <div className="relative">
+        {FieldIcon && (
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <FieldIcon className="w-4 h-4 text-gray-400" />
+          </div>
+        )}
+        <input
+          type={isPass ? (showState ? 'text' : 'password') : type}
+          value={value}
+          onChange={e => onChange(field, e.target.value)}
+          placeholder={placeholder}
+          autoFocus={autoFocus}
+          className={`${inp(error)} ${FieldIcon ? 'pl-9' : ''} ${isPass ? 'pr-10' : ''}`}
+        />
+        {isPass && (
+          <button type="button" onClick={toggle}
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition">
+            {showState ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
+          </button>
+        )}
+      </div>
+      {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+    </div>
+  );
+};
+
+// ── Main component ─────────────────────────────────────────────────────────────
 const RegisterTeacher = ({ onSuccess }) => {
   const navigate = useNavigate();
-  const [isLoading,              setIsLoading]              = useState(false);
-  const [showPassword,           setShowPassword]           = useState(false);
-  const [showConfirmPassword,    setShowConfirmPassword]    = useState(false);
-  const [currentStep,            setCurrentStep]            = useState(1);
-  const [errors,                 setErrors]                 = useState({});
+  const [isLoading,           setIsLoading]           = useState(false);
+  const [showPassword,        setShowPassword]        = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [currentStep,         setCurrentStep]         = useState(1);
+  const [errors,              setErrors]              = useState({});
   const [formData, setFormData] = useState({
     username: '', email: '', password: '', confirmPassword: '',
     department: '', specialization: '', phone: '', address: '',
@@ -45,9 +79,9 @@ const RegisterTeacher = ({ onSuccess }) => {
       else if (!/\S+@\S+\.\S+/.test(formData.email)) errs.email = 'Enter a valid email';
     }
     if (step === 2) {
-      if (!formData.password)                   errs.password        = 'Password is required';
-      else if (formData.password.length < 6)    errs.password        = 'Minimum 6 characters';
-      if (!formData.confirmPassword)            errs.confirmPassword = 'Please confirm your password';
+      if (!formData.password)                errs.password        = 'Password is required';
+      else if (formData.password.length < 6) errs.password        = 'Minimum 6 characters';
+      if (!formData.confirmPassword)         errs.confirmPassword = 'Please confirm your password';
       else if (formData.password !== formData.confirmPassword) errs.confirmPassword = 'Passwords do not match';
     }
     setErrors(errs);
@@ -81,76 +115,57 @@ const RegisterTeacher = ({ onSuccess }) => {
         setFormData({ username: '', email: '', password: '', confirmPassword: '', department: '', specialization: '', phone: '', address: '' });
         setCurrentStep(1);
         if (goBack) { if (onSuccess) onSuccess(); else navigate('/admin'); }
-      } else toast.error(res.data.message || 'Registration failed');
+      } else {
+        toast.error(res.data.message || 'Registration failed');
+      }
     } catch (err) {
       if      (err.response?.status === 409) toast.error('Username or email already exists');
       else if (err.response?.status === 401) toast.error('Authentication required. Please login again.');
       else toast.error(err.response?.data?.message || 'Registration failed');
-    } finally { setIsLoading(false); }
+    } finally {
+      setIsLoading(false);
+    }
   }, [validateStep, formData, onSuccess, navigate]);
 
-  // ── step definitions ────────────────────────────────────────────────────────
   const steps = [
-    { n: 1, label: 'Personal Info',       Icon: UserIcon         },
-    { n: 2, label: 'Account Security',    Icon: LockClosedIcon   },
-    { n: 3, label: 'Professional Details',Icon: BuildingOfficeIcon},
+    { n: 1, label: 'Personal Info',        Icon: UserIcon          },
+    { n: 2, label: 'Account Security',     Icon: LockClosedIcon    },
+    { n: 3, label: 'Professional Details', Icon: BuildingOfficeIcon },
   ];
 
-  // ── labelled input helper ───────────────────────────────────────────────────
-  const Field = ({ label, field, type = 'text', placeholder, Icon: FieldIcon, required, autoFocus }) => {
-    const isPass    = type === 'password';
-    const showState = field === 'password' ? showPassword : showConfirmPassword;
-    const toggle    = field === 'password' ? () => setShowPassword(p => !p) : () => setShowConfirmPassword(p => !p);
-    return (
-      <div>
-        <label className="block text-xs font-semibold text-gray-600 mb-1">
-          {label}{required && <span className="text-red-400 ml-0.5">*</span>}
-        </label>
-        <div className="relative">
-          {FieldIcon && (
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FieldIcon className="w-4 h-4 text-gray-400" />
-            </div>
-          )}
-          <input
-            type={isPass ? (showState ? 'text' : 'password') : type}
-            value={formData[field]}
-            onChange={e => handleInputChange(field, e.target.value)}
-            placeholder={placeholder}
-            autoFocus={autoFocus}
-            className={`${inp(errors[field])} ${FieldIcon ? 'pl-9' : ''} ${isPass ? 'pr-10' : ''}`}
-          />
-          {isPass && (
-            <button type="button" onClick={toggle}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition">
-              {showState ? <EyeSlashIcon className="w-4 h-4" /> : <EyeIcon className="w-4 h-4" />}
-            </button>
-          )}
-        </div>
-        {errors[field] && <p className="text-xs text-red-500 mt-1">{errors[field]}</p>}
-      </div>
-    );
+  // shared props passed down to Field
+  const fieldProps = {
+    value:                   undefined, // overridden per field
+    onChange:                handleInputChange,
+    showPassword,
+    showConfirmPassword,
+    onTogglePassword:        () => setShowPassword(p => !p),
+    onToggleConfirmPassword: () => setShowConfirmPassword(p => !p),
   };
 
-  // ── render ──────────────────────────────────────────────────────────────────
   return (
     <div className="max-w-xl mx-auto">
+
       {/* Step indicator */}
       <div className="flex items-center mb-6">
         {steps.map((s, i) => (
           <React.Fragment key={s.n}>
             <div className="flex flex-col items-center">
-              <button onClick={() => { if (s.n <= currentStep) setCurrentStep(s.n); }}
+              <button
+                onClick={() => { if (s.n <= currentStep) setCurrentStep(s.n); }}
                 className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all ${
                   currentStep > s.n   ? 'bg-[#006770] border-[#006770] text-white' :
                   currentStep === s.n ? 'bg-white border-[#006770] text-[#006770]' :
                                         'bg-white border-gray-200 text-gray-300'
-                }`}>
+                }`}
+              >
                 {currentStep > s.n
                   ? <CheckCircleIcon className="w-5 h-5" />
                   : <s.Icon className="w-4 h-4" />}
               </button>
-              <span className={`text-[10px] mt-1 font-semibold ${currentStep >= s.n ? 'text-[#006770]' : 'text-gray-300'}`}>{s.label}</span>
+              <span className={`text-[10px] mt-1 font-semibold ${currentStep >= s.n ? 'text-[#006770]' : 'text-gray-300'}`}>
+                {s.label}
+              </span>
             </div>
             {i < steps.length - 1 && (
               <div className={`flex-1 h-px mx-2 mb-4 transition-all ${currentStep > s.n ? 'bg-[#006770]' : 'bg-gray-200'}`} />
@@ -167,10 +182,14 @@ const RegisterTeacher = ({ onSuccess }) => {
             <p className="text-[11px] text-gray-500 mt-0.5">Basic contact details for the teacher</p>
           </div>
           <div className="p-5 space-y-4">
-            <Field label="Full Name"     field="username" placeholder="e.g., John Doe"          Icon={UserIcon}    required autoFocus />
-            <Field label="Email Address" field="email"    placeholder="teacher@school.edu"       Icon={EnvelopeIcon} type="email" required />
-            <Field label="Phone Number"  field="phone"    placeholder="+265 888 123 456"         Icon={PhoneIcon}   />
-            <Field label="Address"       field="address"  placeholder="Physical address"         Icon={MapPinIcon}  />
+            <Field {...fieldProps} label="Full Name"     field="username" value={formData.username} error={errors.username}
+              placeholder="e.g., John Doe"        Icon={UserIcon}     required autoFocus />
+            <Field {...fieldProps} label="Email Address" field="email"    value={formData.email}    error={errors.email}
+              placeholder="teacher@school.edu"    Icon={EnvelopeIcon} type="email" required />
+            <Field {...fieldProps} label="Phone Number"  field="phone"    value={formData.phone}    error={errors.phone}
+              placeholder="+265 888 123 456"      Icon={PhoneIcon} />
+            <Field {...fieldProps} label="Address"       field="address"  value={formData.address}  error={errors.address}
+              placeholder="Physical address"      Icon={MapPinIcon} />
           </div>
         </div>
       )}
@@ -183,8 +202,10 @@ const RegisterTeacher = ({ onSuccess }) => {
             <p className="text-[11px] text-gray-500 mt-0.5">Create a secure login password</p>
           </div>
           <div className="p-5 space-y-4">
-            <Field label="Password"         field="password"        type="password" placeholder="••••••••" Icon={LockClosedIcon}  required autoFocus />
-            <Field label="Confirm Password" field="confirmPassword" type="password" placeholder="••••••••" Icon={ShieldCheckIcon} required />
+            <Field {...fieldProps} label="Password"         field="password"        value={formData.password}        error={errors.password}
+              type="password" placeholder="••••••••" Icon={LockClosedIcon}  required autoFocus />
+            <Field {...fieldProps} label="Confirm Password" field="confirmPassword" value={formData.confirmPassword} error={errors.confirmPassword}
+              type="password" placeholder="••••••••" Icon={ShieldCheckIcon} required />
             <div className="px-3 py-2 bg-[#f0faf9] rounded-lg border border-[#006770]/20 text-[11px] text-[#006770]">
               Password must be at least 6 characters long.
             </div>
@@ -200,8 +221,10 @@ const RegisterTeacher = ({ onSuccess }) => {
             <p className="text-[11px] text-gray-500 mt-0.5">Department and teaching specialization (optional)</p>
           </div>
           <div className="p-5 space-y-4">
-            <Field label="Department"     field="department"     placeholder="e.g., Mathematics, Science" Icon={BuildingOfficeIcon} />
-            <Field label="Specialization" field="specialization" placeholder="e.g., Physics, Algebra"     Icon={BeakerIcon}         />
+            <Field {...fieldProps} label="Department"     field="department"     value={formData.department}     error={errors.department}
+              placeholder="e.g., Mathematics, Science" Icon={BuildingOfficeIcon} />
+            <Field {...fieldProps} label="Specialization" field="specialization" value={formData.specialization} error={errors.specialization}
+              placeholder="e.g., Physics, Algebra"     Icon={BeakerIcon} />
             {/* Summary */}
             <div className="p-4 bg-[#f0faf9] rounded-lg border border-[#006770]/20 space-y-2">
               <p className="text-[10px] font-bold text-[#006770] uppercase tracking-wide">Registration Summary</p>

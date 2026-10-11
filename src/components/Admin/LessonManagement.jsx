@@ -64,55 +64,6 @@ const LessonManagement = () => {
   const [uploadStatus,  setUploadStatus]  = useState({ video: false, pdf: false });
   const [confirmLesson, setConfirmLesson] = useState(null);
 
-  // ── Access tokens ─────────────────────────────────────────────────────────
-  const [showTokens,    setShowTokens]    = useState(false);
-  const [tokenLearners, setTokenLearners] = useState([]);
-  const [tokensLoading, setTokensLoading] = useState(false);
-  const [generatingFor, setGeneratingFor] = useState(null);  // learner id
-  const [revokingFor,   setRevokingFor]   = useState(null);
-
-  const loadTokens = useCallback(async () => {
-    setTokensLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const res = await api.get('/api/admin/tokens', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.data.success) setTokenLearners(res.data.learners || []);
-    } catch { toast.error('Could not load token data'); }
-    finally { setTokensLoading(false); }
-  }, []);
-
-  const generateToken = async (learnerId, durationDays = 365) => {
-    setGeneratingFor(learnerId);
-    try {
-      const token = localStorage.getItem('token');
-      const res = await api.post('/api/admin/tokens/generate',
-        { learner_id: learnerId, duration_days: durationDays },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (res.data.success) {
-        toast.success(`Token generated: ${res.data.token}`);
-        loadTokens();
-      } else toast.error(res.data.message || 'Failed');
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
-    finally { setGeneratingFor(null); }
-  };
-
-  const revokeToken = async (learnerId) => {
-    setRevokingFor(learnerId);
-    try {
-      const token = localStorage.getItem('token');
-      const res = await api.post('/api/admin/tokens/revoke',
-        { learner_id: learnerId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      if (res.data.success) { toast.success('Token revoked'); loadTokens(); }
-      else toast.error(res.data.message || 'Failed');
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
-    finally { setRevokingFor(null); }
-  };
-
   // ── Lesson progress ───────────────────────────────────────────────────────
   const [showProgress,     setShowProgress]     = useState(false);
   const [progressSummary,  setProgressSummary]  = useState([]);
@@ -575,13 +526,6 @@ const LessonManagement = () => {
             : `${lessonsInActiveClass.length} lesson${lessonsInActiveClass.length !== 1 ? 's' : ''} across ${weekGroups.length} week${weekGroups.length !== 1 ? 's' : ''}`}
         </span>
         <div className="flex items-center gap-2">
-          {/* Tokens button */}
-          <button
-            onClick={() => { setShowTokens(true); loadTokens(); }}
-            className="flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-200 text-[#003B46] rounded-lg text-sm font-medium hover:bg-gray-50 transition"
-          >
-            🎫 Tokens
-          </button>
           {/* Progress button */}
           <button
             onClick={() => { setShowProgress(true); loadProgress(); }}
@@ -1106,123 +1050,6 @@ const LessonManagement = () => {
       )}
 
       {/* ── ACCESS TOKENS PANEL ── */}
-      {showTokens && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" onClick={() => setShowTokens(false)} />
-          <div className="relative z-50 w-full max-w-lg h-full bg-[#F5F2EB] shadow-2xl flex flex-col overflow-hidden">
-
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 bg-[#003B46] flex-shrink-0">
-              <div className="flex items-center gap-2 text-white">
-                <span className="text-base">🎫</span>
-                <h2 className="text-sm font-bold">Access Tokens</h2>
-                <span className="text-[10px] text-white/50">— manage lesson access</span>
-              </div>
-              <button onClick={() => setShowTokens(false)}
-                className="w-7 h-7 rounded-lg bg-white/10 hover:bg-red-500 flex items-center justify-center transition">
-                <XMarkIcon className="w-4 h-4 text-white" />
-              </button>
-            </div>
-
-            {/* Info strip */}
-            <div className="px-4 py-2.5 bg-amber-50 border-b border-amber-100 flex-shrink-0">
-              <p className="text-[11px] text-amber-700">
-                🎫 Learners need a valid token to access lessons. Generate one per learner and share it with them. Tokens expire after 1 year by default.
-              </p>
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {tokensLoading ? (
-                <div className="flex items-center justify-center py-16">
-                  <div className="w-7 h-7 border-4 border-[#006770]/20 border-t-[#006770] rounded-full animate-spin" />
-                </div>
-              ) : tokenLearners.length === 0 ? (
-                <div className="text-center py-12">
-                  <span className="text-4xl">🎫</span>
-                  <p className="text-sm text-slate-400 mt-2">No learners found.</p>
-                </div>
-              ) : tokenLearners.map(learner => {
-                const isActive  = learner.token_active;
-                const isExpired = learner.token_expired;
-                const hasToken  = !!(learner.access_token);
-
-                return (
-                  <div key={learner.id} className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                    <div className="flex items-center gap-3 px-4 py-3">
-                      {/* Avatar */}
-                      <div className="w-9 h-9 rounded-full bg-[#006770]/10 text-[#006770] flex items-center justify-center font-bold text-sm flex-shrink-0">
-                        {(learner.name || '?')[0].toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-[#003B46] truncate">{learner.name}</p>
-                        <p className="text-[10px] text-slate-400">{learner.reg_number} · {learner.form}</p>
-                        {hasToken && (
-                          <p className="text-[10px] font-mono text-slate-500 mt-0.5">
-                            {learner.access_token}
-                          </p>
-                        )}
-                      </div>
-                      {/* Status badge */}
-                      <span className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        isActive  ? 'bg-green-100 text-green-700' :
-                        isExpired ? 'bg-red-100 text-red-600'    :
-                                    'bg-gray-100 text-gray-500'
-                      }`}>
-                        {isActive ? '✓ Active' : isExpired ? 'Expired' : 'No token'}
-                      </span>
-                    </div>
-
-                    {/* Expiry info */}
-                    {hasToken && learner.token_expires_at && (
-                      <div className="px-4 pb-2">
-                        <p className="text-[10px] text-slate-400">
-                          {isExpired ? 'Expired' : 'Expires'}: {new Date(learner.token_expires_at).toLocaleDateString('en', { dateStyle: 'medium' })}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Actions */}
-                    <div className="flex border-t border-slate-100">
-                      <button
-                        onClick={() => generateToken(learner.id, 365)}
-                        disabled={generatingFor === learner.id}
-                        className="flex-1 py-2 text-xs font-semibold text-[#006770] hover:bg-[#006770]/5 transition border-r border-slate-100 flex items-center justify-center gap-1.5 disabled:opacity-50"
-                      >
-                        {generatingFor === learner.id
-                          ? <><div className="w-3 h-3 border-2 border-[#006770]/30 border-t-[#006770] rounded-full animate-spin" /> Generating…</>
-                          : `${hasToken ? '🔄 Renew' : '✨ Generate'} Token (1 yr)`
-                        }
-                      </button>
-                      {hasToken && (
-                        <button
-                          onClick={() => revokeToken(learner.id)}
-                          disabled={revokingFor === learner.id}
-                          className="flex-1 py-2 text-xs font-semibold text-red-500 hover:bg-red-50 transition flex items-center justify-center gap-1.5 disabled:opacity-50"
-                        >
-                          {revokingFor === learner.id
-                            ? <><div className="w-3 h-3 border-2 border-red-200 border-t-red-500 rounded-full animate-spin" /> Revoking…</>
-                            : '🚫 Revoke'
-                          }
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Footer */}
-            <div className="px-4 py-3 border-t border-gray-100 flex-shrink-0">
-              <button onClick={loadTokens}
-                className="w-full py-2 bg-[#003B46] text-white rounded-xl text-xs font-semibold hover:bg-[#005060] transition flex items-center justify-center gap-2">
-                🔄 Refresh
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ── LESSON PROGRESS PANEL ── */}
       {showProgress && (
         <div className="fixed inset-0 z-50 flex justify-end">
