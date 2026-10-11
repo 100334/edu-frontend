@@ -116,22 +116,25 @@ const StepperBar = ({ steps, currentStep, completedSteps, onStepClick }) => {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 const LearningSpace = ({ onStartQuiz }) => {
-  const [lessons,       setLessons]       = useState([]);   // all accessible lessons
+  const [lessons,       setLessons]       = useState([]);
   const [quizItems,     setQuizItems]     = useState([]);
   const [currentWeek,   setCurrentWeek]   = useState(1);
+  const [dataLoading,   setDataLoading]   = useState(true);
+  const [dataError,     setDataError]     = useState(false);
+  const [tokenRequired, setTokenRequired] = useState(false);
 
   // Navigation state
-  const [activeWeek,     setActiveWeek]     = useState(null);  // null = week list
-  const [activeSubject,  setActiveSubject]  = useState(null);  // null = subject folders
-  const [activeLesson,   setActiveLesson]   = useState(null);
-  const [activeLessonNum, setActiveLessonNum] = useState(1);  // null = folder contents
-  const [activeFolderId, setActiveFolderId] = useState(null);  // 'results' only
+  const [activeWeek,      setActiveWeek]      = useState(null);
+  const [activeSubject,   setActiveSubject]   = useState(null);
+  const [activeLesson,    setActiveLesson]    = useState(null);
+  const [activeLessonNum, setActiveLessonNum] = useState(1);
+  const [activeFolderId,  setActiveFolderId]  = useState(null);
 
   // Lesson stepper
   const [currentStep,    setCurrentStep]    = useState('intro');
   const [completedSteps, setCompletedSteps] = useState([]);
 
-  // Video/PDF viewer modal (for full-screen)
+  // Video/PDF viewer
   const [viewerSrc,   setViewerSrc]   = useState(null);
   const [viewerTitle, setViewerTitle] = useState('');
 
@@ -143,8 +146,8 @@ const LearningSpace = ({ onStartQuiz }) => {
   const loadData = async () => {
     setDataLoading(true);
     setDataError(false);
+    setTokenRequired(false);
 
-    // Safety timeout — if server takes >25s, show error instead of infinite spinner
     const timeout = setTimeout(() => {
       setDataLoading(false);
       setDataError(true);
@@ -153,20 +156,19 @@ const LearningSpace = ({ onStartQuiz }) => {
     try {
       const token   = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
-      const [lr, qr, rr] = await Promise.allSettled([
-        api.get('/api/learner/lessons?mode=schedule', { headers }),
-        api.get('/api/quiz/quizzes',                  { headers }),
-        api.get('/api/learner/lessons?mode=reference', { headers }),
+
+      // Fetch all accessible lessons (own form + other forms) in one request
+      const [lr, qr] = await Promise.allSettled([
+        api.get('/api/learner/lessons', { headers }),
+        api.get('/api/quiz/quizzes',    { headers }),
       ]);
 
       clearTimeout(timeout);
 
       if (lr.status === 'fulfilled') {
         const payload = lr.value.data;
-        // Check for token_required gate
         if (payload?.token_required) {
           setTokenRequired(true);
-          clearTimeout(timeout);
           setDataLoading(false);
           return;
         }
@@ -175,20 +177,13 @@ const LearningSpace = ({ onStartQuiz }) => {
           : payload?.lessons || (Array.isArray(payload?.data) ? payload.data : payload?.data?.lessons) || [];
         if (payload?.success !== false) setLessons(lessonData.map(normalizeLesson));
       } else {
-        // Check if the rejection was a 403 token error
         const respData = lr.reason?.response?.data;
         if (respData?.token_required) {
           setTokenRequired(true);
-          clearTimeout(timeout);
           setDataLoading(false);
           return;
         }
         setDataError(true);
-      }
-
-      // Reference library lessons (other form)
-      if (rr.status === 'fulfilled' && rr.value.data.success) {
-        setRefLessons((rr.value.data.lessons || []).map(normalizeLesson));
       }
 
       if (qr.status === 'fulfilled' && qr.value.data.success) {
@@ -548,79 +543,6 @@ const LearningSpace = ({ onStartQuiz }) => {
                 </div>
               );
             })}
-
-            {/* Reference Library — lessons from other forms */}
-            {refLessons.length > 0 && (
-              <div>
-                <button
-                  onClick={() => setShowRefLib(o => !o)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-white border border-blue-100 rounded-xl hover:border-blue-200 hover:shadow-sm transition"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
-                      <span className="text-lg">📚</span>
-                    </div>
-                    <div className="text-left">
-                      <p className="text-sm font-bold text-[#003B46]">Reference Library</p>
-                      <p className="text-[10px] text-gray-400 mt-0.5">
-                        {refLessons.length} lesson{refLessons.length !== 1 ? 's' : ''} from other forms — for reference only
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-gray-400 text-sm">{showRefLib ? '▾' : '▸'}</span>
-                </button>
-
-                {showRefLib && (() => {
-                  // Group ref lessons by subject
-                  const subjectMap = {};
-                  refLessons.forEach(l => {
-                    const s = l.subject_name || 'General';
-                    if (!subjectMap[s]) subjectMap[s] = [];
-                    subjectMap[s].push(l);
-                  });
-                  return (
-                    <div className="mt-2 space-y-2 pl-2">
-                      {Object.entries(subjectMap).map(([subject, sLessons]) => (
-                        <div key={subject} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                          {/* Subject header */}
-                          <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-100">
-                            <span className="text-sm">📁</span>
-                            <span className="text-xs font-semibold text-slate-700">{subject}</span>
-                            <span className="text-[10px] text-slate-400 bg-slate-200 px-1.5 py-0.5 rounded-full">
-                              {sLessons.length}
-                            </span>
-                            {/* show target_form badge */}
-                            <span className="ml-auto text-[10px] px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-semibold">
-                              {sLessons[0]?.target_form}
-                            </span>
-                          </div>
-                          {/* Lesson rows */}
-                          {sLessons.map((lesson, idx) => (
-                            <button
-                              key={lesson.id}
-                              onClick={() => {
-                                setActiveSubject(lesson.subject_name || 'General');
-                                openLesson(lesson, idx + 1);
-                              }}
-                              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[#f0faf9] transition text-left border-b border-slate-50 last:border-0"
-                            >
-                              <span className="text-base flex-shrink-0">
-                                {lesson.resource_type === 'video' ? '🎬' : '📄'}
-                              </span>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-xs font-semibold text-[#003B46] truncate">{lesson.title}</p>
-                                <p className="text-[10px] text-slate-400">Week {lesson.week_number}</p>
-                              </div>
-                              <ChevronRightIcon className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" />
-                            </button>
-                          ))}
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
 
             {/* My Results */}
             <div
