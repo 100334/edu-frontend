@@ -116,14 +116,9 @@ const StepperBar = ({ steps, currentStep, completedSteps, onStepClick }) => {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 const LearningSpace = ({ onStartQuiz }) => {
-  const [lessons,       setLessons]       = useState([]);   // own-form (schedule)
-  const [refLessons,    setRefLessons]    = useState([]);   // other-form (reference)
+  const [lessons,       setLessons]       = useState([]);   // all accessible lessons
   const [quizItems,     setQuizItems]     = useState([]);
   const [currentWeek,   setCurrentWeek]   = useState(1);
-  const [dataLoading,   setDataLoading]   = useState(true);
-  const [dataError,     setDataError]     = useState(false);
-  const [tokenRequired, setTokenRequired] = useState(false);  // 403 token gate
-  const [showRefLib,    setShowRefLib]    = useState(false); // toggle reference section
 
   // Navigation state
   const [activeWeek,     setActiveWeek]     = useState(null);  // null = week list
