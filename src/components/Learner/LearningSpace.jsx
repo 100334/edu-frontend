@@ -116,11 +116,13 @@ const StepperBar = ({ steps, currentStep, completedSteps, onStepClick }) => {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 const LearningSpace = ({ onStartQuiz }) => {
-  const [lessons,       setLessons]       = useState([]);
+  const [lessons,       setLessons]       = useState([]);   // own-form (schedule)
+  const [refLessons,    setRefLessons]    = useState([]);   // other-form (reference)
   const [quizItems,     setQuizItems]     = useState([]);
   const [currentWeek,   setCurrentWeek]   = useState(1);
   const [dataLoading,   setDataLoading]   = useState(true);
   const [dataError,     setDataError]     = useState(false);
+  const [showRefLib,    setShowRefLib]    = useState(false); // toggle reference section
 
   // Navigation state
   const [activeWeek,     setActiveWeek]     = useState(null);  // null = week list
@@ -145,13 +147,24 @@ const LearningSpace = ({ onStartQuiz }) => {
   const loadData = async () => {
     setDataLoading(true);
     setDataError(false);
+
+    // Safety timeout — if server takes >25s, show error instead of infinite spinner
+    const timeout = setTimeout(() => {
+      setDataLoading(false);
+      setDataError(true);
+    }, 25000);
+
     try {
       const token   = localStorage.getItem('token');
       const headers = { Authorization: `Bearer ${token}` };
-      const [lr, qr] = await Promise.allSettled([
-        api.get('/api/learner/lessons',  { headers }),
-        api.get('/api/quiz/quizzes',     { headers }),
+      const [lr, qr, rr] = await Promise.allSettled([
+        api.get('/api/learner/lessons?mode=schedule', { headers }),
+        api.get('/api/quiz/quizzes',                  { headers }),
+        api.get('/api/learner/lessons?mode=reference', { headers }),
       ]);
+
+      clearTimeout(timeout);
+
       if (lr.status === 'fulfilled') {
         const payload = lr.value.data;
         const lessonData = Array.isArray(payload)
@@ -161,6 +174,12 @@ const LearningSpace = ({ onStartQuiz }) => {
       } else {
         setDataError(true);
       }
+
+      // Reference library lessons (other form)
+      if (rr.status === 'fulfilled' && rr.value.data.success) {
+        setRefLessons((rr.value.data.lessons || []).map(normalizeLesson));
+      }
+
       if (qr.status === 'fulfilled' && qr.value.data.success) {
         setQuizItems((qr.value.data.quizzes || []).map(q => ({
           id: q.id, quiz_id: q.id, title: q.title, description: q.description,
@@ -173,8 +192,10 @@ const LearningSpace = ({ onStartQuiz }) => {
         })));
       }
     } catch {
+      clearTimeout(timeout);
       setDataError(true);
     } finally {
+      clearTimeout(timeout);
       setDataLoading(false);
     }
   };
@@ -353,24 +374,34 @@ const LearningSpace = ({ onStartQuiz }) => {
 
   // Loading state
   if (dataLoading) return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[400px] items-center justify-center gap-3">
-      <div className="w-10 h-10 border-4 border-[#006770]/20 border-t-[#006770] rounded-full animate-spin" />
-      <p className="text-sm text-slate-400 font-medium">Loading learning materials…</p>
-      <p className="text-[11px] text-slate-300">This may take a moment if the server is starting up</p>
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[400px] items-center justify-center gap-4 px-6 text-center">
+      <div className="w-12 h-12 border-4 border-[#006770]/20 border-t-[#006770] rounded-full animate-spin" />
+      <div>
+        <p className="text-sm font-bold text-[#003B46]">Loading your lessons…</p>
+        <p className="text-[11px] text-slate-400 mt-1">This may take up to 30 seconds if the server is starting up</p>
+      </div>
+      <div className="flex gap-1.5 mt-1">
+        {[0, 1, 2].map(i => (
+          <div key={i} className="w-1.5 h-1.5 rounded-full bg-[#006770]/40 animate-bounce"
+            style={{ animationDelay: `${i * 0.15}s` }} />
+        ))}
+      </div>
     </div>
   );
 
   // Error state
   if (dataError && lessons.length === 0) return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[400px] items-center justify-center gap-3 px-6 text-center">
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[400px] items-center justify-center gap-4 px-6 text-center">
       <span className="text-5xl">📚</span>
-      <p className="text-sm font-bold text-[#003B46]">Could not load lessons</p>
-      <p className="text-[11px] text-slate-400 max-w-xs">
-        The server may be starting up. Please wait a moment and try again.
-      </p>
+      <div>
+        <p className="text-sm font-bold text-[#003B46]">Could not load lessons</p>
+        <p className="text-[11px] text-slate-400 mt-1 max-w-xs">
+          The server may be starting up. Please wait a moment and try again.
+        </p>
+      </div>
       <button
         onClick={() => loadData()}
-        className="mt-2 px-5 py-2.5 bg-[#006770] text-white rounded-xl text-sm font-semibold hover:bg-[#005a62] transition"
+        className="px-6 py-2.5 bg-[#006770] text-white rounded-xl text-sm font-semibold hover:bg-[#005a62] transition flex items-center gap-2"
       >
         🔄 Try Again
       </button>
@@ -477,6 +508,79 @@ const LearningSpace = ({ onStartQuiz }) => {
                 </div>
               );
             })}
+
+            {/* Reference Library — lessons from other forms */}
+            {refLessons.length > 0 && (
+              <div>
+                <button
+                  onClick={() => setShowRefLib(o => !o)}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-white border border-blue-100 rounded-xl hover:border-blue-200 hover:shadow-sm transition"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                      <span className="text-lg">📚</span>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-bold text-[#003B46]">Reference Library</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">
+                        {refLessons.length} lesson{refLessons.length !== 1 ? 's' : ''} from other forms — for reference only
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-gray-400 text-sm">{showRefLib ? '▾' : '▸'}</span>
+                </button>
+
+                {showRefLib && (() => {
+                  // Group ref lessons by subject
+                  const subjectMap = {};
+                  refLessons.forEach(l => {
+                    const s = l.subject_name || 'General';
+                    if (!subjectMap[s]) subjectMap[s] = [];
+                    subjectMap[s].push(l);
+                  });
+                  return (
+                    <div className="mt-2 space-y-2 pl-2">
+                      {Object.entries(subjectMap).map(([subject, sLessons]) => (
+                        <div key={subject} className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                          {/* Subject header */}
+                          <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 border-b border-slate-100">
+                            <span className="text-sm">📁</span>
+                            <span className="text-xs font-semibold text-slate-700">{subject}</span>
+                            <span className="text-[10px] text-slate-400 bg-slate-200 px-1.5 py-0.5 rounded-full">
+                              {sLessons.length}
+                            </span>
+                            {/* show target_form badge */}
+                            <span className="ml-auto text-[10px] px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full font-semibold">
+                              {sLessons[0]?.target_form}
+                            </span>
+                          </div>
+                          {/* Lesson rows */}
+                          {sLessons.map((lesson, idx) => (
+                            <button
+                              key={lesson.id}
+                              onClick={() => {
+                                setActiveSubject(lesson.subject_name || 'General');
+                                openLesson(lesson, idx + 1);
+                              }}
+                              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-[#f0faf9] transition text-left border-b border-slate-50 last:border-0"
+                            >
+                              <span className="text-base flex-shrink-0">
+                                {lesson.resource_type === 'video' ? '🎬' : '📄'}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-[#003B46] truncate">{lesson.title}</p>
+                                <p className="text-[10px] text-slate-400">Week {lesson.week_number}</p>
+                              </div>
+                              <ChevronRightIcon className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" />
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
 
             {/* My Results */}
             <div
@@ -882,33 +986,105 @@ const LearningSpace = ({ onStartQuiz }) => {
             )}
 
             {/* ── STEP: Watch Video ── */}
-            {currentStep === 'video' && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-bold text-[#003B46]">🎬 Lesson Video</h3>
-                    <p className="text-[11px] text-slate-400 mt-0.5">Watch the video in full before proceeding.</p>
+            {currentStep === 'video' && (() => {
+              const url = activeLesson.video_url || '';
+              const isYouTube = url.includes('youtube.com') || url.includes('youtu.be');
+              const isVimeo   = url.includes('vimeo.com');
+              const isDirect  = !isYouTube && !isVimeo; // mp4, webm etc.
+
+              // Build embed src for YouTube
+              const embedSrc = isYouTube
+                ? url.includes('embed/')
+                  ? url
+                  : url.includes('youtu.be/')
+                    ? `https://www.youtube.com/embed/${url.split('youtu.be/')[1]?.split('?')[0]}`
+                    : url.replace('watch?v=', 'embed/')
+                : isVimeo
+                  ? url.replace('vimeo.com/', 'player.vimeo.com/video/')
+                  : url;
+
+              return (
+                <div className="space-y-0 rounded-xl overflow-hidden border border-slate-200 shadow-sm flex flex-col" style={{ height: '75vh' }}>
+
+                  {/* Toolbar */}
+                  <div className="flex items-center justify-between px-4 py-2.5 bg-[#003B46] flex-shrink-0">
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-white">🎬 Lesson Video</p>
+                      <p className="text-[10px] text-white/50 truncate max-w-[180px]">{activeLesson.title}</p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {isDirect && (
+                        <a
+                          href={url}
+                          download
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[11px] font-semibold transition"
+                        >
+                          ⬇ Download
+                        </a>
+                      )}
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[11px] font-semibold transition"
+                      >
+                        🔗 Open
+                      </a>
+                      <button
+                        onClick={() => { setViewerSrc(embedSrc); setViewerTitle(activeLesson.title + ' — Video'); }}
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[11px] font-semibold transition"
+                      >
+                        ⛶ Full
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => { setViewerSrc(activeLesson.video_url?.includes('youtube.com') ? activeLesson.video_url.replace('watch?v=', 'embed/') : activeLesson.video_url); setViewerTitle(activeLesson.title + ' — Video'); }}
-                    className="px-3 py-1.5 bg-[#003B46] text-white rounded-lg text-xs font-semibold hover:bg-[#005060] transition"
-                  >
-                    ⛶ Full Screen
-                  </button>
+
+                  {/* Player */}
+                  <div className="flex-1 bg-black">
+                    {isDirect ? (
+                      /* Native HTML5 video — works on all devices for direct MP4/WebM */
+                      <video
+                        src={url}
+                        controls
+                        controlsList="nodownload"
+                        className="w-full h-full"
+                        style={{ maxHeight: '100%' }}
+                        playsInline
+                      >
+                        <p className="text-white text-sm p-4">
+                          Your browser cannot play this video.{' '}
+                          <a href={url} target="_blank" rel="noopener noreferrer" className="text-[#2A9D8F] underline">
+                            Open video
+                          </a>
+                        </p>
+                      </video>
+                    ) : (
+                      /* YouTube / Vimeo — iframe embed */
+                      <iframe
+                        src={embedSrc}
+                        className="w-full h-full border-none"
+                        title="Lesson Video"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                        allowFullScreen
+                      />
+                    )}
+                  </div>
+
+                  {/* Fallback hint */}
+                  <div className="px-4 py-1.5 bg-[#003B46]/80 flex-shrink-0 flex items-center justify-between">
+                    <p className="text-[10px] text-white/30">
+                      {isDirect ? 'Use the player controls above.' : 'If the video doesn\'t load, tap Open.'}
+                    </p>
+                    <a href={url} target="_blank" rel="noopener noreferrer"
+                      className="text-[10px] text-[#2A9D8F] font-semibold flex-shrink-0 ml-2">
+                      Open →
+                    </a>
+                  </div>
                 </div>
-                <div className="rounded-xl overflow-hidden border border-slate-200 shadow-sm bg-slate-900" style={{ height: '55vw', maxHeight: '60vh' }}>
-                  <iframe
-                    src={activeLesson.video_url?.includes('youtube.com')
-                      ? activeLesson.video_url.replace('watch?v=', 'embed/')
-                      : activeLesson.video_url}
-                    className="w-full h-full border-none"
-                    title="Lesson Video"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* ── STEP: Quiz ── */}
             {currentStep === 'quiz' && (() => {
