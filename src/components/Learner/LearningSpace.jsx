@@ -122,6 +122,7 @@ const LearningSpace = ({ onStartQuiz }) => {
   const [currentWeek,   setCurrentWeek]   = useState(1);
   const [dataLoading,   setDataLoading]   = useState(true);
   const [dataError,     setDataError]     = useState(false);
+  const [tokenRequired, setTokenRequired] = useState(false);  // 403 token gate
   const [showRefLib,    setShowRefLib]    = useState(false); // toggle reference section
 
   // Navigation state
@@ -167,11 +168,26 @@ const LearningSpace = ({ onStartQuiz }) => {
 
       if (lr.status === 'fulfilled') {
         const payload = lr.value.data;
+        // Check for token_required gate
+        if (payload?.token_required) {
+          setTokenRequired(true);
+          clearTimeout(timeout);
+          setDataLoading(false);
+          return;
+        }
         const lessonData = Array.isArray(payload)
           ? payload
           : payload?.lessons || (Array.isArray(payload?.data) ? payload.data : payload?.data?.lessons) || [];
         if (payload?.success !== false) setLessons(lessonData.map(normalizeLesson));
       } else {
+        // Check if the rejection was a 403 token error
+        const respData = lr.reason?.response?.data;
+        if (respData?.token_required) {
+          setTokenRequired(true);
+          clearTimeout(timeout);
+          setDataLoading(false);
+          return;
+        }
         setDataError(true);
       }
 
@@ -371,6 +387,35 @@ const LearningSpace = ({ onStartQuiz }) => {
   // ════════════════════════════════════════════════════════════════════════════
   // RENDER
   // ════════════════════════════════════════════════════════════════════════════
+
+  // Token required gate
+  if (tokenRequired) return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[400px] items-center justify-center gap-4 px-6 text-center">
+      <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center">
+        <span className="text-3xl">🎫</span>
+      </div>
+      <div>
+        <p className="text-base font-black text-[#003B46]">Access Token Required</p>
+        <p className="text-sm text-slate-500 mt-1 max-w-xs leading-relaxed">
+          You need a valid access token to view lessons. Please contact your school administrator to get your token.
+        </p>
+      </div>
+      <div className="w-full max-w-xs bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-left space-y-1">
+        <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wide">How to get access</p>
+        <p className="text-[11px] text-amber-600 leading-relaxed">
+          1. Contact your teacher or school admin<br/>
+          2. Ask them to generate a token for you<br/>
+          3. Once issued, your access will be activated automatically
+        </p>
+      </div>
+      <button
+        onClick={() => { setTokenRequired(false); loadData(); }}
+        className="px-5 py-2 border border-gray-200 rounded-xl text-sm text-gray-500 hover:bg-gray-50 transition"
+      >
+        🔄 Check again
+      </button>
+    </div>
+  );
 
   // Loading state
   if (dataLoading) return (
