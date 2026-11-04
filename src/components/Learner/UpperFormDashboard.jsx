@@ -876,35 +876,20 @@ export default function UpperFormDashboard() {
             </div>
           </div>
 
-          {/* Quick-action row moved BELOW header — see main */}
-        </div>
-      </header>
-
-      {/* ── QUICK-ACTION NAV — below header, above content ─────────────────── */}
-      <div className="bg-[#003B46] flex-shrink-0">
-        <div className="container mx-auto px-4">
-          <div className="flex gap-2 pb-3 overflow-x-auto scrollbar-none">
+          {/* Quick-action row — inside header on mobile, hidden on desktop (shown below) */}
+          <div className="flex gap-2 pb-3 overflow-x-auto scrollbar-none lg:hidden">
             {[
               { id: 'learning',    emoji: '🎓', label: 'Learning',    sub: 'Weekly lessons' },
               { id: 'library',     emoji: '📚', label: 'Library',     sub: 'All resources'  },
             ].map(item => (
-              <button
-                key={item.id}
-                onClick={() => setMainView(item.id)}
+              <button key={item.id} onClick={() => setMainView(item.id)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl flex-shrink-0 transition-all ${
-                  mainView === item.id
-                    ? 'bg-white text-[#003B46] shadow-sm'
-                    : 'bg-white/10 text-white/80 hover:bg-white/20'
-                }`}
-              >
+                  mainView === item.id ? 'bg-white text-[#003B46] shadow-sm' : 'bg-white/10 text-white/80 hover:bg-white/20'
+                }`}>
                 <span className="text-base">{item.emoji}</span>
                 <div className="text-left">
-                  <p className={`text-xs font-bold leading-none ${mainView === item.id ? 'text-[#003B46]' : 'text-white'}`}>
-                    {item.label}
-                  </p>
-                  <p className={`text-[9px] mt-0.5 ${mainView === item.id ? 'text-gray-400' : 'text-white/50'}`}>
-                    {item.sub}
-                  </p>
+                  <p className={`text-xs font-bold leading-none ${mainView === item.id ? 'text-[#003B46]' : 'text-white'}`}>{item.label}</p>
+                  <p className={`text-[9px] mt-0.5 ${mainView === item.id ? 'text-gray-400' : 'text-white/50'}`}>{item.sub}</p>
                 </div>
               </button>
             ))}
@@ -914,23 +899,41 @@ export default function UpperFormDashboard() {
               { id: 'attendance',  emoji: '📅', label: 'Attendance',  sub: stats.attendanceRate },
               { id: 'leaderboard', emoji: '🏆', label: 'Leaderboard', sub: currentUserRank ? `Rank #${currentUserRank}` : 'View ranking' },
             ].map(item => (
-              <button
-                key={item.id}
-                onClick={() => togglePanel(item.id)}
+              <button key={item.id} onClick={() => togglePanel(item.id)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-xl flex-shrink-0 transition-all ${
-                  openPanel === item.id
-                    ? 'bg-white text-[#003B46] shadow-sm'
-                    : 'bg-white/10 text-white/80 hover:bg-white/20'
-                }`}
-              >
+                  openPanel === item.id ? 'bg-white text-[#003B46] shadow-sm' : 'bg-white/10 text-white/80 hover:bg-white/20'
+                }`}>
                 <span className="text-base">{item.emoji}</span>
                 <div className="text-left">
-                  <p className={`text-xs font-bold leading-none ${openPanel === item.id ? 'text-[#003B46]' : 'text-white'}`}>
-                    {item.label}
-                  </p>
-                  <p className={`text-[9px] mt-0.5 ${openPanel === item.id ? 'text-gray-400' : 'text-white/50'}`}>
-                    {item.sub}
-                  </p>
+                  <p className={`text-xs font-bold leading-none ${openPanel === item.id ? 'text-[#003B46]' : 'text-white'}`}>{item.label}</p>
+                  <p className={`text-[9px] mt-0.5 ${openPanel === item.id ? 'text-gray-400' : 'text-white/50'}`}>{item.sub}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </header>
+
+      {/* ── DESKTOP-ONLY NAV STRIP — below header on lg+ ───────────────────── */}
+      <div className="hidden lg:block bg-[#003B46] border-t border-white/10 flex-shrink-0">
+        <div className="container mx-auto px-4">
+          <div className="flex gap-2 py-2 overflow-x-auto scrollbar-none">
+            {[
+              { id: 'learning',    emoji: '🎓', label: 'Learning',    sub: 'Weekly lessons', onClick: () => setMainView('learning'),   active: mainView === 'learning'    },
+              { id: 'library',     emoji: '📚', label: 'Library',     sub: 'All resources',  onClick: () => setMainView('library'),    active: mainView === 'library'     },
+              { id: 'overview',    emoji: '🏠', label: 'Overview',    sub: `Avg ${stats.averageScore}`,                                onClick: () => togglePanel('overview'),    active: openPanel === 'overview'    },
+              { id: 'reports',     emoji: '📄', label: 'Reports',     sub: `${stats.reportsCount} term${stats.reportsCount !== 1 ? 's' : ''}`, onClick: () => togglePanel('reports'),     active: openPanel === 'reports'     },
+              { id: 'attendance',  emoji: '📅', label: 'Attendance',  sub: stats.attendanceRate,                                       onClick: () => togglePanel('attendance'),  active: openPanel === 'attendance'  },
+              { id: 'leaderboard', emoji: '🏆', label: 'Leaderboard', sub: currentUserRank ? `Rank #${currentUserRank}` : 'View ranking', onClick: () => togglePanel('leaderboard'), active: openPanel === 'leaderboard' },
+            ].map(item => (
+              <button key={item.id} onClick={item.onClick}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl flex-shrink-0 transition-all ${
+                  item.active ? 'bg-white text-[#003B46] shadow-sm' : 'bg-white/10 text-white/80 hover:bg-white/20'
+                }`}>
+                <span className="text-base">{item.emoji}</span>
+                <div className="text-left">
+                  <p className={`text-xs font-bold leading-none ${item.active ? 'text-[#003B46]' : 'text-white'}`}>{item.label}</p>
+                  <p className={`text-[9px] mt-0.5 ${item.active ? 'text-gray-400' : 'text-white/50'}`}>{item.sub}</p>
                 </div>
               </button>
             ))}
