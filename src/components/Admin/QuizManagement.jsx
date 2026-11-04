@@ -63,6 +63,7 @@ const QuizManagement = () => {
     subject_id: '', title: '', description: '', duration: 30,
     total_marks: 100, section_a_marks: 75, section_b_marks: 25,
     is_active: true, target_form: 'All',
+    week_number: 1,
     exam_year: new Date().getFullYear(),
     exam_type: 'SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION',
     scheduled_start: '', scheduled_end: '',
@@ -154,6 +155,7 @@ const QuizManagement = () => {
     section_a_marks: parseInt(form.section_a_marks),
     section_b_marks: parseInt(form.section_b_marks),
     exam_year:       parseInt(form.exam_year),
+    week_number:     parseInt(form.week_number) || 1,
     scheduled_start: form.scheduled_start ? new Date(form.scheduled_start).toISOString() : null,
     scheduled_end:   form.scheduled_end   ? new Date(form.scheduled_end).toISOString()   : null,
     allow_retake:    !!form.allow_retake,
@@ -467,6 +469,7 @@ const QuizManagement = () => {
     subject_id: '', title: '', description: '', duration: 30,
     total_marks: 100, section_a_marks: 75, section_b_marks: 25,
     is_active: true, target_form: 'All',
+    week_number: 1,
     exam_year: new Date().getFullYear(),
     exam_type: 'SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION',
     scheduled_start: '', scheduled_end: '',
@@ -496,6 +499,7 @@ const QuizManagement = () => {
       exam_type:       quiz.exam_type       || 'SCHOOL CERTIFICATE OF EDUCATION MOCK EXAMINATION',
       scheduled_start: quiz.scheduled_start ? new Date(quiz.scheduled_start).toISOString().slice(0, 16) : '',
       scheduled_end:   quiz.scheduled_end   ? new Date(quiz.scheduled_end).toISOString().slice(0, 16)   : '',
+      week_number:     quiz.week_number     || 1,
       allow_retake:    !!quiz.allow_retake,
     });
     setShowQuizModal(true);
@@ -1011,13 +1015,24 @@ const QuizManagement = () => {
 
               {/* Scheduling */}
               <SectionBlock label="Scheduling (optional)" Icon={CalendarIcon}>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Start</label>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Week Number</label>
+                    <input
+                      type="number" min="1" max="20"
+                      value={quizForm.week_number}
+                      onChange={e => setQuizForm(p => ({ ...p, week_number: parseInt(e.target.value) || 1 }))}
+                      className={inp}
+                      placeholder="e.g. 1"
+                    />
+                    <p className="text-[10px] text-gray-400 mt-1">Which week this quiz appears in</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Opens</label>
                     <input type="datetime-local" value={quizForm.scheduled_start} onChange={e => setQuizForm(p => ({ ...p, scheduled_start: e.target.value }))} className={inp} />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">End</label>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Closes</label>
                     <input type="datetime-local" value={quizForm.scheduled_end} onChange={e => setQuizForm(p => ({ ...p, scheduled_end: e.target.value }))} className={inp} />
                   </div>
                 </div>

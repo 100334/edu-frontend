@@ -876,11 +876,17 @@ export default function UpperFormDashboard() {
             </div>
           </div>
 
-          {/* Quick-action row — always visible, horizontal scroll on mobile */}
+          {/* Quick-action row moved BELOW header — see main */}
+        </div>
+      </header>
+
+      {/* ── QUICK-ACTION NAV — below header, above content ─────────────────── */}
+      <div className="bg-[#003B46] flex-shrink-0">
+        <div className="container mx-auto px-4">
           <div className="flex gap-2 pb-3 overflow-x-auto scrollbar-none">
             {[
               { id: 'learning',    emoji: '🎓', label: 'Learning',    sub: 'Weekly lessons' },
-              { id: 'library',     emoji: '📚', label: 'Library',     sub: 'All resources' },
+              { id: 'library',     emoji: '📚', label: 'Library',     sub: 'All resources'  },
             ].map(item => (
               <button
                 key={item.id}
@@ -930,7 +936,7 @@ export default function UpperFormDashboard() {
             ))}
           </div>
         </div>
-      </header>
+      </div>
 
       {/* ── MAIN CONTENT — Learning Space / Library ─────────────────────────── */}
       <main className="flex-1 container mx-auto px-4 py-4 max-w-7xl">

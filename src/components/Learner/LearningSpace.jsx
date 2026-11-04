@@ -226,9 +226,12 @@ const LearningSpace = ({ onStartQuiz }) => {
     if (activeWeek === null) return [];
     const wd = weekGroups.find(g => g.week === activeWeek);
     if (!wd) return [];
-    // Include all non-quiz lessons — with OR without a subject name
+
+    // Regular lessons (non-quiz resource type)
     const lessonItems = wd.lessons.filter(l => l.resource_type !== 'quiz');
-    return lessonItems.map(lesson => {
+
+    // Attach linked quiz to each lesson
+    const topics = lessonItems.map(lesson => {
       const linkedQuiz = lesson.quiz_id
         ? quizItems.find(q => String(q.quiz_id) === String(lesson.quiz_id))
         : quizItems.find(q =>
@@ -238,6 +241,39 @@ const LearningSpace = ({ onStartQuiz }) => {
           );
       return { ...lesson, linkedQuiz: linkedQuiz || null };
     });
+
+    // Standalone quizzes — those not already linked to any lesson
+    const linkedQuizIds = new Set(
+      topics.map(t => t.linkedQuiz?.quiz_id).filter(Boolean).map(String)
+    );
+    const standaloneQuizzes = wd.lessons
+      .filter(l => l.resource_type === 'quiz' && !linkedQuizIds.has(String(l.quiz_id || l.id)));
+
+    // Also include quizItems with no matching lesson
+    const quizItemsInWeek = quizItems.filter(q =>
+      !q.is_weekend_exam &&
+      q.week_number === activeWeek &&
+      !linkedQuizIds.has(String(q.quiz_id))
+    );
+
+    // Convert standalone quiz items into lesson-like objects so they appear in folders
+    const quizAsTopics = [
+      ...standaloneQuizzes,
+      ...quizItemsInWeek.map(q => ({
+        id:           q.id,
+        title:        q.title,
+        description:  q.description,
+        subject_name: q.subject_name,
+        week_number:  q.week_number,
+        resource_type: 'quiz',
+        pdf_url:      null,
+        video_url:    null,
+        quiz_id:      q.quiz_id,
+        linkedQuiz:   q,
+      })),
+    ];
+
+    return [...topics, ...quizAsTopics];
   }, [activeWeek, weekGroups, quizItems]);
 
   // Weekend exams for the active week
