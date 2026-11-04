@@ -190,7 +190,8 @@ const LearningSpace = ({ onStartQuiz }) => {
         setQuizItems((qr.value.data.quizzes || []).map(q => ({
           id: q.id, quiz_id: q.id, title: q.title, description: q.description,
           resource_type: 'quiz', subject_name: q.subject_name || q.subject || null,
-          week_number: q.week_number || null, is_weekend_exam: q.is_weekend_exam || false,
+          week_number: q.week_number || 1,  // default week 1, not 0
+          is_weekend_exam: q.is_weekend_exam || false,
           disabled: q.disabled || false, attempt_status: q.attempt_status || null,
           allow_retake: q.allow_retake || false,
           scheduled_start: q.scheduled_start || null,
@@ -210,7 +211,7 @@ const LearningSpace = ({ onStartQuiz }) => {
   const weekGroups = React.useMemo(() => {
     const map = {};
     const add = (item) => {
-      const w = item.week_number ?? 0;
+      const w = item.week_number ?? 1;  // default to week 1, not unscheduled
       if (!map[w]) map[w] = { lessons: [], exams: [] };
       (item.is_weekend_exam ? map[w].exams : map[w].lessons).push(item);
     };
@@ -232,10 +233,14 @@ const LearningSpace = ({ onStartQuiz }) => {
 
     // Attach linked quiz to each lesson
     const topics = lessonItems.map(lesson => {
+      const isInLessonWeek = quiz =>
+        Number(quiz.week_number ?? 1) === Number(lesson.week_number ?? 1);
       const linkedQuiz = lesson.quiz_id
-        ? quizItems.find(q => String(q.quiz_id) === String(lesson.quiz_id))
+        ? quizItems.find(q =>
+            String(q.quiz_id) === String(lesson.quiz_id) && isInLessonWeek(q)
+          )
         : quizItems.find(q =>
-            q.week_number === lesson.week_number &&
+            isInLessonWeek(q) &&
             q.subject_name === lesson.subject_name &&
             !q.is_weekend_exam
           );
