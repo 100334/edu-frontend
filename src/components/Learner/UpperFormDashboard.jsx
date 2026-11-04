@@ -878,14 +878,17 @@ export default function UpperFormDashboard() {
           {/* Stats cards — like admin's Learners/Teachers/Classes row */}
           <div className="grid grid-cols-4 gap-2 lg:gap-4 mt-4">
             {[
-              { emoji: '📄', value: stats.reportsCount,         label: 'Reports'    },
-              { emoji: '📅', value: stats.attendanceRate,       label: 'Attendance' },
-              { emoji: '📊', value: stats.averageScore,         label: 'Average'    },
-              { emoji: '📝', value: stats.quizzesCompleted,     label: 'Quizzes'    },
+              { Icon: DocumentTextIcon, value: stats.reportsCount,       label: 'Reports'    },
+              { Icon: CalendarIcon,      value: stats.attendanceRate,     label: 'Attendance' },
+              { Icon: ChartBarIcon,      value: stats.averageScore,       label: 'Average'    },
+              { Icon: BookOpenIcon,      value: stats.quizzesCompleted,   label: 'Quizzes'    },
             ].map(s => (
-              <div key={s.label} className="bg-white/10 backdrop-blur rounded-xl p-2 lg:p-4">
-                <div className="text-lg lg:text-2xl font-black text-white">{s.value}</div>
-                <div className="text-[9px] lg:text-xs text-white/60 font-semibold uppercase tracking-wide">{s.label}</div>
+              <div key={s.label} className="bg-white/10 backdrop-blur rounded-xl p-2 lg:p-4 flex items-center gap-2 lg:gap-3">
+                <s.Icon className="w-5 h-5 lg:w-7 lg:h-7 text-white/60 flex-shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-lg lg:text-2xl font-black text-white leading-none">{s.value}</div>
+                  <div className="text-[9px] lg:text-xs text-white/60 font-semibold uppercase tracking-wide mt-0.5">{s.label}</div>
+                </div>
               </div>
             ))}
           </div>
