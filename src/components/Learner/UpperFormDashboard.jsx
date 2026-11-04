@@ -18,6 +18,8 @@ import {
   ArrowRightOnRectangleIcon,
   XMarkIcon,
   Bars3Icon,
+  AcademicCapIcon,
+  RectangleStackIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
@@ -890,50 +892,50 @@ export default function UpperFormDashboard() {
         </div>
       </header>
 
-      {/* ── DESKTOP NAV BAR (sticky, matches admin) ─────────────────────────── */}
+      {/* ── DESKTOP NAV BAR (matches admin NavItem style) ────────────────────── */}
       <div className="hidden lg:block sticky top-0 z-20 border-b border-[#005a62] shadow-sm" style={{ backgroundColor: NAVBAR_BG }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center gap-1 py-2 overflow-x-auto scrollbar-none">
+          <div className="flex overflow-x-auto scrollbar-none gap-1 py-2">
             {[
-              { id: 'learning',    emoji: '🎓', label: 'Learning',     onClick: () => setMainView('learning'),   active: mainView === 'learning' && !openPanel },
-              { id: 'library',     emoji: '📚', label: 'Library',      onClick: () => setMainView('library'),     active: mainView === 'library && !openPanel' },
-              { id: 'overview',    emoji: '🏠', label: 'Overview',     onClick: () => togglePanel('overview'),    active: openPanel === 'overview'    },
-              { id: 'reports',     emoji: '📄', label: 'Report Cards', onClick: () => togglePanel('reports'),     active: openPanel === 'reports'     },
-              { id: 'attendance',  emoji: '📅', label: 'Attendance',    onClick: () => togglePanel('attendance'),  active: openPanel === 'attendance'  },
-              { id: 'leaderboard', emoji: '🏆', label: 'Leaderboard',   onClick: () => togglePanel('leaderboard'), active: openPanel === 'leaderboard' },
+              { id: 'learning',    Icon: AcademicCapIcon,    label: 'Learning',     onClick: () => setMainView('learning'),   active: mainView === 'learning' && !openPanel },
+              { id: 'library',     Icon: RectangleStackIcon,  label: 'Library',      onClick: () => setMainView('library'),     active: mainView === 'library' && !openPanel },
+              { id: 'overview',    Icon: HomeIcon,            label: 'Overview',     onClick: () => togglePanel('overview'),    active: openPanel === 'overview'    },
+              { id: 'reports',     Icon: DocumentTextIcon,   label: 'Report Cards', onClick: () => togglePanel('reports'),     active: openPanel === 'reports'     },
+              { id: 'attendance',  Icon: CalendarIcon,       label: 'Attendance',    onClick: () => togglePanel('attendance'),  active: openPanel === 'attendance'  },
+              { id: 'leaderboard', Icon: TrophyIcon,          label: 'Leaderboard',   onClick: () => togglePanel('leaderboard'), active: openPanel === 'leaderboard' },
             ].map(item => (
               <button key={item.id} onClick={item.onClick}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                  item.active ? 'bg-white/20 text-white' : 'text-white/70 hover:text-white hover:bg-white/10'
+                className={`flex flex-col items-center gap-1 px-3 lg:px-4 py-2 border-b-2 transition-all duration-200 whitespace-nowrap ${
+                  item.active
+                    ? 'border-[#2A9D8F] text-white'
+                    : 'border-transparent text-white/70 hover:border-white/30 hover:text-white'
                 }`}>
-                <span>{item.emoji}</span>
-                <span>{item.label}</span>
+                <item.Icon className="w-5 h-5 lg:w-6 lg:h-6" />
+                <span className="text-[10px] lg:text-xs font-medium">{item.label}</span>
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ── MOBILE NAV (inside header flow, horizontal scroll) ─────────────── */}
+      {/* ── MOBILE NAV (compact, same icon style) ───────────────────────────── */}
       <div className="lg:hidden bg-[#003B46] flex-shrink-0">
         <div className="px-4">
-          <div className="flex gap-2 pb-3 overflow-x-auto scrollbar-none">
+          <div className="flex gap-1 pb-3 overflow-x-auto scrollbar-none">
             {[
-              { id: 'learning',    emoji: '🎓', label: 'Learning',    onClick: () => setMainView('learning'),   active: mainView === 'learning'    },
-              { id: 'library',     emoji: '📚', label: 'Library',     onClick: () => setMainView('library'),    active: mainView === 'library'     },
-              { id: 'overview',    emoji: '🏠', label: 'Overview',    onClick: () => togglePanel('overview'),    active: openPanel === 'overview'    },
-              { id: 'reports',     emoji: '📄', label: 'Reports',     onClick: () => togglePanel('reports'),     active: openPanel === 'reports'     },
-              { id: 'attendance',  emoji: '📅', label: 'Attendance',  onClick: () => togglePanel('attendance'),  active: openPanel === 'attendance'  },
-              { id: 'leaderboard', emoji: '🏆', label: 'Leaderboard', onClick: () => togglePanel('leaderboard'), active: openPanel === 'leaderboard' },
+              { id: 'learning',    Icon: AcademicCapIcon,    label: 'Learning',     onClick: () => setMainView('learning'),   active: mainView === 'learning'    },
+              { id: 'library',     Icon: RectangleStackIcon,  label: 'Library',      onClick: () => setMainView('library'),    active: mainView === 'library'     },
+              { id: 'overview',    Icon: HomeIcon,            label: 'Overview',    onClick: () => togglePanel('overview'),    active: openPanel === 'overview'    },
+              { id: 'reports',     Icon: DocumentTextIcon,   label: 'Reports',      onClick: () => togglePanel('reports'),     active: openPanel === 'reports'     },
+              { id: 'attendance',  Icon: CalendarIcon,       label: 'Attendance',  onClick: () => togglePanel('attendance'),  active: openPanel === 'attendance'  },
+              { id: 'leaderboard', Icon: TrophyIcon,          label: 'Leaderboard', onClick: () => togglePanel('leaderboard'), active: openPanel === 'leaderboard' },
             ].map(item => (
               <button key={item.id} onClick={item.onClick}
-                className={`flex items-center gap-2 px-3 py-2 rounded-xl flex-shrink-0 transition-all ${
-                  item.active ? 'bg-white text-[#003B46] shadow-sm' : 'bg-white/10 text-white/80 hover:bg-white/20'
+                className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg flex-shrink-0 transition-all ${
+                  item.active ? 'bg-white text-[#003B46] shadow-sm' : 'bg-white/10 text-white/70 hover:bg-white/20'
                 }`}>
-                <span className="text-base">{item.emoji}</span>
-                <div className="text-left">
-                  <p className={`text-xs font-bold leading-none ${item.active ? 'text-[#003B46]' : 'text-white'}`}>{item.label}</p>
-                </div>
+                <item.Icon className="w-4 h-4" />
+                <span className="text-[9px] font-medium leading-none">{item.label}</span>
               </button>
             ))}
           </div>

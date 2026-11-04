@@ -129,6 +129,7 @@ const LearningSpace = ({ onStartQuiz }) => {
   const [activeLesson,    setActiveLesson]    = useState(null);
   const [activeLessonNum, setActiveLessonNum] = useState(1);
   const [activeFolderId,  setActiveFolderId]  = useState(null);
+  const [showQuizFolder,  setShowQuizFolder]  = useState(false);
 
   // Lesson stepper
   const [currentStep,    setCurrentStep]    = useState('intro');
@@ -287,6 +288,15 @@ const LearningSpace = ({ onStartQuiz }) => {
     return weekGroups.find(g => g.week === activeWeek)?.exams || [];
   }, [activeWeek, weekGroups]);
 
+  // Standalone quizzes for the active week (not weekend exams)
+  const weekQuizItems = React.useMemo(() => {
+    if (activeWeek === null) return [];
+    return quizItems.filter(q =>
+      !q.is_weekend_exam &&
+      (q.week_number ?? 1) === activeWeek
+    );
+  }, [activeWeek, quizItems]);
+
   // ── Determine which steps are available for the active lesson ─────────────
   const availableSteps = React.useMemo(() => {
     if (!activeLesson) return STEPS;
@@ -345,12 +355,13 @@ const LearningSpace = ({ onStartQuiz }) => {
   const goBack = () => {
     if (viewerSrc)           { setViewerSrc(null); return; }
     if (activeLesson)        { setActiveLesson(null); setCurrentStep('intro'); setCompletedSteps([]); return; }
+    if (showQuizFolder)      { setShowQuizFolder(false); return; }
     if (activeSubject)       { setActiveSubject(null); return; }
     if (activeFolderId)      { setActiveFolderId(null); return; }
     if (activeWeek !== null) { setActiveWeek(null); setActiveSubject(null); }
   };
 
-  const canGoBack = viewerSrc || activeLesson || activeSubject || activeFolderId || activeWeek !== null;
+  const canGoBack = viewerSrc || activeLesson || showQuizFolder || activeSubject || activeFolderId || activeWeek !== null;
 
   // ── Quiz click logic ───────────────────────────────────────────────────────
   const handleQuizClick = (quiz) => {
@@ -411,6 +422,7 @@ const LearningSpace = ({ onStartQuiz }) => {
     if (activeWeek !== null) p.push(activeWeek === 0 ? 'Unscheduled' : `Week ${activeWeek}`);
     if (activeSubject) p.push(activeSubject);
     if (activeLesson) p.push(lessonWord(activeLessonNum));
+    if (showQuizFolder) p.push('Quizzes');
     if (activeFolderId === 'results') p.push('My Results');
     return p.join(' › ');
   };
@@ -603,7 +615,7 @@ const LearningSpace = ({ onStartQuiz }) => {
         )}
 
         {/* ════ LEVEL 2 — Subject folders ══════════════════════════════════ */}
-        {activeWeek !== null && !activeSubject && !activeLesson && !activeFolderId && (
+        {activeWeek !== null && !activeSubject && !activeLesson && !activeFolderId && !showQuizFolder && (
           <div className="p-4 space-y-4">
 
             {/* Weekend exam card */}
@@ -657,8 +669,28 @@ const LearningSpace = ({ onStartQuiz }) => {
               const subjects = Object.entries(subjectMap);
 
               return (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {subjects.map(([subject, topics]) => {
+                <div className="space-y-3">
+                  {/* Quiz folder card — same style as subject folders */}
+                  {weekQuizItems.length > 0 && (
+                    <button
+                      onClick={() => setShowQuizFolder(true)}
+                      className="w-full flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-amber-200 hover:border-amber-400 hover:shadow-sm transition-all"
+                    >
+                      <div className="w-12 h-10 flex-shrink-0 rounded-lg bg-amber-100 flex items-center justify-center">
+                        <span className="text-2xl">📝</span>
+                      </div>
+                      <div className="text-left">
+                        <p className="text-sm font-bold text-[#003B46]">Quizzes</p>
+                        <p className="text-[10px] text-slate-400">
+                          {weekQuizItems.length} assessment{weekQuizItems.length !== 1 ? 's' : ''}
+                        </p>
+                      </div>
+                      <ChevronRightIcon className="w-4 h-4 text-slate-300 ml-auto" />
+                    </button>
+                  )}
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {subjects.map(([subject, topics]) => {
                     // Count resources inside this subject folder
                     const noteCount  = topics.filter(t => !!t.pdf_url).length;
                     const videoCount = topics.filter(t => !!t.video_url).length;
@@ -689,6 +721,83 @@ const LearningSpace = ({ onStartQuiz }) => {
             })()}
           </div>
         )}
+
+        {/* ════ QUIZ FOLDER VIEW — quiz titles inside the quiz folder ═════ */}
+        {activeWeek !== null && showQuizFolder && !activeLesson && !activeFolderId && (() => {
+          const quizzes = weekQuizItems;
+          if (quizzes.length === 0) {
+            return <div className="p-4 text-center py-12 text-slate-400 text-sm">No quizzes for this week.</div>;
+          }
+
+          // Group by subject
+          const subjectMap = {};
+          quizzes.forEach(q => {
+            const s = q.subject_name || 'General';
+            if (!subjectMap[s]) subjectMap[s] = [];
+            subjectMap[s].push(q);
+          });
+
+          return (
+            <div className="p-4 space-y-4">
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">📝 Quizzes — Week {activeWeek}</p>
+
+              {Object.entries(subjectMap).map(([subject, subjectQuizzes]) => (
+                <div key={subject}>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">{subject}</p>
+                  <div className="space-y-2">
+                    {subjectQuizzes.map(quiz => {
+                      const start = quiz.scheduled_start ? new Date(quiz.scheduled_start) : null;
+                      const end   = quiz.scheduled_end   ? new Date(quiz.scheduled_end)   : null;
+                      const now   = new Date();
+                      const isUpcoming  = start && now < start;
+                      const isClosed    = end   && now > end;
+                      const isDone      = quiz.disabled && !quiz.allow_retake;
+                      const isResumable = quiz.attempt_status === 'in-progress';
+                      const isAvailable = !isUpcoming && !isClosed && !isDone;
+
+                      return (
+                        <div
+                          key={quiz.id}
+                          onClick={() => isAvailable || isResumable ? handleQuizClick(quiz) : undefined}
+                          className={`flex items-center gap-3 px-4 py-3 bg-white rounded-xl border transition-all ${
+                            isClosed ? 'border-gray-100 opacity-50 cursor-not-allowed'
+                            : isAvailable || isResumable ? 'border-slate-200 hover:border-[#006770]/40 hover:shadow-sm cursor-pointer'
+                            : 'border-slate-200 opacity-75'
+                          }`}
+                        >
+                          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                            <span className="text-xl">📝</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-bold text-[#003B46] truncate">{quiz.title}</p>
+                            {quiz.description && (
+                              <p className="text-[11px] text-slate-400 truncate mt-0.5">{quiz.description}</p>
+                            )}
+                            {(start || end) && (
+                              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                {start && <span className="text-[10px] text-slate-400">🕐 Opens {start.toLocaleString('en', { dateStyle: 'short', timeStyle: 'short' })}</span>}
+                                {end   && <span className="text-[10px] text-slate-400">⏳ Closes {end.toLocaleString('en', { dateStyle: 'short', timeStyle: 'short' })}</span>}
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-shrink-0">
+                            {isClosed    && <span className="text-[10px] text-red-400 font-semibold">Closed</span>}
+                            {isUpcoming  && <span className="text-[10px] text-amber-500 font-semibold">⏰ Soon</span>}
+                            {isDone      && <span className="text-[10px] text-green-600 font-semibold">✓ Done</span>}
+                            {isResumable && <span className="text-[10px] text-amber-600 font-semibold">Resume</span>}
+                            {isAvailable && !isResumable && (
+                              <span className="text-xs font-bold text-[#006770]">Start ▶</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* ════ LEVEL 3 — Lesson list within subject ════════════════════ */}
         {activeWeek !== null && activeSubject && !activeLesson && !activeFolderId && (() => {
