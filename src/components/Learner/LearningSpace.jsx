@@ -717,6 +717,7 @@ const LearningSpace = ({ onStartQuiz }) => {
                     );
                   })}
                 </div>
+              </div>
               );
             })()}
           </div>
