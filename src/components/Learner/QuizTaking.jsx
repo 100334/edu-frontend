@@ -204,11 +204,8 @@ toast.dismiss(loadingToast);
 
   if (!quiz || questions.length === 0) {
     return (
-      <div
-        className="flex min-h-screen items-center justify-center bg-cover bg-center px-4"
-        style={{ backgroundImage: "url('/image4.png')" }}
-      >
-        <div className="rounded-2xl border-2 border-[#E9BD35] bg-white/95 px-10 py-8 text-center shadow-xl">
+      <div className="flex min-h-screen items-center justify-center bg-[#F2FBFC] px-4">
+        <div className="rounded-2xl border-2 border-[#12BFC0] bg-white px-10 py-8 text-center shadow-lg">
           <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[#D8EEEE] border-t-[#00777A]" />
           <p className="text-sm font-bold text-[#07575A]">Loading assessment...</p>
         </div>
@@ -224,16 +221,16 @@ toast.dismiss(loadingToast);
     };
 
     return (
-      <div className="min-h-screen bg-cover bg-center bg-fixed px-3 py-5 sm:px-6" style={{ backgroundImage: "url('/image4.png')" }}>
-        <header className="mx-auto mb-6 flex max-w-6xl items-center gap-4 rounded-2xl bg-gradient-to-r from-[#004F55] to-[#008789] px-5 py-4 text-white shadow-lg">
+      <div className="min-h-screen bg-[#F2FBFC] px-3 py-5 sm:px-6">
+        <header className="mx-auto mb-6 flex max-w-3xl items-center gap-4 rounded-2xl bg-gradient-to-r from-[#004F55] to-[#008789] px-5 py-4 text-white shadow-lg">
           <div className="rounded-xl bg-white/10 p-2"><DocumentCheckIcon className="h-8 w-8 text-[#FFD84D]" /></div>
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-100">Progress Schools</p>
             <h1 className="text-xl font-black sm:text-2xl">Assessment Complete</h1>
           </div>
         </header>
-        <main className="mx-auto max-w-5xl space-y-5">
-          <section className="rounded-2xl border-2 border-[#E9BD35] bg-white/95 p-6 text-center shadow-xl sm:p-9">
+        <main className="mx-auto max-w-3xl space-y-5">
+          <section className="rounded-2xl border-2 border-[#12BFC0] bg-white p-6 text-center shadow-sm sm:p-9">
             <p className="text-sm font-bold text-[#668082]">Your score</p>
             <p className="my-2 text-5xl font-black text-[#00676B]">{percentage}%</p>
             <p className="text-sm font-bold text-[#24494B]">{result.earned_points ?? 0} / {result.total_points ?? 0} marks</p>
@@ -247,7 +244,7 @@ toast.dismiss(loadingToast);
           <section className="space-y-3">
             <h2 className="text-lg font-black text-[#07575A]">Answer feedback</h2>
             {(result.answers || []).map((answer, idx) => (
-              <article key={answer.question_id || idx} className="rounded-xl border border-[#E4D18B] bg-white/95 p-4 shadow-sm">
+              <article key={answer.question_id || idx} className="rounded-xl border border-[#D3EEEE] bg-white p-4 shadow-sm">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-2">
                     {answer.is_correct ? <CheckCircleSolid className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-600" /> : <XMarkIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />}
@@ -271,26 +268,23 @@ toast.dismiss(loadingToast);
   }
 
   return (
-    <div
-      className="min-h-screen w-full bg-[#F5FBFC] bg-cover bg-center bg-fixed"
-      style={{ backgroundImage: "url('/image4.png')", backgroundRepeat: "no-repeat", backgroundSize: "100% 100%" }}
-    >
+    <div className="min-h-screen w-full bg-[#F2FBFC]">
       <header className="sticky top-0 z-30 border-b-[3px] border-[#F3C33D] bg-gradient-to-r from-[#004F55] via-[#00777A] to-[#008E8D] text-white shadow-lg">
         <div className="mx-auto flex max-w-[1700px] items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20">
-              <DocumentCheckIcon className="h-7 w-7 text-[#FFD84D]" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20 sm:h-11 sm:w-11">
+              <DocumentCheckIcon className="h-5 w-5 text-[#FFD84D] sm:h-7 sm:w-7" />
             </div>
             <div className="min-w-0">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#BDECE7] sm:text-xs">Progress Schools</p>
-              <h1 className="truncate text-lg font-black leading-tight sm:text-2xl">Assessment</h1>
+              <h1 className="truncate text-base font-black leading-tight sm:text-2xl">Assessment</h1>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2 rounded-full border-2 border-[#F4C43E] bg-[#004F55] px-3 py-2 shadow-md sm:px-5">
-            <ClockIcon className={`h-5 w-5 ${timeLeft < 60 ? 'text-amber-300' : 'text-white'}`} />
+          <div className="flex shrink-0 items-center gap-2 rounded-full border-2 border-[#F4C43E] bg-[#004F55] px-3 py-1.5 shadow-md sm:px-5 sm:py-2">
+            <ClockIcon className={`h-4 w-4 sm:h-5 sm:w-5 ${timeLeft < 60 ? 'text-amber-300' : 'text-white'}`} />
             <div>
               <p className="hidden text-[9px] font-bold uppercase tracking-wider text-teal-100 sm:block">Time remaining</p>
-              <p className={`font-mono text-base font-black tabular-nums sm:text-xl ${timeLeft < 60 ? 'text-amber-300' : 'text-white'}`}>{formatTime(timeLeft)}</p>
+              <p className={`font-mono text-sm font-black tabular-nums sm:text-xl ${timeLeft < 60 ? 'text-amber-300' : 'text-white'}`}>{formatTime(timeLeft)}</p>
             </div>
           </div>
         </div>
@@ -299,53 +293,59 @@ toast.dismiss(loadingToast);
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1700px] px-3 py-5 sm:px-5 lg:px-7">
-        <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[270px_minmax(0,1fr)_300px]">
+      <main className="mx-auto max-w-[1700px] px-3 py-4 sm:px-5 sm:py-5 lg:px-7">
+        {/*
+          Layout:
+          - Portrait mobile / narrow: single column, quiz details collapsed to top summary bar
+          - Landscape mobile / tablet: two columns — question left, navigator right
+          - Desktop xl: three columns — details | question | navigator
+        */}
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_260px] xl:grid-cols-[250px_minmax(0,1fr)_280px]">
 
-          {/* Left: quiz details */}
-          <aside className="overflow-hidden rounded-[22px] border-2 border-[#F0C33F] bg-white/95 shadow-[0_8px_24px_rgba(0,76,80,0.12)]">
-            <div className="flex items-center gap-3 bg-gradient-to-r from-[#00565D] to-[#008487] px-4 py-4 text-white">
-              <DocumentCheckIcon className="h-7 w-7 text-[#FFE16A]" />
-              <h2 className="text-base font-extrabold sm:text-lg">Quiz Details</h2>
+          {/* Quiz details — hidden on mobile portrait, shown as top bar on landscape, full aside on xl */}
+          <aside className="order-2 overflow-hidden rounded-[22px] border-2 border-[#12BFC0] bg-white shadow-sm lg:order-1 xl:block">
+            <div className="flex items-center gap-3 bg-gradient-to-r from-[#00565D] to-[#008487] px-4 py-3 text-white">
+              <DocumentCheckIcon className="h-6 w-6 text-[#FFE16A]" />
+              <h2 className="text-sm font-extrabold sm:text-base">Quiz Details</h2>
             </div>
             <div className="divide-y divide-[#D9E8E8] px-4">
-              <div className="flex items-center gap-3 py-4">
-                <DocumentCheckIcon className="h-7 w-7 shrink-0 text-[#00777A]" />
-                <div><p className="text-xs font-semibold text-[#688183]">Subject</p><p className="text-sm font-bold text-[#123F42]">{quiz.subject_name || quiz.subject?.name || 'Assessment'}</p></div>
+              <div className="flex items-center gap-3 py-3">
+                <DocumentCheckIcon className="h-6 w-6 shrink-0 text-[#00777A]" />
+                <div><p className="text-[11px] font-semibold text-[#688183]">Subject</p><p className="text-sm font-bold text-[#123F42]">{quiz.subject_name || quiz.subject?.name || 'Assessment'}</p></div>
               </div>
-              <div className="flex items-center gap-3 py-4">
-                <FlagIcon className="h-7 w-7 shrink-0 text-[#00777A]" />
-                <div><p className="text-xs font-semibold text-[#688183]">Topic</p><p className="text-sm font-bold text-[#123F42]">{quiz.topic || quiz.title || 'Quiz'}</p></div>
+              <div className="flex items-center gap-3 py-3">
+                <FlagIcon className="h-6 w-6 shrink-0 text-[#00777A]" />
+                <div><p className="text-[11px] font-semibold text-[#688183]">Topic</p><p className="text-sm font-bold text-[#123F42]">{quiz.topic || quiz.title || 'Quiz'}</p></div>
               </div>
-              <div className="flex items-center gap-3 py-4">
-                <DocumentCheckIcon className="h-7 w-7 shrink-0 text-[#00777A]" />
-                <div><p className="text-xs font-semibold text-[#688183]">Questions</p><p className="text-sm font-bold text-[#123F42]">{questions.length}</p></div>
+              <div className="flex items-center gap-3 py-3">
+                <DocumentCheckIcon className="h-6 w-6 shrink-0 text-[#00777A]" />
+                <div><p className="text-[11px] font-semibold text-[#688183]">Questions</p><p className="text-sm font-bold text-[#123F42]">{questions.length}</p></div>
               </div>
-              <div className="flex items-center gap-3 py-4">
-                <CheckCircleSolid className="h-7 w-7 shrink-0 text-[#00777A]" />
-                <div><p className="text-xs font-semibold text-[#688183]">Total Marks</p><p className="text-sm font-bold text-[#123F42]">{quiz.total_marks || questions.reduce((sum, q) => sum + Number(q.marks || 0), 0)}</p></div>
+              <div className="flex items-center gap-3 py-3">
+                <CheckCircleSolid className="h-6 w-6 shrink-0 text-[#00777A]" />
+                <div><p className="text-[11px] font-semibold text-[#688183]">Total Marks</p><p className="text-sm font-bold text-[#123F42]">{quiz.total_marks || questions.reduce((s, q) => s + Number(q.marks || 0), 0)}</p></div>
               </div>
-              <div className="flex items-center gap-3 py-4">
-                <ClockIcon className="h-7 w-7 shrink-0 text-[#00777A]" />
-                <div><p className="text-xs font-semibold text-[#688183]">Duration</p><p className="text-sm font-bold text-[#123F42]">{quiz.duration} Minutes</p></div>
+              <div className="flex items-center gap-3 py-3">
+                <ClockIcon className="h-6 w-6 shrink-0 text-[#00777A]" />
+                <div><p className="text-[11px] font-semibold text-[#688183]">Duration</p><p className="text-sm font-bold text-[#123F42]">{quiz.duration} Minutes</p></div>
               </div>
             </div>
             <div className="h-2 bg-gradient-to-r from-[#00777A] via-[#FFE16A] to-[#00777A]" />
           </aside>
 
           {/* Centre: question and answers */}
-          <section ref={pageRef} className="min-w-0 overflow-hidden rounded-[24px] border-2 border-[#E9B82C] bg-white/95 shadow-[0_10px_30px_rgba(0,76,80,0.12)]">
-            <div className="border-b border-[#E6EEEE] px-5 py-5 sm:px-7">
+          <section ref={pageRef} className="order-1 min-w-0 overflow-hidden rounded-[22px] border-2 border-[#12BFC0] bg-white shadow-sm lg:order-2">
+            <div className="border-b border-[#E6EEEE] px-4 py-4 sm:px-6 sm:py-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-xl font-black text-[#123F42] sm:text-2xl">Question {startIdx + 1} of {questions.length}</h2>
-                <span className="rounded-full border-2 border-[#F0C33F] bg-[#005E64] px-4 py-2 font-mono text-lg font-black text-white shadow-sm">{formatTime(timeLeft)}</span>
+                <h2 className="text-lg font-black text-[#123F42] sm:text-2xl">Question {startIdx + 1} of {questions.length}</h2>
+                <span className="rounded-full border-2 border-[#F0C33F] bg-[#005E64] px-3 py-1.5 font-mono text-base font-black text-white shadow-sm sm:px-4 sm:py-2 sm:text-lg">{formatTime(timeLeft)}</span>
               </div>
-              <div className="mt-4 h-3 overflow-hidden rounded-full border border-[#C7D6D9] bg-[#E8EFF1]">
+              <div className="mt-3 h-2.5 overflow-hidden rounded-full border border-[#C7D6D9] bg-[#E8EFF1] sm:h-3">
                 <div className="h-full rounded-full bg-gradient-to-r from-[#00676B] to-[#00A3A0] transition-all duration-500" style={{ width: `${((startIdx + pageQuestions.length) / questions.length) * 100}%` }} />
               </div>
             </div>
 
-            <div className="space-y-5 px-5 py-6 sm:px-7 sm:py-7">
+            <div className="space-y-5 px-4 py-5 sm:px-6 sm:py-7">
               {pageQuestions.map(({ question: q, questionIndex }, idxInPage) => {
                 const displayIdx = startIdx + idxInPage;
                 const section = q.section === 'B' ? 'B' : 'A';
@@ -413,14 +413,14 @@ toast.dismiss(loadingToast);
           </section>
 
           {/* Right: question navigator */}
-          <aside className="space-y-4">
-            <section className="overflow-hidden rounded-[22px] border-2 border-[#F0C33F] bg-white/95 shadow-[0_8px_24px_rgba(0,76,80,0.12)]">
-              <div className="flex items-center gap-3 bg-gradient-to-r from-[#00565D] to-[#008487] px-4 py-4 text-white">
-                <DocumentCheckIcon className="h-7 w-7 text-[#FFE16A]" />
-                <h2 className="text-base font-extrabold sm:text-lg">Question Navigator</h2>
+          <aside className="order-3 space-y-4">
+            <section className="overflow-hidden rounded-[22px] border-2 border-[#12BFC0] bg-white shadow-sm">
+              <div className="flex items-center gap-3 bg-gradient-to-r from-[#00565D] to-[#008487] px-4 py-3 text-white">
+                <DocumentCheckIcon className="h-6 w-6 text-[#FFE16A]" />
+                <h2 className="text-sm font-extrabold sm:text-base">Question Navigator</h2>
               </div>
               <div className="p-4">
-                <div className="grid grid-cols-5 gap-2">
+                <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
                   {displayQuestions.map(({ questionIndex }, idx) => {
                     const targetPage = Math.floor(idx / QUESTIONS_PER_PAGE);
                     const isCurrent = targetPage === currentPage;
@@ -434,29 +434,29 @@ toast.dismiss(loadingToast);
                             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                           }, 80);
                         }}
-                        className={`aspect-square rounded-xl border-2 text-sm font-black transition ${
+                        className={`aspect-square rounded-xl border-2 text-xs font-black transition sm:text-sm ${
                           isCurrent ? 'border-[#F0B900] bg-gradient-to-b from-[#FFD84D] to-[#F2A900] text-[#173A3D] shadow-md'
                           : isAnswered ? 'border-[#00777A] bg-[#00777A] text-white hover:bg-[#00666B]'
                           : 'border-[#BFCFD4] bg-white text-[#18383C] hover:border-[#00777A] hover:bg-[#F0FAF9]'
                         }`}>
-                        {idx + 1}{isAnswered && !isCurrent && <span className="ml-0.5">✓</span>}
+                        {idx + 1}{isAnswered && !isCurrent && <span>✓</span>}
                       </button>
                     );
                   })}
                 </div>
-                <div className="mt-5 space-y-2 border-t border-[#DCE7E8] pt-4 text-xs font-semibold text-[#29494C]">
-                  <div className="flex items-center gap-2"><span className="h-3.5 w-3.5 rounded bg-[#00777A]" /> Answered <span className="ml-auto h-3.5 w-3.5 rounded bg-[#F3B500]" /> Current</div>
-                  <div className="flex items-center gap-2"><span className="h-3.5 w-3.5 rounded border-2 border-[#BFCFD4] bg-white" /> Not answered</div>
+                <div className="mt-4 space-y-1.5 border-t border-[#DCE7E8] pt-3 text-xs font-semibold text-[#29494C]">
+                  <div className="flex items-center gap-2"><span className="h-3 w-3 rounded bg-[#00777A]" /> Answered <span className="ml-auto h-3 w-3 rounded bg-[#F3B500]" /> Current</div>
+                  <div className="flex items-center gap-2"><span className="h-3 w-3 rounded border-2 border-[#BFCFD4] bg-white" /> Not answered</div>
                 </div>
-                <button onClick={handleConfirmSubmit} className="mt-5 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-b from-[#FFE16A] to-[#F0A900] px-4 py-3.5 text-sm font-black text-[#173A3D] shadow-md transition hover:brightness-105">
+                <button onClick={handleConfirmSubmit} className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-b from-[#FFE16A] to-[#F0A900] px-4 py-3 text-sm font-black text-[#173A3D] shadow-md transition hover:brightness-105">
                   <PaperAirplaneIcon className="h-5 w-5" /> Submit Quiz
                 </button>
-                <button onClick={handleOpenReview} className="mt-3 flex w-full items-center justify-center gap-2 rounded-full border-2 border-[#00777A] bg-white px-4 py-3 text-sm font-extrabold text-[#064F54] transition hover:bg-[#E9F8F6]">
+                <button onClick={handleOpenReview} className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border-2 border-[#00777A] bg-white px-4 py-2.5 text-sm font-extrabold text-[#064F54] transition hover:bg-[#E9F8F6]">
                   <EyeIcon className="h-5 w-5" /> Review Answers
                 </button>
               </div>
             </section>
-            <section className="rounded-[18px] border border-[#E7D58B] bg-white/90 p-4 shadow-sm">
+            <section className="rounded-[18px] border border-[#D3EEEE] bg-white p-4 shadow-sm">
               <div className="flex items-center gap-2 text-[#00676B]"><ExclamationCircleIcon className="h-5 w-5" /><h3 className="text-sm font-extrabold">Assessment Tips</h3></div>
               <p className="mt-2 text-xs leading-relaxed text-[#617B7D]">Your answers are saved when you move between questions. Review your answers before submitting.</p>
             </section>
