@@ -33,6 +33,7 @@ const QuizTaking = ({ quizId, onComplete, questionsPerPage = 1 }) => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [lightboxImage, setLightboxImage] = useState(null);
+  const [showDetails, setShowDetails] = useState(true); // true = details page, false = questions page
   const pageRef = useRef(null);
   const pdfContentRef = useRef(null);
   const navigate = useNavigate();
@@ -267,95 +268,159 @@ toast.dismiss(loadingToast);
     );
   }
 
-  return (
-    <div className="min-h-screen w-full bg-[#F2FBFC]">
-      <header className="sticky top-0 z-30 border-b-[3px] border-[#F3C33D] bg-gradient-to-r from-[#004F55] via-[#00777A] to-[#008E8D] text-white shadow-lg">
-        <div className="mx-auto flex max-w-[1700px] items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/20 sm:h-11 sm:w-11">
-              <DocumentCheckIcon className="h-5 w-5 text-[#FFD84D] sm:h-7 sm:w-7" />
+  // ── QUIZ DETAILS PAGE ──────────────────────────────────────────────────────
+  if (showDetails) {
+    const totalMarks = quiz.total_marks || questions.reduce((s, q) => s + Number(q.marks || 0), 0);
+    return (
+      <div className="min-h-screen w-full bg-[#F2FBFC] flex flex-col">
+        {/* Header */}
+        <header className="w-full border-b-[3px] border-[#F3C33D] bg-gradient-to-r from-[#004F55] via-[#00777A] to-[#008E8D] text-white shadow-lg">
+          <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10">
+                <DocumentCheckIcon className="h-5 w-5 text-[#FFD84D]" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#BDECE7]">Progress Schools</p>
+                <h1 className="text-base font-black leading-tight">Assessment</h1>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#BDECE7] sm:text-xs">Progress Schools</p>
-              <h1 className="truncate text-base font-black leading-tight sm:text-2xl">Assessment</h1>
+            <div className="flex shrink-0 items-center gap-2 rounded-full border-2 border-[#F4C43E] bg-[#004F55] px-3 py-1.5">
+              <ClockIcon className="h-4 w-4 text-white" />
+              <p className="font-mono text-sm font-black tabular-nums">{formatTime(timeLeft)}</p>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2 rounded-full border-2 border-[#F4C43E] bg-[#004F55] px-3 py-1.5 shadow-md sm:px-5 sm:py-2">
-            <ClockIcon className={`h-4 w-4 sm:h-5 sm:w-5 ${timeLeft < 60 ? 'text-amber-300' : 'text-white'}`} />
-            <div>
-              <p className="hidden text-[9px] font-bold uppercase tracking-wider text-teal-100 sm:block">Time remaining</p>
-              <p className={`font-mono text-sm font-black tabular-nums sm:text-xl ${timeLeft < 60 ? 'text-amber-300' : 'text-white'}`}>{formatTime(timeLeft)}</p>
+        </header>
+
+        {/* Details card — centred, full width on phone */}
+        <div className="flex flex-1 items-start justify-center p-4 sm:p-6 sm:items-center">
+          <div className="w-full max-w-lg overflow-hidden rounded-[22px] border-2 border-[#12BFC0] bg-white shadow-lg">
+            {/* Card header */}
+            <div className="bg-gradient-to-r from-[#00565D] to-[#008487] px-5 py-4 text-white">
+              <div className="flex items-center gap-3">
+                <DocumentCheckIcon className="h-7 w-7 text-[#FFE16A]" />
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-widest text-teal-200">Quiz Details</p>
+                  <h2 className="text-lg font-black leading-tight">{quiz.title || 'Assessment'}</h2>
+                </div>
+              </div>
+            </div>
+
+            {/* Detail rows */}
+            <div className="divide-y divide-[#E4F4F4] px-5">
+              {[
+                { Icon: DocumentCheckIcon, label: 'Subject', value: quiz.subject_name || quiz.subject?.name || '—' },
+                { Icon: FlagIcon,          label: 'Topic',   value: quiz.topic || quiz.title || '—' },
+                { Icon: DocumentCheckIcon, label: 'Questions', value: `${questions.length} question${questions.length !== 1 ? 's' : ''}` },
+                { Icon: CheckCircleSolid,  label: 'Total Marks', value: `${totalMarks} marks` },
+                { Icon: ClockIcon,         label: 'Time Allowed', value: `${quiz.duration} minutes` },
+              ].map(({ Icon, label, value }) => (
+                <div key={label} className="flex items-center gap-4 py-3.5">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#E4F4F4]">
+                    <Icon className="h-5 w-5 text-[#00777A]" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[#688183]">{label}</p>
+                    <p className="text-sm font-bold text-[#123F42]">{value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Instructions */}
+            <div className="mx-5 mb-4 rounded-xl bg-[#FFF8DF] border border-[#E8C75B] px-4 py-3">
+              <p className="text-xs font-black text-[#765A08] uppercase tracking-wide mb-1">Instructions</p>
+              <ul className="text-xs text-[#5C4A00] space-y-1">
+                <li>• Answer all questions before the time runs out.</li>
+                <li>• Your answers are auto-saved as you move between questions.</li>
+                <li>• You can review your answers before submitting.</li>
+              </ul>
+            </div>
+
+            {/* Bottom accent + Start button */}
+            <div className="h-1.5 bg-gradient-to-r from-[#00777A] via-[#FFE16A] to-[#00777A]" />
+            <div className="px-5 py-5">
+              <button
+                onClick={() => setShowDetails(false)}
+                className="flex w-full items-center justify-center gap-3 rounded-full bg-gradient-to-r from-[#00656B] to-[#008C8B] py-4 text-lg font-extrabold text-white shadow-lg transition hover:brightness-110 active:scale-[0.98]"
+              >
+                <ChevronRightIcon className="h-6 w-6" />
+                Start Quiz
+              </button>
+              <p className="mt-3 text-center text-xs text-[#688183]">
+                {stats.answered > 0 ? `${stats.answered} of ${stats.total} already answered — continuing from where you left off` : 'Timer starts when the quiz loads'}
+              </p>
             </div>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // ── QUIZ QUESTIONS PAGE ─────────────────────────────────────────────────────
+  return (
+    <div className="min-h-screen w-full bg-[#F2FBFC]">
+      {/* Sticky header */}
+      <header className="sticky top-0 z-30 border-b-[3px] border-[#F3C33D] bg-gradient-to-r from-[#004F55] via-[#00777A] to-[#008E8D] text-white shadow-lg">
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2">
+            {/* Back to details */}
+            <button
+              onClick={() => setShowDetails(true)}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition"
+              title="Quiz details"
+            >
+              <ChevronLeftIcon className="h-5 w-5" />
+            </button>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-bold leading-tight text-[#BDECE7]">{quiz.title || 'Assessment'}</p>
+              <p className="text-[10px] text-teal-200">{stats.answered}/{stats.total} answered</p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 rounded-full border-2 border-[#F4C43E] bg-[#004F55] px-3 py-1.5 shadow-md">
+            <ClockIcon className={`h-4 w-4 ${timeLeft < 60 ? 'text-amber-300' : 'text-white'}`} />
+            <p className={`font-mono text-sm font-black tabular-nums ${timeLeft < 60 ? 'text-amber-300' : 'text-white'}`}>{formatTime(timeLeft)}</p>
+          </div>
+        </div>
+        {/* Progress bar */}
         <div className="h-1.5 bg-white/20">
           <div className="h-full bg-gradient-to-r from-[#FFE477] to-[#F4B900] transition-all duration-500" style={{ width: `${stats.progress}%` }} />
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1700px] px-3 py-4 sm:px-5 sm:py-5 lg:px-7">
-        {/* ── 1. Quiz details — full-width strip ─────────────────────────────── */}
-        <div className="mb-4 overflow-hidden rounded-[18px] border-2 border-[#12BFC0] bg-white shadow-sm">
-          <div className="flex items-center gap-3 bg-gradient-to-r from-[#00565D] to-[#008487] px-4 py-3 text-white">
-            <DocumentCheckIcon className="h-5 w-5 text-[#FFE16A]" />
-            <h2 className="text-sm font-extrabold">Quiz Details</h2>
-          </div>
-          <div className="grid grid-cols-2 divide-x divide-[#D9E8E8] sm:grid-cols-3 lg:grid-cols-5">
-            <div className="flex items-center gap-2 px-4 py-3">
-              <DocumentCheckIcon className="h-5 w-5 shrink-0 text-[#00777A]" />
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold text-[#688183]">Subject</p>
-                <p className="truncate text-xs font-bold text-[#123F42]">{quiz.subject_name || quiz.subject?.name || 'Assessment'}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-3">
-              <FlagIcon className="h-5 w-5 shrink-0 text-[#00777A]" />
-              <div className="min-w-0">
-                <p className="text-[10px] font-semibold text-[#688183]">Topic</p>
-                <p className="truncate text-xs font-bold text-[#123F42]">{quiz.topic || quiz.title || 'Quiz'}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-3">
-              <DocumentCheckIcon className="h-5 w-5 shrink-0 text-[#00777A]" />
-              <div>
-                <p className="text-[10px] font-semibold text-[#688183]">Questions</p>
-                <p className="text-xs font-bold text-[#123F42]">{questions.length}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-3">
-              <CheckCircleSolid className="h-5 w-5 shrink-0 text-[#00777A]" />
-              <div>
-                <p className="text-[10px] font-semibold text-[#688183]">Total Marks</p>
-                <p className="text-xs font-bold text-[#123F42]">{quiz.total_marks || questions.reduce((s, q) => s + Number(q.marks || 0), 0)}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 px-4 py-3">
-              <ClockIcon className="h-5 w-5 shrink-0 text-[#00777A]" />
-              <div>
-                <p className="text-[10px] font-semibold text-[#688183]">Duration</p>
-                <p className="text-xs font-bold text-[#123F42]">{quiz.duration} min</p>
-              </div>
-            </div>
-          </div>
-          <div className="h-1.5 bg-gradient-to-r from-[#00777A] via-[#FFE16A] to-[#00777A]" />
-        </div>
+      <main className="w-full px-0 py-0 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
+        {/*
+          Portrait  → single column, navigator hidden, questions full-width
+          Landscape / sm+ → two columns: questions | navigator (compact)
+        */}
+        <div className="flex min-h-0 w-full flex-col sm:flex-row sm:items-start sm:gap-4">
 
-        {/* ── 2. Questions + Navigator — side by side ─────────────────────────── */}
-        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-[minmax(0,1fr)_240px] lg:grid-cols-[minmax(0,1fr)_280px]">
-
-          {/* Questions */}
-          <section ref={pageRef} className="min-w-0 overflow-hidden rounded-[22px] border-2 border-[#12BFC0] bg-white shadow-sm">
-            <div className="border-b border-[#E6EEEE] px-4 py-4 sm:px-6 sm:py-5">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 className="text-lg font-black text-[#123F42] sm:text-2xl">Question {startIdx + 1} of {questions.length}</h2>
-                <span className="rounded-full border-2 border-[#F0C33F] bg-[#005E64] px-3 py-1.5 font-mono text-base font-black text-white shadow-sm sm:px-4 sm:py-2 sm:text-lg">{formatTime(timeLeft)}</span>
+          {/* ── Questions ── */}
+          <section
+            ref={pageRef}
+            className="min-w-0 flex-1 overflow-hidden bg-white sm:rounded-[22px] sm:border-2 sm:border-[#12BFC0] sm:shadow-sm"
+          >
+            {/* Question header */}
+            <div className="border-b border-[#E6EEEE] px-4 py-3 sm:px-6 sm:py-4">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-base font-black text-[#123F42] sm:text-xl">
+                  Question {startIdx + 1} <span className="text-sm font-semibold text-[#688183]">of {questions.length}</span>
+                </h2>
+                {/* Page counter — only on sm+ */}
+                <span className="hidden rounded-full bg-[#E4F4F4] px-3 py-1 text-xs font-bold text-[#00777A] sm:inline-flex">
+                  Page {currentPage + 1}/{totalPages}
+                </span>
               </div>
-              <div className="mt-3 h-2.5 overflow-hidden rounded-full border border-[#C7D6D9] bg-[#E8EFF1] sm:h-3">
-                <div className="h-full rounded-full bg-gradient-to-r from-[#00676B] to-[#00A3A0] transition-all duration-500" style={{ width: `${((startIdx + pageQuestions.length) / questions.length) * 100}%` }} />
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#E8EFF1]">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#00676B] to-[#00A3A0] transition-all duration-500"
+                  style={{ width: `${((startIdx + pageQuestions.length) / questions.length) * 100}%` }}
+                />
               </div>
             </div>
 
-            <div className="space-y-5 px-4 py-5 sm:px-6 sm:py-7">
+            {/* Question body */}
+            <div className="space-y-5 px-4 py-5 sm:px-6 sm:py-6">
               {pageQuestions.map(({ question: q, questionIndex }, idxInPage) => {
                 const displayIdx = startIdx + idxInPage;
                 const section = q.section === 'B' ? 'B' : 'A';
@@ -363,74 +428,107 @@ toast.dismiss(loadingToast);
                 return (
                   <React.Fragment key={questionIndex}>
                     {(idxInPage === 0 || section !== previousSection) && (
-                      <div className="inline-flex rounded-lg border border-[#E8C75B] bg-[#FFF8DF] px-3 py-1.5">
+                      <div className="inline-flex rounded-lg border border-[#E8C75B] bg-[#FFF8DF] px-3 py-1">
                         <span className="text-xs font-black tracking-wider text-[#765A08]">SECTION {section}</span>
                       </div>
                     )}
-                    <article id={`q-${questionIndex}`} className="border-b border-[#E7EEEE] pb-6 last:border-b-0">
-                      <div className="mb-4 flex items-start justify-between gap-3">
-                        <h3 className="text-base font-bold leading-relaxed text-[#123F42] sm:text-lg"><span className="mr-2">{displayIdx + 1}.</span>{q.question_text}</h3>
-                        <span className="shrink-0 rounded-full bg-[#FFF4C9] px-3 py-1 text-xs font-extrabold text-[#795C08]">{q.marks} {q.marks === 1 ? 'mark' : 'marks'}</span>
+                    <article id={`q-${questionIndex}`} className="border-b border-[#E7EEEE] pb-5 last:border-b-0">
+                      <div className="mb-3 flex items-start justify-between gap-2">
+                        <h3 className="text-sm font-bold leading-relaxed text-[#123F42] sm:text-base">
+                          <span className="mr-1.5 font-black">{displayIdx + 1}.</span>{q.question_text}
+                        </h3>
+                        <span className="shrink-0 rounded-full bg-[#FFF4C9] px-2.5 py-0.5 text-[11px] font-extrabold text-[#795C08]">
+                          {q.marks} {q.marks === 1 ? 'mk' : 'mks'}
+                        </span>
                       </div>
                       {q.question_image && (
-                        <div className="mb-4">
-                          <img src={q.question_image} alt="Question diagram" className="mx-auto max-h-64 max-w-full cursor-zoom-in rounded-xl border border-[#DCE8E8] object-contain" onClick={() => setLightboxImage(q.question_image)} />
+                        <div className="mb-3">
+                          <img
+                            src={q.question_image} alt="Question diagram"
+                            className="mx-auto max-h-52 max-w-full cursor-zoom-in rounded-xl border border-[#DCE8E8] object-contain"
+                            onClick={() => setLightboxImage(q.question_image)}
+                          />
                         </div>
                       )}
                       {q.options ? (
-                        <div className="space-y-3">
+                        <div className="space-y-2.5">
                           {q.options.map((opt, optIdx) => {
                             const selected = answers[questionIndex] === optIdx;
                             return (
                               <button key={optIdx} type="button" onClick={() => handleAnswer(questionIndex, optIdx)}
-                                className={`flex w-full items-center gap-3 rounded-[17px] border-2 px-4 py-3.5 text-left transition-all sm:px-5 ${
-                                  selected ? 'border-[#00898A] bg-[#C9F0EE] shadow-[0_2px_8px_rgba(0,137,138,0.12)]' : 'border-[#D5E0E4] bg-white hover:border-[#55B7B5] hover:bg-[#F5FCFB]'
+                                className={`flex w-full items-center gap-3 rounded-2xl border-2 px-4 py-3 text-left transition-all ${
+                                  selected
+                                    ? 'border-[#00898A] bg-[#C9F0EE]'
+                                    : 'border-[#D5E0E4] bg-white hover:border-[#55B7B5] hover:bg-[#F5FCFB]'
                                 }`}>
-                                <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 ${selected ? 'border-[#00777A] bg-[#00777A] text-white' : 'border-[#AEBEC4] bg-white'}`}>
-                                  {selected && <CheckCircleSolid className="h-5 w-5" />}
+                                <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs ${selected ? 'border-[#00777A] bg-[#00777A] text-white' : 'border-[#AEBEC4] bg-white'}`}>
+                                  {selected ? <CheckCircleSolid className="h-4 w-4" /> : <span className="font-bold">{String.fromCharCode(65 + optIdx)}</span>}
                                 </span>
-                                <span className={`text-sm sm:text-base ${selected ? 'font-extrabold text-[#063F43]' : 'font-medium text-[#172F34]'}`}>
-                                  <span className="mr-2 font-bold">{String.fromCharCode(65 + optIdx)}.</span>{opt}
-                                </span>
+                                <span className={`text-sm ${selected ? 'font-extrabold text-[#063F43]' : 'font-medium text-[#172F34]'}`}>{opt}</span>
                               </button>
                             );
                           })}
                         </div>
                       ) : (
-                        <textarea value={answers[questionIndex] || ''} onChange={(e) => handleShortAnswer(questionIndex, e.target.value)} placeholder="Type your answer here..."
-                          className="min-h-[130px] w-full rounded-2xl border-2 border-[#D5E0E4] bg-white p-4 text-sm text-[#123F42] outline-none transition focus:border-[#00898A] focus:ring-4 focus:ring-[#00898A]/10" />
+                        <textarea
+                          value={answers[questionIndex] || ''}
+                          onChange={e => handleShortAnswer(questionIndex, e.target.value)}
+                          placeholder="Type your answer here..."
+                          className="min-h-[120px] w-full rounded-2xl border-2 border-[#D5E0E4] bg-white p-4 text-sm text-[#123F42] outline-none transition focus:border-[#00898A] focus:ring-4 focus:ring-[#00898A]/10"
+                        />
                       )}
                     </article>
                   </React.Fragment>
                 );
               })}
 
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                <button onClick={() => handlePageChange(Math.max(0, currentPage - 1))} disabled={currentPage === 0}
-                  className="inline-flex items-center gap-2 rounded-full border-2 border-[#00777A] bg-white px-5 py-3 text-sm font-extrabold text-[#064F54] transition hover:bg-[#E9F8F6] disabled:cursor-not-allowed disabled:opacity-40">
-                  <ChevronLeftIcon className="h-5 w-5" /> Previous
+              {/* Nav buttons */}
+              <div className="flex items-center justify-between gap-2 pt-1">
+                <button
+                  onClick={() => handlePageChange(Math.max(0, currentPage - 1))}
+                  disabled={currentPage === 0}
+                  className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#00777A] bg-white px-4 py-2.5 text-sm font-extrabold text-[#064F54] transition hover:bg-[#E9F8F6] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeftIcon className="h-4 w-4" /> Prev
                 </button>
-                <button onClick={handleOpenReview} className="inline-flex items-center gap-2 rounded-full border-2 border-[#00777A] bg-white px-5 py-3 text-sm font-extrabold text-[#064F54] transition hover:bg-[#E9F8F6]">
-                  <EyeIcon className="h-5 w-5" /> Review
-                </button>
-                <button onClick={() => handlePageChange(Math.min(totalPages - 1, currentPage + 1))} disabled={currentPage + 1 >= totalPages}
-                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-b from-[#FFE16A] to-[#F3B500] px-7 py-3 text-sm font-black text-[#173A3D] shadow-md transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40">
-                  Next <ChevronRightIcon className="h-5 w-5" />
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleOpenReview}
+                    className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#00777A] bg-white px-4 py-2.5 text-sm font-extrabold text-[#064F54] transition hover:bg-[#E9F8F6]"
+                  >
+                    <EyeIcon className="h-4 w-4" />
+                    <span className="hidden sm:inline">Review</span>
+                  </button>
+                  <button
+                    onClick={handleConfirmSubmit}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-b from-[#FFE16A] to-[#F0A900] px-4 py-2.5 text-sm font-black text-[#173A3D] shadow-md transition hover:brightness-105 sm:hidden"
+                  >
+                    <PaperAirplaneIcon className="h-4 w-4" /> Submit
+                  </button>
+                </div>
+                <button
+                  onClick={() => handlePageChange(Math.min(totalPages - 1, currentPage + 1))}
+                  disabled={currentPage + 1 >= totalPages}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-b from-[#FFE16A] to-[#F3B500] px-4 py-2.5 text-sm font-black text-[#173A3D] shadow-md transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next <ChevronRightIcon className="h-4 w-4" />
                 </button>
               </div>
-              <p className="text-center text-xs font-semibold text-[#779091]">Page {currentPage + 1} of {totalPages} · {stats.answered} of {stats.total} answered</p>
+              <p className="text-center text-[11px] font-semibold text-[#779091]">
+                {stats.answered} of {stats.total} answered
+              </p>
             </div>
           </section>
 
-          {/* Navigator */}
-          <aside className="space-y-4">
-            <section className="overflow-hidden rounded-[22px] border-2 border-[#12BFC0] bg-white shadow-sm">
-              <div className="flex items-center gap-3 bg-gradient-to-r from-[#00565D] to-[#008487] px-4 py-3 text-white">
-                <DocumentCheckIcon className="h-6 w-6 text-[#FFE16A]" />
-                <h2 className="text-sm font-extrabold sm:text-base">Question Navigator</h2>
+          {/* ── Navigator — hidden on portrait, compact on landscape/desktop ── */}
+          <aside className="hidden w-[200px] shrink-0 space-y-3 sm:block lg:w-[220px]">
+            <div className="overflow-hidden rounded-[18px] border-2 border-[#12BFC0] bg-white shadow-sm">
+              <div className="flex items-center gap-2 bg-gradient-to-r from-[#00565D] to-[#008487] px-3 py-2.5 text-white">
+                <DocumentCheckIcon className="h-4 w-4 text-[#FFE16A]" />
+                <h2 className="text-xs font-extrabold">Navigator</h2>
               </div>
-              <div className="p-4">
-                <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
+              <div className="p-3">
+                <div className="grid grid-cols-5 gap-1">
                   {displayQuestions.map(({ questionIndex }, idx) => {
                     const targetPage = Math.floor(idx / QUESTIONS_PER_PAGE);
                     const isCurrent = targetPage === currentPage;
@@ -444,32 +542,46 @@ toast.dismiss(loadingToast);
                             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                           }, 80);
                         }}
-                        className={`aspect-square rounded-xl border-2 text-xs font-black transition sm:text-sm ${
-                          isCurrent ? 'border-[#F0B900] bg-gradient-to-b from-[#FFD84D] to-[#F2A900] text-[#173A3D] shadow-md'
-                          : isAnswered ? 'border-[#00777A] bg-[#00777A] text-white hover:bg-[#00666B]'
-                          : 'border-[#BFCFD4] bg-white text-[#18383C] hover:border-[#00777A] hover:bg-[#F0FAF9]'
+                        className={`aspect-square rounded-lg border text-[10px] font-black transition ${
+                          isCurrent
+                            ? 'border-[#F0B900] bg-gradient-to-b from-[#FFD84D] to-[#F2A900] text-[#173A3D] shadow-sm'
+                            : isAnswered
+                              ? 'border-[#00777A] bg-[#00777A] text-white'
+                              : 'border-[#BFCFD4] bg-white text-[#18383C] hover:border-[#00777A]'
                         }`}>
-                        {idx + 1}{isAnswered && !isCurrent && <span>✓</span>}
+                        {idx + 1}
                       </button>
                     );
                   })}
                 </div>
-                <div className="mt-4 space-y-1.5 border-t border-[#DCE7E8] pt-3 text-xs font-semibold text-[#29494C]">
-                  <div className="flex items-center gap-2"><span className="h-3 w-3 rounded bg-[#00777A]" /> Answered <span className="ml-auto h-3 w-3 rounded bg-[#F3B500]" /> Current</div>
-                  <div className="flex items-center gap-2"><span className="h-3 w-3 rounded border-2 border-[#BFCFD4] bg-white" /> Not answered</div>
+                <div className="mt-3 space-y-1 border-t border-[#DCE7E8] pt-2.5 text-[10px] font-semibold text-[#29494C]">
+                  <div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded bg-[#00777A]" /> Answered</div>
+                  <div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded bg-[#F3B500]" /> Current</div>
+                  <div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded border border-[#BFCFD4] bg-white" /> Unanswered</div>
                 </div>
-                <button onClick={handleConfirmSubmit} className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-b from-[#FFE16A] to-[#F0A900] px-4 py-3 text-sm font-black text-[#173A3D] shadow-md transition hover:brightness-105">
-                  <PaperAirplaneIcon className="h-5 w-5" /> Submit Quiz
+                <button
+                  onClick={handleConfirmSubmit}
+                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-to-b from-[#FFE16A] to-[#F0A900] px-3 py-2.5 text-xs font-black text-[#173A3D] shadow-sm transition hover:brightness-105"
+                >
+                  <PaperAirplaneIcon className="h-4 w-4" /> Submit Quiz
                 </button>
-                <button onClick={handleOpenReview} className="mt-2 flex w-full items-center justify-center gap-2 rounded-full border-2 border-[#00777A] bg-white px-4 py-2.5 text-sm font-extrabold text-[#064F54] transition hover:bg-[#E9F8F6]">
-                  <EyeIcon className="h-5 w-5" /> Review Answers
+                <button
+                  onClick={handleOpenReview}
+                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-full border border-[#00777A] bg-white px-3 py-2 text-xs font-extrabold text-[#064F54] transition hover:bg-[#E9F8F6]"
+                >
+                  <EyeIcon className="h-4 w-4" /> Review
                 </button>
               </div>
-            </section>
-            <section className="rounded-[18px] border border-[#D3EEEE] bg-white p-4 shadow-sm">
-              <div className="flex items-center gap-2 text-[#00676B]"><ExclamationCircleIcon className="h-5 w-5" /><h3 className="text-sm font-extrabold">Assessment Tips</h3></div>
-              <p className="mt-2 text-xs leading-relaxed text-[#617B7D]">Your answers are saved when you move between questions. Review your answers before submitting.</p>
-            </section>
+            </div>
+            <div className="rounded-[14px] border border-[#D3EEEE] bg-white p-3 shadow-sm">
+              <div className="flex items-center gap-1.5 text-[#00676B]">
+                <ExclamationCircleIcon className="h-4 w-4" />
+                <h3 className="text-xs font-extrabold">Tips</h3>
+              </div>
+              <p className="mt-1.5 text-[10px] leading-relaxed text-[#617B7D]">
+                Answers are saved as you move between questions.
+              </p>
+            </div>
           </aside>
         </div>
       </main>
