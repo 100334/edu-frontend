@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
+import {
   ClockIcon, FlagIcon, PaperAirplaneIcon, ExclamationCircleIcon,
   DocumentCheckIcon, XMarkIcon, ChevronLeftIcon,
   ChevronRightIcon, EyeIcon, DocumentArrowDownIcon
@@ -10,13 +10,16 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import html2pdf from 'html2pdf.js/dist/html2pdf.bundle.min.js';
 
-function normalizeQuizIdProp(q) {
-  if (q == null || q === '') return null;
-  if (typeof q === 'number' && Number.isFinite(q)) return String(Math.trunc(q));
-  const s = String(q).trim();
-  if (!s || s === 'undefined' || s === 'null' || s === 'NaN' || s === '[object Object]') return null;
-  return s;
+function normalizeQuizId(value) {
+  if (value == null || value === '') return null;
+  const id = String(value).trim();
+  return ['undefined', 'null', 'NaN', '[object Object]'].includes(id)
+    ? null
+    : id;
 }
+
+// Keep old name as alias for internal use
+const normalizeQuizIdProp = normalizeQuizId;
 
 const QuizTaking = ({ quizId, onComplete, questionsPerPage = 1 }) => {
   const [quiz, setQuiz] = useState(null);
@@ -39,15 +42,46 @@ const QuizTaking = ({ quizId, onComplete, questionsPerPage = 1 }) => {
     ? questionsPerPage
     : 3;
 
+  const displayQuestions = useMemo(() => questions
+    .map((question, questionIndex) => ({ question, questionIndex }))
+    .sort((a, b) => {
+      const sectionOrder = (a.question.section === 'B' ? 1 : 0) - (b.question.section === 'B' ? 1 : 0);
+      return sectionOrder || a.questionIndex - b.questionIndex;
+    }), [questions]);
+
+  const totalPages = Math.ceil(displayQuestions.length / QUESTIONS_PER_PAGE);
+  const startIdx = currentPage * QUESTIONS_PER_PAGE;
+  const pageQuestions = displayQuestions.slice(startIdx, startIdx + QUESTIONS_PER_PAGE);
+
+  const answeredCount = Object.keys(answers).filter(
+    key => answers[key] !== undefined && answers[key] !== null && answers[key] !== ''
+  ).length;
+
+  const stats = {
+    answered: answeredCount,
+    total: questions.length,
+    progress: questions.length ? (answeredCount / questions.length) * 100 : 0,
+  };
+
+  const formatTime = (seconds) => {
+    const safeSeconds = Math.max(0, seconds || 0);
+    const mins = Math.floor(safeSeconds / 60);
+    const secs = safeSeconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Load quiz
   useEffect(() => { loadQuiz(); }, [quizId]);
 
+  // Timer — uses setTimeout to avoid stale closure issues
   useEffect(() => {
-    if (timeLeft === 0 && !submitting) submitQuiz();
-    const timer = setInterval(() => {
-      if (timeLeft > 0 && !submitting) setTimeLeft(prev => prev - 1);
+    if (timeLeft === null || submitting || result) return;
+    if (timeLeft <= 0) { submitQuiz(); return; }
+    const timer = setTimeout(() => {
+      setTimeLeft(prev => Math.max(0, prev - 1));
     }, 1000);
-    return () => clearInterval(timer);
-  }, [timeLeft, submitting]);
+    return () => clearTimeout(timer);
+  }, [timeLeft, submitting, result]);
 
   const autoSavePage = async (page) => {
     if (!attemptId || !resolvedQuizId) return;
@@ -173,21 +207,6 @@ toast.dismiss(loadingToast);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
-
-  const stats = {
-    answered: Object.keys(answers).length,
-    total: questions.length,
-    progress: ((Object.keys(answers).length) / questions.length) * 100
-  };
-  const displayQuestions = useMemo(() => questions
-    .map((question, questionIndex) => ({ question, questionIndex }))
-    .sort((a, b) => {
-      const sectionOrder = (a.question.section === 'B' ? 1 : 0) - (b.question.section === 'B' ? 1 : 0);
-      return sectionOrder || a.questionIndex - b.questionIndex;
-    }), [questions]);
-  const totalPages = Math.ceil(questions.length / QUESTIONS_PER_PAGE);
-  const startIdx = currentPage * QUESTIONS_PER_PAGE;
-  const pageQuestions = displayQuestions.slice(startIdx, startIdx + QUESTIONS_PER_PAGE);
 
   if (!quiz || questions.length === 0) {
     return (
