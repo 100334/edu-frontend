@@ -333,11 +333,23 @@ const QuizManagement = () => {
 
   const normalizeImportedQuestion = (question) => {
     const rawType = String(question.question_type || question.type || '').toLowerCase().replace(/[-\s]+/g, '_');
+    const rawOptions = question.options ?? question.choices;
+    const optionValues = rawOptions !== undefined && rawOptions !== null
+      ? Array.isArray(rawOptions)
+        ? rawOptions
+        : typeof rawOptions === 'string'
+          ? rawOptions.split('|').map(option => option.trim()).filter(Boolean)
+          : []
+      : ['a', 'b', 'c', 'd'].map(letter =>
+          question[`option_${letter}`] ?? question[`opt_${letter}`] ?? question[letter] ?? ''
+        ).filter(Boolean);
     const questionType = ['multiple_choice', 'mcq'].includes(rawType)
       ? 'multiple_choice'
-      : ['short_answer', 'essay', 'written'].includes(rawType) || !question.options
+      : ['short_answer', 'essay', 'written'].includes(rawType)
         ? 'short_answer'
-        : 'multiple_choice';
+        : optionValues.length > 0
+          ? 'multiple_choice'
+          : 'short_answer';
     const rawExpectedAnswer = question.expected_answer
       ?? question.model_answer
       ?? question.modelAnswer
@@ -346,10 +358,23 @@ const QuizManagement = () => {
       ?? question.answer_key
       ?? question.answer
       ?? '';
+    const rawCorrectAnswer = question.correct_answer
+      ?? question.correct_option
+      ?? question.answer_index
+      ?? question.correct
+      ?? (questionType === 'multiple_choice' ? question.answer : 0);
+    const correctLetter = typeof rawCorrectAnswer === 'string'
+      ? rawCorrectAnswer.trim().match(/^(?:option\s*)?([a-d])$/i)
+      : null;
+    const correctAnswer = correctLetter
+      ? correctLetter[1].toUpperCase().charCodeAt(0) - 65
+      : Number.parseInt(rawCorrectAnswer, 10);
     return {
       ...question,
       question_text: question.question_text || question.question || '',
       question_type: questionType,
+      options: questionType === 'multiple_choice' ? optionValues : null,
+      correct_answer: Number.isInteger(correctAnswer) ? correctAnswer : 0,
       expected_answer: Array.isArray(rawExpectedAnswer)
         ? rawExpectedAnswer.join('\n')
         : String(rawExpectedAnswer),
@@ -392,9 +417,9 @@ const QuizManagement = () => {
     const lines = t.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
     const parsed = [];
     const rows = lines.map(parseCsvRow);
-    const headerNames = rows[0].map(value => value.toLowerCase().replace(/[\s-]+/g, '_'));
+    const headerNames = rows[0].map(value => value.toLowerCase().replace(/\([^)]*\)/g, '').replace(/[\s-]+/g, '_'));
     const hasHeader = headerNames.some(name =>
-      ['question', 'question_text', 'question_type', 'type', 'expected_answer', 'model_answer'].includes(name)
+      ['question', 'question_text', 'question_type', 'type', 'expected_answer', 'model_answer', 'opt_a', 'option_a'].includes(name)
     );
 
     try {
@@ -406,13 +431,16 @@ const QuizManagement = () => {
             ? (row.options.trim().startsWith('[')
                 ? JSON.parse(row.options)
                 : row.options.split('|').map(option => option.trim()))
-            : ['option_a', 'option_b', 'option_c', 'option_d']
-                .map(key => row[key]).filter(Boolean);
+            : ['a', 'b', 'c', 'd']
+                .map(letter => row[`option_${letter}`] || row[`opt_${letter}`] || row[letter] || '')
+                .filter(Boolean);
           parsed.push(normalizeImportedQuestion({
             ...row,
             question_type: row.question_type || row.type || (optionValues.length ? 'multiple_choice' : 'short_answer'),
             options: optionValues.length ? optionValues : null,
-            correct_answer: row.correct_answer || row.correct || 0,
+            correct_answer: optionValues.length
+              ? row.correct_answer || row.correct_option || row.answer_index || row.correct || row.answer || 0
+              : 0,
           }));
         }
       } else {
