@@ -474,21 +474,45 @@ toast.error('Could not create PDF');
           </>
         )}
 
-        {activeTab === 'reports' && (
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-black text-[#00565B]">
-                {selectedResultCategory ? (resultsCategories.find(item => item.id === selectedResultCategory)?.label || 'Results') : 'Report Cards'}
-              </h2>
+        {activeTab !== 'overview' && (
+          <section className="overflow-hidden rounded-[26px] border border-[#D3EEEE] bg-white shadow-[0_8px_28px_rgba(0,91,96,0.08)]">
+            <div className="flex items-center gap-3 border-b border-[#D8EEEE] bg-gradient-to-r from-[#E7F8F7] to-[#F7FCFA] px-4 py-4">
               <button
-                onClick={() => selectedResultCategory ? setSelectedResultCategory(null) : setActiveTab('overview')}
-                className="text-sm font-bold text-[#00666B]"
+                type="button"
+                onClick={() => {
+                  setSelectedResultCategory(null);
+                  setActiveTab('overview');
+                }}
+                className="rounded-full bg-white px-4 py-2 text-sm font-bold text-[#00666B] shadow-sm ring-1 ring-[#D2E9E8] transition hover:bg-[#FFF3C5]"
               >
-                {selectedResultCategory ? '← Back' : '← Back'}
+                ← Home
               </button>
+              <h2 className="text-lg font-black text-[#00565B]">
+                {activeTab === 'reports'
+                  ? selectedResultCategory
+                    ? resultsCategories.find(item => item.id === selectedResultCategory)?.label || 'Results'
+                    : 'Results'
+                  : activeTab === 'learning'
+                    ? 'Learn'
+                    : activeTab === 'library'
+                      ? 'Library'
+                      : 'Attendance'}
+              </h2>
             </div>
 
-            {!selectedResultCategory && (
+            <div className="p-3">
+              {activeTab === 'reports' && (
+                <div className="space-y-3">
+                  {selectedResultCategory && (
+                    <button
+                      onClick={() => setSelectedResultCategory(null)}
+                      className="text-sm font-bold text-[#00666B]"
+                    >
+                      ← All results
+                    </button>
+                  )}
+
+                  {!selectedResultCategory && (
               <>
                 <div className="grid grid-cols-2 gap-2">
                   <select
@@ -553,42 +577,18 @@ toast.error('Could not create PDF');
                 )) : <p className="rounded-2xl bg-[#F3FAF9] p-6 text-center text-sm text-slate-500">No reports match this selection.</p>}
               </div>
             )}
-          </section>
-        )}
+                </div>
+              )}
 
-        {activeTab === 'learning' && (
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xl font-black text-[#00565B]">Learning Space</h2>
-              <button onClick={() => setActiveTab('overview')} className="text-sm font-bold text-[#00666B]">
-                ← Back
-              </button>
-             </div>
-            <LearningSpace onStartQuiz={(quizId) => setShowQuiz(quizId)} />
-          </section>
-        )}
+              {activeTab === 'learning' && (
+                <LearningSpace onStartQuiz={quizId => setShowQuiz(quizId)} />
+              )}
 
-        {activeTab === 'library' && (
-          <section>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xl font-black text-[#00565B]">Library</h2>
-              <button onClick={() => setActiveTab('overview')} className="text-sm font-bold text-[#00666B]">
-                ← Back
-              </button>
-             </div>
-            <Library />
-          </section>
-        )}
+              {activeTab === 'library' && <Library />}
 
-        {activeTab === 'attendance' && (
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-black text-[#00565B]">Attendance Records</h2>
-              <button onClick={() => setActiveTab('overview')} className="text-sm font-bold text-[#00666B]">
-                ← Back
-              </button>
-            </div>
-            <div className="rounded-2xl border border-[#D5E9E7] bg-gradient-to-r from-[#DDF7F5] to-[#EFFBFA] p-5 text-center shadow-sm">
+              {activeTab === 'attendance' && (
+                <div className="space-y-3">
+                  <div className="rounded-2xl border border-[#D5E9E7] bg-gradient-to-r from-[#DDF7F5] to-[#EFFBFA] p-5 text-center shadow-sm">
               <div className="text-4xl font-black text-[#00666B]">{attendanceRate === '—' ? '—' : `${attendanceRate}%`}</div>
               <div className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-500">Overall Attendance Rate</div>
             </div>
@@ -599,7 +599,10 @@ toast.error('Could not create PDF');
                   {record.status || 'unknown'}
                 </span>
               </div>
-            )) : <p className="rounded-2xl bg-[#F3FAF9] p-6 text-center text-sm text-slate-500">No records yet.</p>}
+                  )) : <p className="rounded-2xl bg-[#F3FAF9] p-6 text-center text-sm text-slate-500">No records yet.</p>}
+                </div>
+              )}
+            </div>
           </section>
         )}
       </main>
