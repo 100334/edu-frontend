@@ -311,7 +311,7 @@ toast.dismiss(loadingToast);
             <div className="divide-y divide-[#D9E8E8] px-4">
               <div className="flex items-center gap-3 py-4">
                 <DocumentCheckIcon className="h-7 w-7 shrink-0 text-[#00777A]" />
-                <div><p className="text-xs font-semibold text-[#688183]">Subject</p><p className="text-sm font-bold text-[#123F42]">{quiz.subject || quiz.subject_name || 'Assessment'}</p></div>
+                <div><p className="text-xs font-semibold text-[#688183]">Subject</p><p className="text-sm font-bold text-[#123F42]">{quiz.subject_name || quiz.subject?.name || 'Assessment'}</p></div>
               </div>
               <div className="flex items-center gap-3 py-4">
                 <FlagIcon className="h-7 w-7 shrink-0 text-[#00777A]" />
