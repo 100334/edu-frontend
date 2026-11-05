@@ -18,7 +18,7 @@ function normalizeQuizIdProp(q) {
   return s;
 }
 
-const QuizTaking = ({ quizId, onComplete }) => {
+const QuizTaking = ({ quizId, onComplete, questionsPerPage = 3 }) => {
   const [quiz, setQuiz] = useState(null);
   const [result, setResult] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -35,7 +35,9 @@ const QuizTaking = ({ quizId, onComplete }) => {
   const navigate = useNavigate();
   const resolvedQuizId = useMemo(() => normalizeQuizIdProp(quizId), [quizId]);
 
-  const QUESTIONS_PER_PAGE = 3;
+  const QUESTIONS_PER_PAGE = Number.isInteger(questionsPerPage) && questionsPerPage > 0
+    ? questionsPerPage
+    : 3;
 
   useEffect(() => { loadQuiz(); }, [quizId]);
 

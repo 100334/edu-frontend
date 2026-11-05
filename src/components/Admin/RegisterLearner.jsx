@@ -43,6 +43,8 @@ const RegisterLearner = ({ onSuccess }) => {
     const yr    = new Date().getFullYear().toString().slice(-2);
     const match = lower.match(/form\s*(\d+)/i);
     if (match) return `FRM${match[1]}-${yr}`;
+    const standardMatch = lower.match(/standard\s*(\d+)/i);
+    if (standardMatch) return `STD${standardMatch[1]}-${yr}`;
     return `STU-${yr}`;
   };
 
@@ -85,7 +87,9 @@ const RegisterLearner = ({ onSuccess }) => {
   // ── form helpers ───────────────────────────────────────────────────────────
   const getFormName = (className) => {
     const match = (className || '').match(/Form\s*(\d+)/i);
-    return match ? `Form ${match[1]}` : 'Form 1';
+    if (match) return `Form ${match[1]}`;
+    const standardMatch = (className || '').match(/Standard\s*(\d+)/i);
+    return standardMatch ? `Standard ${standardMatch[1]}` : 'Form 1';
   };
 
   const handleClassSelect = useCallback((classId) => {

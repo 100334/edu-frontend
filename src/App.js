@@ -13,6 +13,7 @@ import AdminLogin from './components/Auth/AdminLogin';
 import TeacherDashboard from './components/Teacher/TeacherDashboard';
 import LearnerDashboard from './components/Learner/LearnerDashboard';
 import MobileLearnerDashboard from './components/Learner/MobileLearnerDashboard';
+import PrimaryLearnerDashboard from './components/Learner/PrimaryLearnerDashboard';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
 // Import Admin Components
@@ -127,7 +128,9 @@ const isMobilePhone = () => {
 };
 
 const LearnerDashboardRoute = () => {
+  const { user } = useAuth();
   const [isMobile, setIsMobile] = useState(isMobilePhone);
+  const isPrimaryLearner = /^standard\s*[1-7](?:\s*[a-z])?\s*$/i.test(String(user?.form || '').trim());
 
   useEffect(() => {
     const updateDeviceType = () => setIsMobile(isMobilePhone());
@@ -145,6 +148,7 @@ const LearnerDashboardRoute = () => {
     };
   }, []);
 
+  if (isPrimaryLearner) return <PrimaryLearnerDashboard />;
   return isMobile ? <MobileLearnerDashboard /> : <LearnerDashboard />;
 };
 
