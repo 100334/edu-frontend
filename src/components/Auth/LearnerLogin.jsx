@@ -62,7 +62,7 @@ const LearnerLogin = ({ serverStatus }) => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#F0FAF9] flex flex-col">
+    <div className="learner-login-page min-h-screen w-full bg-[#F0FAF9] flex flex-col">
 
       {/* ── Hero image with curved bottom ─────────────────────────────────── */}
       <div className="relative w-full shrink-0" style={{ height: '42vh', minHeight: 180, maxHeight: 320 }}>
@@ -87,13 +87,13 @@ const LearnerLogin = ({ serverStatus }) => {
             className="block w-full"
             style={{ height: 48 }}
           >
-            <path d="M0,0 C360,60 1080,60 1440,0 L1440,60 L0,60 Z" fill="#F0FAF9" />
+            <path className="learner-login-wave-fill" d="M0,0 C360,60 1080,60 1440,0 L1440,60 L0,60 Z" />
           </svg>
         </div>
       </div>
 
-      {/* ── Compact card — sits right below the curve ──────────────────────── */}
-      <div className="flex flex-1 flex-col items-center px-4 pb-6 -mt-3">
+      {/* ── Compact card — overlaps the wave ──────────────────────────────── */}
+      <div className="learner-login-content flex flex-1 flex-col items-center px-4 pb-6 -mt-14">
         <div className="w-full max-w-sm">
 
           {/* Logo + title — small, above card */}
@@ -108,6 +108,22 @@ const LearnerLogin = ({ serverStatus }) => {
               <p className="text-sm font-black text-[#075B60]">Progress Secondary School</p>
               <p className="text-[11px] text-[#527174]">Sign in to continue learning</p>
             </div>
+            <style>{`
+              .learner-login-wave-fill {
+                fill: #F0FAF9;
+              }
+              @media (orientation: portrait) {
+                .learner-login-page {
+                  background-color: #01919F;
+                }
+                .learner-login-wave-fill {
+                  fill: #01919F;
+                }
+                .learner-login-content {
+                  margin-top: 0;
+                }
+              }
+            `}</style>
           </div>
 
           {/* Card */}

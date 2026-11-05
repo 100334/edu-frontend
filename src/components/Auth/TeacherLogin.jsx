@@ -55,8 +55,8 @@ export default function TeacherLogin({ serverStatus }) {
         </div>
       </div>
 
-      {/* ── Compact card ───────────────────────────────────────────────────── */}
-      <div className="flex flex-1 flex-col items-center px-4 pb-6 -mt-3">
+      {/* ── Compact card — overlaps the wave ──────────────────────────────── */}
+      <div className="flex flex-1 flex-col items-center px-4 pb-6 -mt-14">
         <div className="w-full max-w-sm">
 
           {/* Logo + title */}
