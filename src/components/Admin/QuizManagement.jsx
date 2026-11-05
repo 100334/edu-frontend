@@ -1144,8 +1144,17 @@ const QuizManagement = () => {
               ) : (
                 <>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">Expected Answer (model answer)</label>
-                    <textarea rows={2} value={qForm.expected_answer} onChange={e => setQForm(p => ({ ...p, expected_answer: e.target.value }))} className={inp} />
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Suggested Answers / Marking Key</label>
+                    <textarea
+                      rows={4}
+                      value={qForm.expected_answer}
+                      onChange={e => setQForm(p => ({ ...p, expected_answer: e.target.value }))}
+                      placeholder={'Enter one acceptable answer per line.\nAI accepts equivalent wording for any suggested answer.'}
+                      className={inp}
+                    />
+                    <p className="mt-1 text-[10px] text-gray-400">
+                      Each line is an alternative answer; learners do not need to include every suggestion.
+                    </p>
                   </div>
                   <ImageUploader label="Answer Reference Image" currentImage={qForm.answer_image} onImageUpload={url => setQForm(p => ({ ...p, answer_image: url }))} />
                 </>

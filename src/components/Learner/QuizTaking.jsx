@@ -20,6 +20,7 @@ function normalizeQuizIdProp(q) {
 
 const QuizTaking = ({ quizId, onComplete }) => {
   const [quiz, setQuiz] = useState(null);
+  const [result, setResult] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -131,11 +132,7 @@ toast.error('Failed to load quiz.');
         headers: { Authorization: `Bearer ${token}` }
       });
       if (response.data.success) {
-        toast.success('Quiz submitted! Admin will review.');
-        setTimeout(() => {
-          if (onComplete) onComplete(response.data);
-          else navigate('/learner/dashboard');
-        }, 2000);
+        setResult(response.data.attempt);
       } else throw new Error(response.data.message);
     } catch (error) {
       toast.error(error.response?.data?.message || 'Submission failed');
@@ -184,6 +181,92 @@ toast.dismiss(loadingToast);
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 to-white">
         <div className="text-center"><div className="w-10 h-10 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div><p className="text-sm text-gray-500">Loading assessment...</p></div>
+      </div>
+    );
+  }
+
+  if (result) {
+    const percentage = Number(result.percentage) || 0;
+    const returnToDashboard = () => {
+      if (onComplete) onComplete(result);
+      else navigate('/learner/dashboard');
+    };
+
+    return (
+      <div className="min-h-screen bg-teal-50/60">
+        <header className="bg-[#006770] px-4 py-5 text-white shadow-lg">
+          <div className="mx-auto max-w-4xl">
+            <p className="text-xs font-semibold uppercase tracking-wider text-white/75">Assessment complete</p>
+            <h1 className="mt-1 text-xl font-bold">{quiz.title}</h1>
+          </div>
+        </header>
+        <main className="mx-auto max-w-4xl space-y-5 px-4 py-6">
+          <section className="rounded-xl border border-teal-100 bg-white p-6 text-center shadow-sm">
+            <p className="text-sm font-semibold text-slate-500">Your score</p>
+            <p className="my-2 text-5xl font-black text-[#006770]">{percentage}%</p>
+            <p className="text-sm font-bold text-slate-700">
+              {result.earned_points} / {result.total_points} marks
+            </p>
+            <p className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+              result.passed ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+            }`}>
+              {result.passed ? 'Passed' : 'Keep practising'}
+            </p>
+            <p className="mt-3 text-xs text-slate-500">
+              {result.ai_graded
+                ? 'Multiple-choice answers were checked automatically and written answers were marked by AI.'
+                : 'Your answers were marked automatically.'}
+            </p>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold text-[#003B46]">Answer feedback</h2>
+            {(result.answers || []).map((answer, idx) => (
+              <article key={answer.question_id || idx} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-2">
+                    {answer.is_correct
+                      ? <CheckCircleSolid className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-600" />
+                      : <XMarkIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />}
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">Q{idx + 1}. {answer.question_text}</p>
+                      <p className="mt-1 text-xs text-slate-600">
+                        Your answer: {answer.selected_answer_text || 'Not answered'}
+                      </p>
+                      {!answer.is_correct && answer.correct_answer && (
+                        <p className="mt-1 text-xs text-teal-800">Expected answer: {answer.correct_answer}</p>
+                      )}
+                      {answer.feedback && <p className="mt-2 text-xs text-slate-500">{answer.feedback}</p>}
+                      {answer.explanation && <p className="mt-1 text-xs text-slate-500">{answer.explanation}</p>}
+                    </div>
+                  </div>
+                  <span className="whitespace-nowrap text-xs font-bold text-[#006770]">
+                    {answer.points_obtained ?? 0}/{answer.max_points}
+                  </span>
+                </div>
+              </article>
+            ))}
+          </section>
+
+          <button
+            onClick={returnToDashboard}
+            className="w-full rounded-lg bg-[#006770] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#00565e]"
+          >
+            Back to Dashboard
+          </button>
+        </main>
+      </div>
+    );
+  }
+
+  if (submitting) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-teal-50/60 px-4">
+        <div className="rounded-xl bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-teal-100 border-t-[#006770]" />
+          <h2 className="text-lg font-bold text-[#003B46]">Marking your answers</h2>
+          <p className="mt-2 text-sm text-slate-500">Written answers are being reviewed by AI. Your results will appear shortly.</p>
+        </div>
       </div>
     );
   }
@@ -524,11 +607,11 @@ toast.dismiss(loadingToast);
               You answered {stats.answered} of {stats.total} questions.
               {stats.total - stats.answered > 0 && ` ${stats.total - stats.answered} unanswered.`}
             </p>
-            <p className="text-xs text-center text-slate-400 mb-5">Once submitted, no changes allowed. Admin will review.</p>
+            <p className="text-xs text-center text-slate-400 mb-5">Once submitted, your answers are marked and your results appear here.</p>
             <div className="flex gap-2">
               <button onClick={() => setShowConfirmDialog(false)} className="flex-1 py-1.5 bg-slate-100 text-slate-700 rounded-md text-sm hover:bg-slate-200 transition">Cancel</button>
               <button onClick={submitQuiz} disabled={submitting} className="flex-1 py-1.5 bg-teal-600 text-white rounded-md text-sm hover:bg-teal-700 transition disabled:opacity-50">
-                {submitting ? 'Submitting...' : 'Yes, Submit'}
+                {submitting ? 'Marking answers...' : 'Yes, Submit'}
               </button>
             </div>
           </div>

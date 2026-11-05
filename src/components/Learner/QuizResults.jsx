@@ -174,8 +174,8 @@ const QuizResults = ({ onRetake }) => {
       {attempts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 bg-white rounded-xl border border-slate-200 gap-2 text-center px-4">
           <span className="text-4xl">📋</span>
-          <p className="text-sm text-slate-500">No graded quizzes yet.</p>
-          <p className="text-[11px] text-slate-400">Complete quizzes in the Assessments folder — results appear here after marking.</p>
+          <p className="text-sm text-slate-500">No quiz results yet.</p>
+          <p className="text-[11px] text-slate-400">Complete a quiz in the Assessments folder to see your score and feedback here.</p>
         </div>
       ) : grouped.map(({ key, label, items }) => {
         const isOpen = collapsed[key] !== true; // default open
