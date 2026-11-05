@@ -244,11 +244,17 @@ const RegisterLearner = ({ onSuccess }) => {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-5 py-3.5 border-b border-gray-100 bg-[#f0faf9]">
             <p className="text-xs font-bold text-[#006770] uppercase tracking-wide">Step 1 — Academic Placement</p>
-            <p className="text-[11px] text-gray-500 mt-0.5">Select the class for this student</p>
+            <p className="text-[11px] text-gray-500 mt-0.5">
+              Select the learner's class. Primary learners should be placed in a Standard 1–7 class.
+            </p>
           </div>
           <div className="p-5 space-y-4">
             {loadingClasses ? (
               <div className="flex justify-center py-6"><div className="w-6 h-6 border-4 border-[#006770] border-t-transparent rounded-full animate-spin" /></div>
+            ) : classes.length === 0 ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                No classes are available. Create a Standard class in Class Management before registering a primary learner.
+              </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {classes.map(cls => (

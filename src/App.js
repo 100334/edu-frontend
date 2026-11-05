@@ -21,7 +21,6 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import TeachersList from './components/Admin/TeachersList';
 import LearnersList from './components/Admin/LearnersList';
 import AddTeacher from './components/Admin/AddTeacher';
-import AddLearner from './components/Admin/AddLearner';
 import RegisterLearner from './components/Admin/RegisterLearner';
 import RegisterTeacher from './components/Admin/RegisterTeacher';
 import AdminClassManagement from './components/Admin/AdminClassManagement';
@@ -283,7 +282,7 @@ setServerStatus({ status: 'offline', error: error.message });
         <Route path="/admin/learners" element={<AdminRoute><ErrorBoundary><LearnersList /></ErrorBoundary></AdminRoute>} />
         <Route path="/admin/add-teacher" element={<AdminRoute><ErrorBoundary><AddTeacher onSuccess={() => window.location.href = '/admin/teachers'} /></ErrorBoundary></AdminRoute>} />
         <Route path="/admin/register-teacher" element={<AdminRoute><ErrorBoundary><RegisterTeacher /></ErrorBoundary></AdminRoute>} />
-        <Route path="/admin/add-learner" element={<AdminRoute><ErrorBoundary><AddLearner onSuccess={() => window.location.href = '/admin/learners'} /></ErrorBoundary></AdminRoute>} />
+        <Route path="/admin/add-learner" element={<AdminRoute><ErrorBoundary><RegisterLearner onSuccess={() => window.location.href = '/admin/learners'} /></ErrorBoundary></AdminRoute>} />
         <Route path="/admin/register-learner" element={<AdminRoute><ErrorBoundary><RegisterLearner /></ErrorBoundary></AdminRoute>} />
         <Route path="/admin/class-management" element={<AdminRoute><ErrorBoundary><AdminClassManagement /></ErrorBoundary></AdminRoute>} />
         <Route path="/admin/class/:classId/subjects" element={<AdminRoute><ErrorBoundary><AdminSubjectManagementWrapper /></ErrorBoundary></AdminRoute>} />
