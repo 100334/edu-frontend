@@ -9,21 +9,15 @@ import Library from '../Library';
 import QuizTaking from './QuizTaking';
 import {
   ArrowRightOnRectangleIcon,
-  CalendarIcon,
+  AcademicCapIcon,
   ChartBarIcon,
   DocumentTextIcon,
   HomeIcon,
   UserCircleIcon,
-  AcademicCapIcon,
   BookOpenIcon,
   ClipboardDocumentCheckIcon,
-  BellIcon
+  BellIcon,
 } from '@heroicons/react/24/outline';
-
-const HEADER_BG = '#224248';
-const TEAL = '#005F7B';
-const CYAN = '#00B4D8';
-const ICE_WHITE = '#F8FAFC';
 
 const getAverage = (subjects = []) => {
   const scores = subjects
@@ -51,35 +45,12 @@ const getGrade = (score, form) => {
   return { letter: 'F', description: 'Need improvement' };
 };
 
-const DashboardCard = ({ icon: Icon, title, color, onClick, className = '' }) => (
-  <button 
-    onClick={onClick}
-    className={`w-full min-h-36 rounded-2xl border-2 border-[#224248] bg-transparent p-5 shadow-sm transition-all hover:bg-transparent hover:shadow-md active:scale-[0.98] ${className}`}
-  >
-    <div className="flex justify-center">
-      <div className="rounded-xl p-2">
-        {typeof Icon === 'string' ? (
-          <img src={Icon} alt={title} className="h-8 w-8 object-contain" />
-        ) : (
-          <Icon className="h-8 w-8 text-[#224248]" />
-        )}
-      </div>
-    </div>
-    <h3 className="mt-3 text-center text-sm font-semibold text-[#224248]">{title}</h3>
-  </button>
-);
-
-const MobileStat = ({ icon: Icon, value, label }) => (
-  <div className="rounded-2xl bg-transparent px-3 py-3 text-center text-[#005F7B]">
-    {typeof Icon === 'string' ? (
-      <img src={Icon} alt={label} className="mx-auto mb-1 h-5 w-5 object-contain" />
-    ) : (
-      <Icon className="mx-auto mb-1 h-5 w-5 text-[#005F7B]" />
-    )}
-    <div className="text-lg font-bold">{value}</div>
-    <div className="text-[10px] font-semibold uppercase tracking-wide text-[#005F7B]/75">{label}</div>
-  </div>
-);
+const quickLinks = [
+  { tab: 'learning', title: 'Learn', description: 'Open your lessons', Icon: BookOpenIcon, theme: 'teal' },
+  { tab: 'library', title: 'Library', description: 'Explore your books', Icon: AcademicCapIcon, theme: 'gold' },
+  { tab: 'reports', title: 'Results', description: 'Review your progress', Icon: ChartBarIcon, theme: 'teal' },
+  { tab: 'attendance', title: 'Attendance', description: 'Check your school days', Icon: ClipboardDocumentCheckIcon, theme: 'gold' },
+];
 
 export default function MobileLearnerDashboard() {
   const { user, logout } = useAuth();
@@ -329,167 +300,189 @@ toast.error('Could not create PDF');
 
   if (showQuiz) {
     return (
-      <div className="min-h-screen bg-[#F5F2EB] px-4 py-5">
-        <button onClick={() => setShowQuiz(null)} className="mb-4 text-sm font-semibold text-[#005F7B]">
-          ← Back
-        </button>
-        <QuizTaking
-          quizId={showQuiz}
-          onComplete={() => setShowQuiz(null)}
-        />
+      <div className="min-h-screen bg-[#F2FBFC] px-4 py-5">
+        <div className="mx-auto max-w-[520px]">
+          <button
+            onClick={() => setShowQuiz(null)}
+            className="mb-4 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#00666B] shadow-sm ring-1 ring-[#D6EEEE]"
+          >
+            ← Back to learning
+          </button>
+          <QuizTaking quizId={showQuiz} onComplete={() => setShowQuiz(null)} />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F2EB] pb-20">
-      {/* Header Section */}
-      <header className="sticky top-0 z-30 bg-[#224248] px-4 pb-3 pt-3 shadow-xl">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex flex-col items-center text-center">
-            <img
-              src="/schoologo.png"
-              alt="Progress Secondary School logo"
-              className="h-12 w-12 object-contain drop-shadow-lg"
-            />
-            <div className="mt-1 leading-tight">
-              <div className="text-[8px] font-semibold uppercase tracking-[0.2em] text-[#7DE3FF]">
-                Student Portal
-              </div>
-              <h1 className="text-sm font-black tracking-wide text-white">
-                Progress School
-              </h1>
-              <div className="text-[10px] font-light text-white/60">
-                Secondary School
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
+    <div className="mx-auto min-h-screen w-full max-w-[520px] overflow-x-hidden bg-[#F2FBFC] pb-24 text-[#073F43] shadow-[0_0_35px_rgba(0,91,96,0.10)]">
+      <header className="relative z-30 w-full overflow-hidden bg-[#00676B] shadow-lg">
+        <div className="relative w-full">
+          <img
+            src="/image3.png"
+            alt="Two learners reading together"
+            className="block h-auto w-full"
+          />
+
+          <div className="absolute inset-x-0 top-[3%] flex items-center justify-between gap-1 px-[4%] text-white">
+            <button
+              type="button"
+              onClick={() => setActiveTab('overview')}
+              className="min-w-0 text-left text-[9px] font-black leading-tight drop-shadow"
+              aria-label="My Learning Space home"
+            >
+              My Learning
+              <br />
+              Space
+            </button>
+
+            <div className="mx-1 h-7 w-px shrink-0 bg-white/80" />
+
+            <h1 className="min-w-0 flex-1 text-center text-[10px] font-black leading-tight drop-shadow">
+              Learner Dashboard
+            </h1>
+
             <div className="relative">
               <button
+                type="button"
                 onClick={() => setShowNotifications(current => !current)}
                 aria-label="Notifications"
-                className="relative flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-white backdrop-blur-sm transition-all hover:bg-white/20"
+                className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#25D2CE] bg-[#004F54]/80 text-[#FFD84D]"
               >
                 <BellIcon className="h-4 w-4" />
                 {unreadCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                  <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
               </button>
               {showNotifications && (
-                <div className="absolute right-0 z-50 mt-2 w-72 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl">
-                  <div className="border-b border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700">
+                <div className="absolute right-0 z-50 mt-2 w-72 overflow-hidden rounded-xl border border-[#D3EEEE] bg-white shadow-xl">
+                  <div className="border-b border-[#D3EEEE] bg-[#F0FAF8] px-4 py-3 text-sm font-semibold text-[#00565B]">
                     Notifications
                   </div>
                   <div className="max-h-64 overflow-y-auto">
                     {notifications.length === 0 ? (
-                      <div className="px-4 py-6 text-center text-sm text-gray-500">No notifications</div>
+                      <div className="px-4 py-6 text-center text-sm text-slate-500">No notifications</div>
                     ) : notifications.map(notification => (
                       <button
                         key={notification.id}
                         onClick={() => markNotificationAsRead(notification.id)}
-                        className={`block w-full border-b border-gray-100 px-4 py-3 text-left hover:bg-gray-50 ${!notification.is_read ? 'bg-blue-50/60' : ''}`}
+                        className={`block w-full border-b border-slate-100 px-4 py-3 text-left hover:bg-[#F3FAF9] ${!notification.is_read ? 'bg-[#E8F8F7]' : ''}`}
                       >
-                        <div className="text-sm font-medium text-gray-800">{notification.title}</div>
-                        <div className="mt-0.5 text-xs text-gray-500">{notification.message}</div>
+                        <div className="text-sm font-medium text-[#073F43]">{notification.title}</div>
+                        <div className="mt-0.5 text-xs text-slate-500">{notification.message}</div>
                       </button>
                     ))}
                   </div>
                 </div>
               )}
             </div>
-            <button
-              onClick={handleLogout}
-              className="group flex items-center gap-1 rounded-xl bg-white/10 px-3 py-2 text-[10px] font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20"
-            >
-              <ArrowRightOnRectangleIcon className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-              <span>Exit</span>
-            </button>
-          </div>
-        </div>
 
-        <div className="mt-3 border-t border-white/20 pt-2">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <h2 className="text-base font-bold text-white">
-                {user?.name || 'Learner'}
-              </h2>
-              <div className="mt-0.5 flex items-center gap-1.5">
-                <AcademicCapIcon className="h-3.5 w-3.5 text-[#7DE3FF]" />
-                <span className="text-[11px] font-medium text-white/80">
-                  {user?.form || 'Form'}
-                </span>
+            <div className="flex min-w-0 max-w-[34%] items-center gap-1 rounded-full border border-[#25D2CE] bg-[#004F54]/75 py-0.5 pl-0.5 pr-1">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[#F7D34D] bg-[#EAFBFA] text-[#00858A]">
+                <UserCircleIcon className="h-5 w-5" />
               </div>
-            </div>
-            <div className="px-1.5 py-1 text-center">
-              <div className="text-[8px] font-semibold uppercase tracking-wider text-[#7DE3FF]">
-                Today
+              <div className="min-w-0 text-left">
+                <p className="truncate text-[7px] font-black leading-tight">{user?.name || 'Learner'}</p>
+                <p className="truncate text-[7px] font-semibold text-[#D7F6F3]">{user?.form || 'Form'}</p>
               </div>
-              <div className="text-[10px] font-bold text-white">
-                {new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                title="Log out"
+                aria-label="Log out"
+                className="shrink-0 text-white"
+              >
+                <ArrowRightOnRectangleIcon className="h-3 w-3" />
+              </button>
             </div>
           </div>
+
+          {activeTab === 'overview' && (
+            <div className="absolute right-[4%] top-[43%] flex w-[43%] flex-col items-center text-center text-white">
+              <h2 className="text-[15px] font-black leading-tight drop-shadow">
+                Hello, {(user?.name || 'Learner').trim().split(' ')[0]}!
+              </h2>
+              <p className="mt-1 hidden max-w-[230px] text-[9px] leading-snug text-white/90">
+                Ready for a great day of learning?
+              </p>
+              <button
+                type="button"
+                onClick={() => setActiveTab('learning')}
+                className="mt-3 rounded-full bg-gradient-to-b from-[#FFE77B] to-[#FFBF19] px-5 py-1.5 text-[10px] font-black text-[#073F43] shadow-md transition hover:brightness-105 active:scale-95"
+              >
+                Learn <span aria-hidden="true">›</span>
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
-      <main className="space-y-5 px-4 py-5">
+      <main className="mx-auto w-full max-w-[520px] space-y-3.5 px-3 py-3">
         {activeTab === 'overview' && (
           <>
-            {/* Four Main Cards */}
-            <div className="grid grid-cols-3 gap-2">
-              <MobileStat icon={ChartBarIcon} value={latestAverage} label="Average" />
-              <MobileStat icon={DocumentTextIcon} value={filteredReports.length} label="Reports" />
-              <MobileStat icon="/attendance.png" value={attendanceRate === '—' ? '—' : `${attendanceRate}%`} label="Attendance" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              {/* Results Card */}
-              <DashboardCard
-                icon="/results.png"
-                title="Results"
-                color={TEAL}
-                onClick={() => setActiveTab('reports')}
-              />
+            <section className="grid grid-cols-3 gap-1.5">
+              <div className="flex min-h-[92px] min-w-0 flex-col items-center justify-center rounded-[17px] border-2 border-[#F3C34A] bg-gradient-to-br from-white to-[#FFF8E6] px-1 py-2 text-center shadow-[0_4px_0_rgba(232,181,45,0.12)]">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FFF0B5] text-[#936500]">
+                  <ChartBarIcon className="h-5 w-5 stroke-[2.3]" />
+                </div>
+                <p className="mt-1 text-xl font-black leading-none text-[#07575A]">{latestAverage}</p>
+                <p className="mt-1 text-[10px] font-bold leading-tight text-[#173F43]">Average</p>
+              </div>
 
-              {/* Learn Card */}
-              <DashboardCard
-                icon="/open-book.png"
-                title="Learn"
-                color={CYAN}
-                onClick={() => setActiveTab('learning')}
-              />
+              <div className="flex min-h-[92px] min-w-0 flex-col items-center justify-center rounded-[17px] border-2 border-[#12BFC0] bg-gradient-to-br from-white to-[#E4FAFA] px-1 py-2 text-center shadow-[0_4px_0_rgba(0,171,174,0.10)]">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#C9F5F3] text-[#00686D]">
+                  <ClipboardDocumentCheckIcon className="h-5 w-5 stroke-[2.2]" />
+                </div>
+                <p className="mt-1 text-xl font-black leading-none text-[#07575A]">
+                  {attendanceRate === '—' ? '—' : `${attendanceRate}%`}
+                </p>
+                <p className="mt-1 text-[10px] font-bold leading-tight text-[#173F43]">Attendance</p>
+              </div>
 
-              {/* Attendance Card */}
-              <DashboardCard
-                icon="/attendance.png"
-                title="Attendance"
-                color="#6C63FF"
-                onClick={() => setActiveTab('attendance')}
-              />
+              <div className="flex min-h-[92px] min-w-0 flex-col items-center justify-center rounded-[17px] border-2 border-[#F3C34A] bg-gradient-to-br from-white to-[#FFF8E6] px-1 py-2 text-center shadow-[0_4px_0_rgba(232,181,45,0.12)]">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FFF0B5] text-[#936500]">
+                  <DocumentTextIcon className="h-5 w-5 stroke-[2]" />
+                </div>
+                <p className="mt-1 text-xl font-black leading-none text-[#07575A]">{filteredReports.length}</p>
+                <p className="mt-1 text-[10px] font-bold leading-tight text-[#173F43]">Reports</p>
+              </div>
+            </section>
 
-              {/* Profile Card */}
-              <DashboardCard
-                icon="/user.png"
-                title="Profile"
-                color="#F59E0B"
-                onClick={() => toast.info('Profile details coming soon')}
-              />
-            </div>
-
+            <section className="grid grid-cols-2 gap-3">
+              {quickLinks.map(({ tab, title, description, Icon, theme }) => (
+                <button
+                  key={tab}
+                  type="button"
+                  onClick={() => setActiveTab(tab)}
+                  className={`group relative flex min-h-[140px] flex-col items-center justify-center overflow-hidden rounded-[19px] px-3 py-4 shadow-[0_8px_0_rgba(0,91,96,0.10)] transition duration-200 hover:-translate-y-1 hover:shadow-xl ${
+                    theme === 'teal'
+                      ? 'bg-gradient-to-br from-[#009B9D] via-[#00777C] to-[#00585F] text-white'
+                      : 'bg-gradient-to-br from-[#FFE47A] via-[#FFC72D] to-[#F3A900] text-[#102F2E]'
+                  }`}
+                >
+                  <div className="pointer-events-none absolute -bottom-10 -left-8 h-28 w-[130%] -rotate-6 rounded-[50%] bg-white/10" />
+                  <Icon className={`relative z-10 h-11 w-11 stroke-[1.9] transition group-hover:scale-105 ${theme === 'teal' ? 'text-white' : 'text-[#5C4300]'}`} />
+                  <span className="relative z-10 mt-1 text-base font-black">{title}</span>
+                  <span className={`relative z-10 mt-0.5 text-[10px] font-semibold ${theme === 'teal' ? 'text-white/75' : 'text-[#604900]/80'}`}>
+                    {description}
+                  </span>
+                </button>
+              ))}
+            </section>
           </>
         )}
 
         {activeTab === 'reports' && (
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-[#0A2540]">
+              <h2 className="text-xl font-black text-[#00565B]">
                 {selectedResultCategory ? (resultsCategories.find(item => item.id === selectedResultCategory)?.label || 'Results') : 'Report Cards'}
               </h2>
               <button
                 onClick={() => selectedResultCategory ? setSelectedResultCategory(null) : setActiveTab('overview')}
-                className="text-sm font-semibold text-[#005F7B]"
+                className="text-sm font-bold text-[#00666B]"
               >
                 {selectedResultCategory ? '← Back' : '← Back'}
               </button>
@@ -501,7 +494,7 @@ toast.error('Could not create PDF');
                   <select
                     value={selectedYear}
                     onChange={(event) => setSelectedYear(event.target.value)}
-                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                    className="rounded-xl border border-[#D5E9E7] bg-white px-3 py-2 text-sm"
                   >
                     <option value="">All Years</option>
                     {availableYears.map(year => <option key={year} value={year}>{year}</option>)}
@@ -509,7 +502,7 @@ toast.error('Could not create PDF');
                   <select
                     value={selectedAssessment}
                     onChange={(event) => setSelectedAssessment(event.target.value)}
-                    className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+                    className="rounded-xl border border-[#D5E9E7] bg-white px-3 py-2 text-sm"
                   >
                     <option value="">All Exams</option>
                     {availableAssessments.map(assessment => <option key={assessment} value={assessment}>{assessment}</option>)}
@@ -523,9 +516,9 @@ toast.error('Could not create PDF');
                       <button
                         key={category.id}
                         onClick={() => setSelectedResultCategory(category.id)}
-                        className="rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98]"
+                        className="rounded-2xl border border-[#D5E9E7] bg-white p-4 text-left shadow-sm transition-all hover:bg-[#F3FAF9] active:scale-[0.98]"
                       >
-                        <div className="text-lg font-bold text-[#0A2540]">{category.label}</div>
+                        <div className="text-lg font-black text-[#00565B]">{category.label}</div>
                         <div className="mt-2 text-xs text-slate-500">{count} result{count === 1 ? '' : 's'}</div>
                       </button>
                     );
@@ -537,27 +530,27 @@ toast.error('Could not create PDF');
             {selectedResultCategory && (
               <div className="space-y-3">
                 {selectedCategoryReports.length ? selectedCategoryReports.map(report => (
-                  <article key={report.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <article key={report.id} className="rounded-2xl border border-[#D5E9E7] bg-white p-4 shadow-sm">
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="font-bold text-[#0A2540]">{report.term || 'Report card'}</div>
+                        <div className="font-bold text-[#00565B]">{report.term || 'Report card'}</div>
                         <div className="text-xs text-slate-500">{report.form || user?.form} · {report.academic_year || ''}</div>
                       </div>
-                      <div className="text-lg font-bold text-[#005F7B]">{getAverage(report.subjects)}%</div>
+                      <div className="text-lg font-bold text-[#00666B]">{getAverage(report.subjects)}%</div>
                     </div>
                     <div className="mt-3 space-y-2">
                       {(report.subjects || []).slice(0, 4).map(subject => (
                         <div key={`${report.id}-${subject.name}`} className="flex justify-between text-sm">
                           <span className="text-slate-600">{subject.name}</span>
-                          <span className="font-semibold text-[#0A2540]">{subject.score}%</span>
+                          <span className="font-semibold text-[#00565B]">{subject.score}%</span>
                         </div>
                       ))}
                     </div>
-                    <button onClick={() => downloadReportPDF(report)} className="mt-4 w-full rounded-xl bg-[#005F7B] py-3 text-sm font-semibold text-white">
+                    <button onClick={() => downloadReportPDF(report)} className="mt-4 w-full rounded-xl bg-[#00666B] py-3 text-sm font-semibold text-white">
                       Download PDF
                     </button>
                   </article>
-                )) : <p className="rounded-2xl bg-white p-6 text-center text-sm text-slate-500">No reports match this selection.</p>}
+                )) : <p className="rounded-2xl bg-[#F3FAF9] p-6 text-center text-sm text-slate-500">No reports match this selection.</p>}
               </div>
             )}
           </section>
@@ -566,8 +559,8 @@ toast.error('Could not create PDF');
         {activeTab === 'learning' && (
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xl font-bold text-[#0A2540]">Learning Space</h2>
-              <button onClick={() => setActiveTab('overview')} className="text-sm font-semibold text-[#005F7B]">
+              <h2 className="text-xl font-black text-[#00565B]">Learning Space</h2>
+              <button onClick={() => setActiveTab('overview')} className="text-sm font-bold text-[#00666B]">
                 ← Back
               </button>
              </div>
@@ -578,8 +571,8 @@ toast.error('Could not create PDF');
         {activeTab === 'library' && (
           <section>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-xl font-bold text-[#0A2540]">Library</h2>
-              <button onClick={() => setActiveTab('overview')} className="text-sm font-semibold text-[#005F7B]">
+              <h2 className="text-xl font-black text-[#00565B]">Library</h2>
+              <button onClick={() => setActiveTab('overview')} className="text-sm font-bold text-[#00666B]">
                 ← Back
               </button>
              </div>
@@ -590,54 +583,56 @@ toast.error('Could not create PDF');
         {activeTab === 'attendance' && (
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-[#0A2540]">Attendance Records</h2>
-              <button onClick={() => setActiveTab('overview')} className="text-sm font-semibold text-[#005F7B]">
+              <h2 className="text-xl font-black text-[#00565B]">Attendance Records</h2>
+              <button onClick={() => setActiveTab('overview')} className="text-sm font-bold text-[#00666B]">
                 ← Back
               </button>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm">
-              <div className="text-4xl font-bold text-[#005F7B]">{attendanceRate === '—' ? '—' : `${attendanceRate}%`}</div>
+            <div className="rounded-2xl border border-[#D5E9E7] bg-gradient-to-r from-[#DDF7F5] to-[#EFFBFA] p-5 text-center shadow-sm">
+              <div className="text-4xl font-black text-[#00666B]">{attendanceRate === '—' ? '—' : `${attendanceRate}%`}</div>
               <div className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-500">Overall Attendance Rate</div>
             </div>
             {attendance.records.length ? attendance.records.slice(0, 12).map(record => (
-              <div key={record.id || `${record.date}-${record.status}`} className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div key={record.id || `${record.date}-${record.status}`} className="flex items-center justify-between rounded-xl border border-[#D5E9E7] bg-white p-4 shadow-sm">
                 <span className="text-sm text-slate-600">{record.date ? new Date(record.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Date unavailable'}</span>
                 <span className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${record.status === 'present' ? 'bg-green-100 text-green-700' : record.status === 'late' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
                   {record.status || 'unknown'}
                 </span>
               </div>
-            )) : <p className="rounded-2xl bg-white p-6 text-center text-sm text-slate-500">No records yet.</p>}
+            )) : <p className="rounded-2xl bg-[#F3FAF9] p-6 text-center text-sm text-slate-500">No records yet.</p>}
           </section>
         )}
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-200 bg-transparent px-2 py-2">
-        <div className="mx-auto flex max-w-md justify-around">
+      <nav className="fixed bottom-0 left-1/2 z-30 w-full max-w-[520px] -translate-x-1/2 px-2 pb-2">
+        <div className="mx-auto flex w-full items-center justify-around gap-0.5 rounded-full border border-[#8DE5E1] bg-gradient-to-r from-[#005C62] via-[#00777A] to-[#005C62] px-1 py-1.5 shadow-[0_-4px_20px_rgba(0,91,96,0.12),0_8px_25px_rgba(0,0,0,0.18)]">
           {[
-            { id: 'overview', label: 'Home', icon: '/schoologo.png' },
-            { id: 'learning', label: 'Learn', icon: '/open-book.png' },
-            { id: 'library', label: 'Library', icon: null },
-            { id: 'reports', label: 'Reports', icon: '/results.png' },
-            { id: 'attendance', label: 'Attendance', icon: '/attendance.png' }
-          ].map(({ id, label, icon: Icon }) => (
-            <button 
-              key={id} 
-              onClick={() => setActiveTab(id)} 
-              aria-label={label}
-              className={`flex items-center justify-center rounded-xl p-3 transition-all ${
-                activeTab === id ? 'text-slate-600' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              {Icon === null ? (
-                <span className="text-xl leading-none" role="img" aria-label={label}>📚</span>
-              ) : typeof Icon === 'string' ? (
-                <img src={Icon} alt={label} className="h-6 w-6 object-contain" />
-              ) : (
-                <Icon className="h-6 w-6" />
-              )}
-            </button>
-          ))}
+            { id: 'overview', label: 'Home', Icon: HomeIcon },
+            { id: 'learning', label: 'Learn', Icon: BookOpenIcon },
+            { id: 'library', label: 'Library', Icon: AcademicCapIcon },
+            { id: 'reports', label: 'Results', Icon: ChartBarIcon },
+            { id: 'attendance', label: 'Attendance', Icon: ClipboardDocumentCheckIcon },
+          ].map(({ id, label, Icon }) => {
+            const isActive = activeTab === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setActiveTab(id)}
+                aria-label={label}
+                aria-current={isActive ? 'page' : undefined}
+                className={`flex min-w-0 flex-1 items-center justify-center gap-0.5 rounded-full px-1 py-1.5 text-[9px] font-black transition ${
+                  isActive
+                    ? 'bg-gradient-to-b from-[#FFE77B] to-[#FFBF19] text-[#073F43] shadow-md'
+                    : 'text-white hover:bg-white/10'
+                }`}
+              >
+                <Icon className="h-4 w-4 shrink-0 stroke-[2.1]" />
+                <span className="truncate">{label}</span>
+              </button>
+            );
+          })}
         </div>
       </nav>
     </div>
