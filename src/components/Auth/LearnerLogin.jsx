@@ -100,7 +100,10 @@ const LearnerLogin = ({ serverStatus }) => {
   );
 
   return (
-    <div className="min-h-screen bg-[#F4F9F9] flex items-center justify-center p-3">
+    <div
+      className="min-h-screen bg-cover bg-center bg-no-repeat flex items-center justify-center p-3"
+      style={{ backgroundImage: "url('/image2.png')" }}
+    >
       <div className="w-full max-w-sm">
         {/* Main Card */}
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200/80 overflow-hidden">
