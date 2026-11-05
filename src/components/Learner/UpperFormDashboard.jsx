@@ -38,10 +38,10 @@ const getGradeFromScore = (score) => {
   if (score >= 75) return { letter: 'A',  points: 2, description: 'Distinction', color: '#2a6e2a', bgColor: '#e8f5e9' };
   if (score >= 65) return { letter: 'B',  points: 3, description: 'Credit',      color: '#2a9090', bgColor: '#e0f2f1' };
   if (score >= 56) return { letter: 'C',  points: 4, description: 'Credit',      color: TEAL_ACCENT, bgColor: '#e0f2f1' };
-  if (score >= 50) return { letter: 'D',  points: 5, description: 'Credit',      color: AZURE_ACCENT, bgColor: '#e0f7fa' };
-  if (score >= 45) return { letter: 'E',  points: 6, description: 'Pass',        color: AZURE_ACCENT, bgColor: '#e0f7fa' };
-  if (score >= 40) return { letter: 'F',  points: 7, description: 'Pass',        color: AZURE_ACCENT, bgColor: '#e0f7fa' };
-  if (score >= 35) return { letter: 'G',  points: 8, description: 'Pass',        color: AZURE_ACCENT, bgColor: '#e0f7fa' };
+  if (score >= 50) return { letter: 'D',  points: 5, description: 'Credit',      color: '#0097A7', bgColor: '#e0f7fa' };
+  if (score >= 45) return { letter: 'E',  points: 6, description: 'Pass',        color: '#0097A7', bgColor: '#e0f7fa' };
+  if (score >= 40) return { letter: 'F',  points: 7, description: 'Pass',        color: '#0097A7', bgColor: '#e0f7fa' };
+  if (score >= 35) return { letter: 'G',  points: 8, description: 'Pass',        color: '#0097A7', bgColor: '#e0f7fa' };
   return            { letter: 'U',  points: 9, description: 'Fail',        color: '#c0392b', bgColor: '#ffebee' };
 };
 
@@ -698,105 +698,6 @@ export default function UpperFormDashboard() {
                 </button>
                 <button onClick={() => { downloadReportPDF(selectedReport); setShowReportModal(false); }}
                   className="flex-1 py-2.5 bg-[#00676B] text-white rounded-xl text-sm font-bold hover:bg-[#005060] transition flex items-center justify-center gap-2">
-                  <ArrowDownTrayIcon className="w-4 h-4" /> Download PDF
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };core}%`, backgroundColor: g.color }} />
-                  </div>
-                  <span className="text-[11px] font-bold font-mono w-16 text-right flex-shrink-0" style={{ color: g.color }}>
-                    {s.score}% {g.letter}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-          <div className="mx-4 mb-4 px-3 py-2 bg-[#F5F2EB] rounded-lg flex items-center justify-between">
-            <span className="text-[11px] text-gray-500">Best 6: <span className="font-semibold text-[#003B46]">{best6pts} pts</span></span>
-            <span className="text-[11px] font-semibold text-[#2A9D8F]">{overallDesc}</span>
-          </div>
-          <div className="flex border-t border-[#e2e8f0]">
-            <button onClick={() => { setSelectedReport(report); setShowReportModal(true); }}
-              className="flex-1 py-2.5 text-xs font-semibold text-[#2A9D8F] hover:bg-[#2A9D8F]/5 transition border-r border-[#e2e8f0] flex items-center justify-center gap-1.5">
-              👁 View Report
-            </button>
-            <button onClick={() => downloadReportPDF(report)}
-              className="flex-1 py-2.5 text-xs font-semibold text-gray-600 hover:bg-gray-50 transition flex items-center justify-center gap-1.5">
-              <ArrowDownTrayIcon className="w-3.5 h-3.5" /> Download PDF
-            </button>
-          </div>
-        </div>
-
-        {/* View modal */}
-        {showReportModal && selectedReport && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-            <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-              <div className="flex items-center justify-between px-5 py-3 bg-[#003B46] flex-shrink-0">
-                <span className="text-sm font-bold text-white truncate">
-                  {selectedReport.term} — {selectedReport.form || user?.form} {selectedReport.academic_year}
-                </span>
-                <button onClick={() => setShowReportModal(false)}
-                  className="w-7 h-7 rounded-lg bg-white/10 hover:bg-red-500 flex items-center justify-center transition ml-2 flex-shrink-0">
-                  <XMarkIcon className="w-4 h-4 text-white" />
-                </button>
-              </div>
-              <div className="overflow-y-auto flex-1 p-5 space-y-4">
-                {(() => {
-                  const v   = (selectedReport.subjects || []).filter(s => s?.score != null);
-                  const a   = calculateAverage(v);
-                  const g   = getGradeFromScore(a);
-                  const b6  = calculateBestSubjects(v);
-                  const pts = calculateTotalPoints(b6);
-                  return (
-                    <>
-                      <div className="grid grid-cols-3 gap-3">
-                        {[{ label: 'Average', value: `${a}%` }, { label: 'Grade', value: g.letter }, { label: 'Points', value: `${pts} pts` }].map(c => (
-                          <div key={c.label} className="text-center bg-[#F5F2EB] rounded-xl p-3 border border-[#e2e8f0]">
-                            <p className="text-lg font-black text-[#003B46]">{c.value}</p>
-                            <p className="text-[10px] text-gray-400 font-semibold uppercase">{c.label}</p>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="space-y-1.5">
-                        {v.map((s, i) => {
-                          const sg = getGradeFromScore(s.score);
-                          return (
-                            <div key={i} className="flex items-center gap-2">
-                              <span className="text-xs text-gray-600 w-32 truncate flex-shrink-0">{s.name}</span>
-                              <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                <div className="h-full rounded-full" style={{ width: `${s.score}%`, backgroundColor: sg.color }} />
-                              </div>
-                              <span className="text-xs font-bold font-mono w-16 text-right flex-shrink-0" style={{ color: sg.color }}>
-                                {s.score}% {sg.letter}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div className="flex items-center justify-between px-3 py-2.5 bg-[#F5F2EB] rounded-lg border border-[#e2e8f0]">
-                        <span className="text-xs text-gray-500">Best 6 Aggregate</span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-[#003B46]">{pts} pts</span>
-                          <span className="px-2 py-0.5 bg-[#2A9D8F]/10 text-[#2A9D8F] text-[10px] rounded-full font-semibold">
-                            {getOverallGradeFromPoints(pts).description}
-                          </span>
-                        </div>
-                      </div>
-                    </>
-                  );
-                })()}
-              </div>
-              <div className="px-5 py-3 border-t border-[#e2e8f0] flex gap-2 flex-shrink-0">
-                <button onClick={() => setShowReportModal(false)}
-                  className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50 transition">
-                  Close
-                </button>
-                <button onClick={() => { downloadReportPDF(selectedReport); setShowReportModal(false); }}
-                  className="flex-1 py-2.5 bg-[#003B46] text-white rounded-xl text-sm font-semibold hover:bg-[#005060] transition flex items-center justify-center gap-2">
                   <ArrowDownTrayIcon className="w-4 h-4" /> Download PDF
                 </button>
               </div>
