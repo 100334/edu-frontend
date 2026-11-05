@@ -678,9 +678,9 @@ const LearningSpace = ({ onStartQuiz }) => {
                       >
                         <svg viewBox="0 0 56 44" fill="none" xmlns="http://www.w3.org/2000/svg"
                           className="w-14 h-11 flex-shrink-0 transition-transform group-hover:scale-105">
-                          <rect x="0" y="0" width="20" height="7" rx="3" fill="#F5C842" />
-                          <rect x="0" y="5" width="56" height="36" rx="4" fill="#F5C842" />
-                          <rect x="0" y="5" width="56" height="8" rx="4" fill="#F9D85A" opacity="0.6" />
+                          <rect x="0" y="0" width="20" height="7" rx="3" fill="#005BB5" />
+                          <rect x="0" y="5" width="56" height="36" rx="4" fill="#007FFF" />
+                          <rect x="0" y="5" width="56" height="8" rx="4" fill="#3399FF" opacity="0.6" />
                         </svg>
                         <div className="text-center w-full">
                           <p className="text-xs font-bold text-slate-700 leading-tight truncate">Quizzes</p>
