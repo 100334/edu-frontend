@@ -294,47 +294,57 @@ toast.dismiss(loadingToast);
       </header>
 
       <main className="mx-auto max-w-[1700px] px-3 py-4 sm:px-5 sm:py-5 lg:px-7">
-        {/*
-          Layout:
-          - Portrait mobile / narrow: single column, quiz details collapsed to top summary bar
-          - Landscape mobile / tablet: two columns — question left, navigator right
-          - Desktop xl: three columns — details | question | navigator
-        */}
-        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_260px] xl:grid-cols-[250px_minmax(0,1fr)_280px]">
-
-          {/* Quiz details — hidden on mobile portrait, shown as top bar on landscape, full aside on xl */}
-          <aside className="order-2 overflow-hidden rounded-[22px] border-2 border-[#12BFC0] bg-white shadow-sm lg:order-1 xl:block">
-            <div className="flex items-center gap-3 bg-gradient-to-r from-[#00565D] to-[#008487] px-4 py-3 text-white">
-              <DocumentCheckIcon className="h-6 w-6 text-[#FFE16A]" />
-              <h2 className="text-sm font-extrabold sm:text-base">Quiz Details</h2>
-            </div>
-            <div className="divide-y divide-[#D9E8E8] px-4">
-              <div className="flex items-center gap-3 py-3">
-                <DocumentCheckIcon className="h-6 w-6 shrink-0 text-[#00777A]" />
-                <div><p className="text-[11px] font-semibold text-[#688183]">Subject</p><p className="text-sm font-bold text-[#123F42]">{quiz.subject_name || quiz.subject?.name || 'Assessment'}</p></div>
-              </div>
-              <div className="flex items-center gap-3 py-3">
-                <FlagIcon className="h-6 w-6 shrink-0 text-[#00777A]" />
-                <div><p className="text-[11px] font-semibold text-[#688183]">Topic</p><p className="text-sm font-bold text-[#123F42]">{quiz.topic || quiz.title || 'Quiz'}</p></div>
-              </div>
-              <div className="flex items-center gap-3 py-3">
-                <DocumentCheckIcon className="h-6 w-6 shrink-0 text-[#00777A]" />
-                <div><p className="text-[11px] font-semibold text-[#688183]">Questions</p><p className="text-sm font-bold text-[#123F42]">{questions.length}</p></div>
-              </div>
-              <div className="flex items-center gap-3 py-3">
-                <CheckCircleSolid className="h-6 w-6 shrink-0 text-[#00777A]" />
-                <div><p className="text-[11px] font-semibold text-[#688183]">Total Marks</p><p className="text-sm font-bold text-[#123F42]">{quiz.total_marks || questions.reduce((s, q) => s + Number(q.marks || 0), 0)}</p></div>
-              </div>
-              <div className="flex items-center gap-3 py-3">
-                <ClockIcon className="h-6 w-6 shrink-0 text-[#00777A]" />
-                <div><p className="text-[11px] font-semibold text-[#688183]">Duration</p><p className="text-sm font-bold text-[#123F42]">{quiz.duration} Minutes</p></div>
+        {/* ── 1. Quiz details — full-width strip ─────────────────────────────── */}
+        <div className="mb-4 overflow-hidden rounded-[18px] border-2 border-[#12BFC0] bg-white shadow-sm">
+          <div className="flex items-center gap-3 bg-gradient-to-r from-[#00565D] to-[#008487] px-4 py-3 text-white">
+            <DocumentCheckIcon className="h-5 w-5 text-[#FFE16A]" />
+            <h2 className="text-sm font-extrabold">Quiz Details</h2>
+          </div>
+          <div className="grid grid-cols-2 divide-x divide-[#D9E8E8] sm:grid-cols-3 lg:grid-cols-5">
+            <div className="flex items-center gap-2 px-4 py-3">
+              <DocumentCheckIcon className="h-5 w-5 shrink-0 text-[#00777A]" />
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold text-[#688183]">Subject</p>
+                <p className="truncate text-xs font-bold text-[#123F42]">{quiz.subject_name || quiz.subject?.name || 'Assessment'}</p>
               </div>
             </div>
-            <div className="h-2 bg-gradient-to-r from-[#00777A] via-[#FFE16A] to-[#00777A]" />
-          </aside>
+            <div className="flex items-center gap-2 px-4 py-3">
+              <FlagIcon className="h-5 w-5 shrink-0 text-[#00777A]" />
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold text-[#688183]">Topic</p>
+                <p className="truncate text-xs font-bold text-[#123F42]">{quiz.topic || quiz.title || 'Quiz'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-3">
+              <DocumentCheckIcon className="h-5 w-5 shrink-0 text-[#00777A]" />
+              <div>
+                <p className="text-[10px] font-semibold text-[#688183]">Questions</p>
+                <p className="text-xs font-bold text-[#123F42]">{questions.length}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-3">
+              <CheckCircleSolid className="h-5 w-5 shrink-0 text-[#00777A]" />
+              <div>
+                <p className="text-[10px] font-semibold text-[#688183]">Total Marks</p>
+                <p className="text-xs font-bold text-[#123F42]">{quiz.total_marks || questions.reduce((s, q) => s + Number(q.marks || 0), 0)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-3">
+              <ClockIcon className="h-5 w-5 shrink-0 text-[#00777A]" />
+              <div>
+                <p className="text-[10px] font-semibold text-[#688183]">Duration</p>
+                <p className="text-xs font-bold text-[#123F42]">{quiz.duration} min</p>
+              </div>
+            </div>
+          </div>
+          <div className="h-1.5 bg-gradient-to-r from-[#00777A] via-[#FFE16A] to-[#00777A]" />
+        </div>
 
-          {/* Centre: question and answers */}
-          <section ref={pageRef} className="order-1 min-w-0 overflow-hidden rounded-[22px] border-2 border-[#12BFC0] bg-white shadow-sm lg:order-2">
+        {/* ── 2. Questions + Navigator — side by side ─────────────────────────── */}
+        <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-[minmax(0,1fr)_240px] lg:grid-cols-[minmax(0,1fr)_280px]">
+
+          {/* Questions */}
+          <section ref={pageRef} className="min-w-0 overflow-hidden rounded-[22px] border-2 border-[#12BFC0] bg-white shadow-sm">
             <div className="border-b border-[#E6EEEE] px-4 py-4 sm:px-6 sm:py-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-lg font-black text-[#123F42] sm:text-2xl">Question {startIdx + 1} of {questions.length}</h2>
@@ -412,8 +422,8 @@ toast.dismiss(loadingToast);
             </div>
           </section>
 
-          {/* Right: question navigator */}
-          <aside className="order-3 space-y-4">
+          {/* Navigator */}
+          <aside className="space-y-4">
             <section className="overflow-hidden rounded-[22px] border-2 border-[#12BFC0] bg-white shadow-sm">
               <div className="flex items-center gap-3 bg-gradient-to-r from-[#00565D] to-[#008487] px-4 py-3 text-white">
                 <DocumentCheckIcon className="h-6 w-6 text-[#FFE16A]" />
