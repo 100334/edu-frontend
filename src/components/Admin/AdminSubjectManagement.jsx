@@ -100,6 +100,7 @@ const AdminSubjectManagement = ({ user, onBack }) => {
   const [showEditModal,     setShowEditModal]     = useState(false);
   const [selectedSubject,   setSelectedSubject]   = useState(null);
   const [submitting,        setSubmitting]        = useState(false);
+  const [addingPrimarySubjects, setAddingPrimarySubjects] = useState(false);
   const [formData, setFormData] = useState({ name: '', code: '', description: '', display_order: 1 });
 
   // ── Plain async function — no useCallback, no stale closures ─────────────
@@ -226,6 +227,27 @@ const AdminSubjectManagement = ({ user, onBack }) => {
     } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
   };
 
+  const handleAddPrimarySubjects = async () => {
+    if (!window.confirm('Add Social Studies, Primary Science, and Arts/Life Skills to every existing Standard 1–8 class? Subjects already present will be skipped.')) return;
+    setAddingPrimarySubjects(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await api.post('/api/admin/subjects/primary-standards', {}, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data.success) {
+        toast.success(res.data.message);
+        if (selectedClassId) fetchSubjects(selectedClassId);
+      } else {
+        toast.error(res.data.message || 'Could not add primary subjects');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not add primary subjects');
+    } finally {
+      setAddingPrimarySubjects(false);
+    }
+  };
+
   const openEditModal = (subject) => {
     setSelectedSubject(subject);
     setFormData({
@@ -299,6 +321,16 @@ const AdminSubjectManagement = ({ user, onBack }) => {
             <PlusIcon className="w-4 h-4" /> Add Subject
           </button>
         </div>
+      </div>
+      <div className="mb-5">
+        <button
+          onClick={handleAddPrimarySubjects}
+          disabled={addingPrimarySubjects}
+          className="flex items-center gap-1.5 px-3 py-2 border border-[#00B4D8] text-[#006770] rounded-lg text-xs font-semibold hover:bg-[#f0faf9] transition disabled:opacity-50"
+        >
+          <PlusIcon className="w-4 h-4" />
+          {addingPrimarySubjects ? 'Adding primary subjects…' : 'Add primary subjects to all Standards'}
+        </button>
       </div>
 
       {/* Subjects table */}
@@ -388,7 +420,7 @@ const AdminSubjectManagement = ({ user, onBack }) => {
       {/* Modals */}
       {showAddModal && (
         <SubjectModal
-          title={`Add Subject — ${selectedClassName}`}
+          title={'Add Subject - ' + selectedClassName}
           formData={formData}
           setFormData={setFormData}
           onSubmit={handleAddSubject}
@@ -398,7 +430,7 @@ const AdminSubjectManagement = ({ user, onBack }) => {
       )}
       {showEditModal && selectedSubject && (
         <SubjectModal
-          title={`Edit — ${selectedSubject.name}`}
+          title={'Edit - ' + selectedSubject.name}
           formData={formData}
           setFormData={setFormData}
           onSubmit={handleEditSubject}

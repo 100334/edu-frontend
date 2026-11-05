@@ -347,7 +347,8 @@ toast.error('Failed to load statistics');
         setUnreadCount(notifs.length);
       }
     } catch (error) {
-}
+      console.error('Failed to fetch admin notifications:', error);
+    }
   };
 
   const markNotificationAsRead = async (id) => {
@@ -359,7 +360,8 @@ toast.error('Failed to load statistics');
       // Refresh notifications
       await fetchNotifications();
     } catch (error) {
-}
+      console.error('Failed to mark admin notification as read:', error);
+    }
   };
 
   const handleLogout = async () => {
