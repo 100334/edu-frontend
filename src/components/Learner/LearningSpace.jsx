@@ -670,26 +670,26 @@ const LearningSpace = ({ onStartQuiz }) => {
 
               return (
                 <div className="space-y-3">
-                  {/* Quiz folder card — same style as subject folders */}
-                  {weekQuizItems.length > 0 && (
-                    <button
-                      onClick={() => setShowQuizFolder(true)}
-                      className="w-full flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-amber-200 hover:border-amber-400 hover:shadow-sm transition-all"
-                    >
-                      <div className="w-12 h-10 flex-shrink-0 rounded-lg bg-amber-100 flex items-center justify-center">
-                        <span className="text-2xl">📝</span>
-                      </div>
-                      <div className="text-left">
-                        <p className="text-sm font-bold text-[#003B46]">Quizzes</p>
-                        <p className="text-[10px] text-slate-400">
-                          {weekQuizItems.length} assessment{weekQuizItems.length !== 1 ? 's' : ''}
-                        </p>
-                      </div>
-                      <ChevronRightIcon className="w-4 h-4 text-slate-300 ml-auto" />
-                    </button>
-                  )}
-
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {weekQuizItems.length > 0 && (
+                      <button
+                        onClick={() => setShowQuizFolder(true)}
+                        className="group flex flex-col items-center gap-2 p-3 rounded-xl border border-gray-200 bg-white hover:border-[#006770]/40 hover:shadow-sm transition-all duration-200 active:scale-95"
+                      >
+                        <svg viewBox="0 0 56 44" fill="none" xmlns="http://www.w3.org/2000/svg"
+                          className="w-14 h-11 flex-shrink-0 transition-transform group-hover:scale-105">
+                          <rect x="0" y="0" width="20" height="7" rx="3" fill="#F5C842" />
+                          <rect x="0" y="5" width="56" height="36" rx="4" fill="#F5C842" />
+                          <rect x="0" y="5" width="56" height="8" rx="4" fill="#F9D85A" opacity="0.6" />
+                        </svg>
+                        <div className="text-center w-full">
+                          <p className="text-xs font-bold text-slate-700 leading-tight truncate">Quizzes</p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">
+                            {weekQuizItems.length} item{weekQuizItems.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                      </button>
+                    )}
                     {subjects.map(([subject, topics]) => {
                     // Count resources inside this subject folder
                     const noteCount  = topics.filter(t => !!t.pdf_url).length;
