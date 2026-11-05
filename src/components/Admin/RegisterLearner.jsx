@@ -16,6 +16,11 @@ import {
 const inp = 'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#00B4D8] focus:border-[#00B4D8] transition';
 const TEAL = '#006770';
 const AZURE = '#00B4D8';
+const PRIMARY_STANDARDS = Array.from({ length: 7 }, (_, index) => ({
+  id: `standard:${index + 1}`,
+  name: `Standard ${index + 1}`,
+  isPrimaryOption: true,
+}));
 
 const RegisterLearner = ({ onSuccess }) => {
   const [isEditMode,          setIsEditMode]          = useState(false);
@@ -93,10 +98,11 @@ const RegisterLearner = ({ onSuccess }) => {
   };
 
   const handleClassSelect = useCallback((classId) => {
-    const cls = classes.find(c => String(c.id) === String(classId));
+    const cls = classes.find(c => String(c.id) === String(classId))
+      || PRIMARY_STANDARDS.find(option => option.id === classId);
     setFormData(p => ({ ...p, selectedClassId: cls?.id || classId, selectedClassName: cls?.name || '' }));
     if (errors.classId) setErrors(p => ({ ...p, classId: null }));
-    if (isEditMode) fetchLearnersForClass(classId);
+    if (isEditMode && !cls?.isPrimaryOption) fetchLearnersForClass(classId);
     else { setLearners([]); setTimeout(handleGenerateRegNumber, 0); }
   }, [classes, isEditMode, fetchLearnersForClass, handleGenerateRegNumber, errors]);
 
@@ -142,12 +148,13 @@ const RegisterLearner = ({ onSuccess }) => {
     try {
       const token = localStorage.getItem('token');
       const cls = classes.find(c => String(c.id) === String(formData.selectedClassId));
-      if (!cls) { toast.error('Selected class not found'); setIsLoading(false); return; }
+      const standard = PRIMARY_STANDARDS.find(option => option.id === formData.selectedClassId);
+      if (!cls && !standard) { toast.error('Selected class not found'); setIsLoading(false); return; }
       const res = await api.post('/api/admin/learners', {
         name: formData.name.trim(),
         reg_number: formData.regNumber.trim().toUpperCase(),
-        class_id: cls.id,
-        form: getFormName(cls.name),
+        class_id: cls?.id || null,
+        form: getFormName(cls?.name || standard.name),
         enrollment_date: new Date().toISOString().split('T')[0],
       }, { headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' } });
       if (res.data.success) {
@@ -251,24 +258,50 @@ const RegisterLearner = ({ onSuccess }) => {
           <div className="p-5 space-y-4">
             {loadingClasses ? (
               <div className="flex justify-center py-6"><div className="w-6 h-6 border-4 border-[#006770] border-t-transparent rounded-full animate-spin" /></div>
-            ) : classes.length === 0 ? (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-                No classes are available. Create a Standard class in Class Management before registering a primary learner.
-              </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {classes.map(cls => (
-                  <button key={cls.id} type="button"
-                    onClick={() => handleClassSelect(cls.id)}
-                    className={`px-3 py-2.5 rounded-lg border text-sm font-medium transition-all text-left ${
-                      String(formData.selectedClassId) === String(cls.id)
-                        ? 'bg-[#006770] text-white border-[#006770] shadow-sm'
-                        : 'bg-white text-gray-700 border-gray-200 hover:border-[#006770]/50 hover:bg-[#f0faf9]'
-                    }`}>
-                    {cls.name}
-                    <span className={`block text-[10px] mt-0.5 ${String(formData.selectedClassId) === String(cls.id) ? 'text-white/70' : 'text-gray-400'}`}>{cls.year}</span>
-                  </button>
-                ))}
+              <div className="space-y-5">
+                {!isEditMode && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 mb-2">Primary — select a Standard</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {PRIMARY_STANDARDS.map(standard => (
+                        <button key={standard.id} type="button"
+                          onClick={() => handleClassSelect(standard.id)}
+                          className={`px-3 py-2.5 rounded-lg border text-sm font-medium transition-all text-left ${
+                            formData.selectedClassId === standard.id
+                              ? 'bg-[#006770] text-white border-[#006770] shadow-sm'
+                              : 'bg-white text-gray-700 border-gray-200 hover:border-[#006770]/50 hover:bg-[#f0faf9]'
+                          }`}>
+                          {standard.name}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-2">
+                      Primary learners can be registered at their Standard without creating a class first.
+                    </p>
+                  </div>
+                )}
+                {classes.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 mb-2">
+                      {isEditMode ? 'Select a class' : 'Secondary or assigned class'}
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {classes.map(cls => (
+                        <button key={cls.id} type="button"
+                          onClick={() => handleClassSelect(cls.id)}
+                          className={`px-3 py-2.5 rounded-lg border text-sm font-medium transition-all text-left ${
+                            String(formData.selectedClassId) === String(cls.id)
+                              ? 'bg-[#006770] text-white border-[#006770] shadow-sm'
+                              : 'bg-white text-gray-700 border-gray-200 hover:border-[#006770]/50 hover:bg-[#f0faf9]'
+                          }`}>
+                          {cls.name}
+                          <span className={`block text-[10px] mt-0.5 ${String(formData.selectedClassId) === String(cls.id) ? 'text-white/70' : 'text-gray-400'}`}>{cls.year}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             {errors.classId && <p className="text-xs text-red-500">{errors.classId}</p>}
