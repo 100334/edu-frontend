@@ -148,7 +148,10 @@ setQuizzes([]);
           const now = new Date();
           const isUpcoming = startTime && now < startTime;
           const isClosed = endTime && now > endTime;
-          const canStart = !isRestricted && !isUpcoming && !isClosed;
+          const attemptsUsed = Number(quiz.attempts_used) || 0;
+          const maxAttempts = Number(quiz.max_attempts) || 2;
+          const attemptsExhausted = attemptsUsed >= maxAttempts;
+          const canStart = !isRestricted && !isUpcoming && !isClosed && !attemptsExhausted;
 
           return (
             <div key={quizId} className="group relative bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 flex flex-col overflow-hidden">
@@ -225,6 +228,11 @@ setQuizzes([]);
                     </div>
                   </div>
                 </div>
+                {attemptsUsed > 0 && (
+                  <p className="mb-4 text-xs font-medium text-slate-500">
+                    Attempts used: {attemptsUsed} of {maxAttempts}
+                  </p>
+                )}
 
                 {/* Action / Results Area */}
                 {isCompleted ? (
@@ -251,7 +259,7 @@ setQuizzes([]);
                     disabled={!canStart}
                     className={`w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all duration-300 ${canStart ? 'bg-[#0F172A] text-white hover:bg-[#007FFF] hover:shadow-blue-500/30 shadow-navy-900/20' : 'bg-slate-200 text-slate-500 cursor-not-allowed'}`}
                   >
-                    {isUpcoming ? '⏰ Coming Soon' : isClosed ? '🔒 Closed' : 'Take Assessment'}
+                    {attemptsExhausted ? '🔒 Attempts Used' : isUpcoming ? '⏰ Coming Soon' : isClosed ? '🔒 Closed' : 'Take Assessment'}
                     <ChevronRightIcon className="w-4 h-4" />
                   </button>
                 )}
