@@ -236,38 +236,38 @@ const PrimaryLearnerDashboard = () => {
       <main className="mx-auto w-full max-w-[520px] space-y-3.5 px-3 py-3">
         {activeTab === 'home' && (
           <>
-            <section className="grid grid-cols-1 gap-2">
-              <div className="flex min-h-[76px] items-center gap-3 rounded-[17px] border-2 border-[#F3C34A] bg-gradient-to-r from-white to-[#FFF8E6] px-3 py-2.5 shadow-[0_4px_0_rgba(232,181,45,0.12)]">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFF0B5] text-[#936500]">
-                  <ChartBarIcon className="h-7 w-7 stroke-[2.3]" />
+            <section className="grid grid-cols-3 gap-1.5 sm:gap-2">
+              <div className="flex min-h-[92px] min-w-0 flex-col items-center justify-center rounded-[17px] border-2 border-[#F3C34A] bg-gradient-to-br from-white to-[#FFF8E6] px-1 py-2 text-center shadow-[0_4px_0_rgba(232,181,45,0.12)]">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FFF0B5] text-[#936500]">
+                  <ChartBarIcon className="h-5 w-5 stroke-[2.3]" />
                 </div>
                 <div>
-                  <p className="text-[27px] font-black leading-none text-[#07575A]">
+                  <p className="mt-1 text-xl font-black leading-none text-[#07575A]">
                     {loading ? '…' : formattedAverage}
                   </p>
-                  <p className="mt-0.5 text-xs font-bold text-[#173F43]">Average</p>
+                  <p className="mt-1 text-[10px] font-bold leading-tight text-[#173F43]">Average</p>
                 </div>
               </div>
 
-              <div className="flex min-h-[76px] items-center gap-3 rounded-[17px] border-2 border-[#12BFC0] bg-gradient-to-r from-white to-[#E4FAFA] px-3 py-2.5 shadow-[0_4px_0_rgba(0,171,174,0.10)]">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#C9F5F3] text-[#00686D]">
-                  <ClipboardDocumentCheckIcon className="h-7 w-7 stroke-[2.2]" />
+              <div className="flex min-h-[92px] min-w-0 flex-col items-center justify-center rounded-[17px] border-2 border-[#12BFC0] bg-gradient-to-br from-white to-[#E4FAFA] px-1 py-2 text-center shadow-[0_4px_0_rgba(0,171,174,0.10)]">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#C9F5F3] text-[#00686D]">
+                  <ClipboardDocumentCheckIcon className="h-5 w-5 stroke-[2.2]" />
                 </div>
                 <div>
-                  <p className="text-[27px] font-black leading-none text-[#07575A]">
+                  <p className="mt-1 text-xl font-black leading-none text-[#07575A]">
                     {loading ? '…' : attendanceRate == null ? '—' : `${attendanceRate}%`}
                   </p>
-                  <p className="mt-0.5 text-xs font-bold text-[#173F43]">Attendance</p>
+                  <p className="mt-1 text-[10px] font-bold leading-tight text-[#173F43]">Attendance</p>
                 </div>
               </div>
 
-              <div className="flex min-h-[76px] items-center gap-3 rounded-[17px] border-2 border-[#F3C34A] bg-gradient-to-r from-white to-[#FFF8E6] px-3 py-2.5 shadow-[0_4px_0_rgba(232,181,45,0.12)]">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#FFF0B5] text-[#936500]">
-                  <DocumentTextIcon className="h-7 w-7 stroke-[2]" />
+              <div className="flex min-h-[92px] min-w-0 flex-col items-center justify-center rounded-[17px] border-2 border-[#F3C34A] bg-gradient-to-br from-white to-[#FFF8E6] px-1 py-2 text-center shadow-[0_4px_0_rgba(232,181,45,0.12)]">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FFF0B5] text-[#936500]">
+                  <DocumentTextIcon className="h-5 w-5 stroke-[2]" />
                 </div>
                 <div>
-                  <p className="text-[27px] font-black leading-none text-[#07575A]">{reports.length}</p>
-                  <p className="mt-0.5 text-xs font-bold text-[#173F43]">Reports</p>
+                  <p className="mt-1 text-xl font-black leading-none text-[#07575A]">{reports.length}</p>
+                  <p className="mt-1 text-[10px] font-bold leading-tight text-[#173F43]">Reports</p>
                 </div>
               </div>
             </section>
