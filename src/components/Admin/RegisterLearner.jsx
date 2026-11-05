@@ -16,7 +16,7 @@ import {
 const inp = 'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#00B4D8] focus:border-[#00B4D8] transition';
 const TEAL = '#006770';
 const AZURE = '#00B4D8';
-const PRIMARY_STANDARDS = Array.from({ length: 7 }, (_, index) => ({
+const PRIMARY_STANDARDS = Array.from({ length: 8 }, (_, index) => ({
   id: `standard:${index + 1}`,
   name: `Standard ${index + 1}`,
   isPrimaryOption: true,
@@ -252,7 +252,7 @@ const RegisterLearner = ({ onSuccess }) => {
           <div className="px-5 py-3.5 border-b border-gray-100 bg-[#f0faf9]">
             <p className="text-xs font-bold text-[#006770] uppercase tracking-wide">Step 1 — Academic Placement</p>
             <p className="text-[11px] text-gray-500 mt-0.5">
-              Select the learner's class. Primary learners should be placed in a Standard 1–7 class.
+              Select the learner's class. Primary learners should be placed in a Standard 1–8.
             </p>
           </div>
           <div className="p-5 space-y-4">

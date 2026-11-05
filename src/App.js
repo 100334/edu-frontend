@@ -129,7 +129,7 @@ const isMobilePhone = () => {
 const LearnerDashboardRoute = () => {
   const { user } = useAuth();
   const [isMobile, setIsMobile] = useState(isMobilePhone);
-  const isPrimaryLearner = /^standard\s*[1-7](?:\s*[a-z])?\s*$/i.test(String(user?.form || '').trim());
+  const isPrimaryLearner = /^standard\s*[1-8](?:\s*[a-z])?\s*$/i.test(String(user?.form || '').trim());
 
   useEffect(() => {
     const updateDeviceType = () => setIsMobile(isMobilePhone());

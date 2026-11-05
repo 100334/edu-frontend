@@ -813,7 +813,7 @@ const LessonManagement = () => {
                   <select value={formData.target_form}
                     onChange={e => setFormData(p => ({ ...p, target_form: e.target.value }))}
                     className={inp}>
-                    {['All', 'Form 1', 'Form 2', 'Form 3', 'Form 4', ...Array.from({ length: 7 }, (_, i) => `Standard ${i + 1}`)].map(f => <option key={f}>{f}</option>)}
+                    {['All', 'Form 1', 'Form 2', 'Form 3', 'Form 4', ...Array.from({ length: 8 }, (_, i) => `Standard ${i + 1}`)].map(f => <option key={f}>{f}</option>)}
                   </select>
                 </div>
               </div>

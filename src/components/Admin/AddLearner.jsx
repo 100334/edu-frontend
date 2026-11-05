@@ -127,7 +127,7 @@ toast.error(error.response?.data?.error || 'Failed to create learner');
               <option>Form 2</option>
               <option>Form 3</option>
               <option>Form 4</option>
-              {[1, 2, 3, 4, 5, 6, 7].map(standard => (
+              {[1, 2, 3, 4, 5, 6, 7, 8].map(standard => (
                 <option key={standard}>Standard {standard}</option>
               ))}
             </select>
