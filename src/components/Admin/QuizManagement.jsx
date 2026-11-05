@@ -37,6 +37,8 @@ const QuizManagement = () => {
   const [editingQ,       setEditingQ]       = useState(null);
   const [submitting,     setSubmitting]     = useState(false);
   const [confirmDelete,  setConfirmDelete]  = useState(null); // { type:'quiz'|'submission'|'question', item }
+  const [resetAttempt,   setResetAttempt]   = useState(null);
+  const [resettingAttempt, setResettingAttempt] = useState(false);
 
   const [submissions,         setSubmissions]         = useState([]);
   const [selectedSub,         setSelectedSub]         = useState(null);
@@ -583,14 +585,36 @@ const QuizManagement = () => {
     }
   };
 
-  const handleResetAttempt = async () => {
+  const handleResetAttempt = () => {
     if (!selectedSub) return;
+    setResetAttempt({
+      attemptId: selectedSub.id,
+      learnerName: selectedSub.student_name,
+      source: 'grading'
+    });
+  };
+
+  const confirmResetLearnerQuiz = async () => {
+    if (!resetAttempt || resettingAttempt) return;
+    setResettingAttempt(true);
     try {
       const token = localStorage.getItem('token');
-      const res = await api.delete(`/api/admin/attempts/${selectedSub.id}/reset`, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.data.success) { toast.success('Attempt reset. Learner can retake.'); setGradingModal(false); loadSubmissions(gradingQuizId); }
-      else toast.error(res.data.message);
-    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+      const res = await api.post(`/api/admin/attempts/${resetAttempt.attemptId}/reset`, {}, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data.success) {
+        toast.success(res.data.message || 'Test reset. Learner can start afresh.');
+        setResetAttempt(null);
+        setGradingModal(false);
+        setSelectedSub(null);
+        if (resetAttempt.source === 'all') loadAllSubmissions();
+        else if (gradingQuizId) loadSubmissions(gradingQuizId);
+      } else {
+        toast.error(res.data.message || 'Failed to reset test');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to reset test');
+    } finally {
+      setResettingAttempt(false);
+    }
   };
 
   // ── helpers ──────────────────────────────────────────────────────────────────
@@ -805,6 +829,13 @@ const QuizManagement = () => {
                             <PencilIcon className="w-3.5 h-3.5" /> Mark Script
                           </button>
                           <button
+                            onClick={() => setResetAttempt({ attemptId: sub.id, learnerName: sub.student_name, source: 'grading' })}
+                            className="flex items-center gap-1 px-2 py-1.5 border border-[#B9D9DD] text-[#006770] rounded-lg text-xs font-semibold hover:bg-[#E8F6F7] transition"
+                            title="Reset this learner's entire test history"
+                          >
+                            <ArrowPathIcon className="w-3.5 h-3.5" /> Reset
+                          </button>
+                          <button
                             onClick={() => setConfirmDelete({ type: 'submission', item: sub, label: sub.student_name })}
                             className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition"
                           >
@@ -886,6 +917,14 @@ const QuizManagement = () => {
                           {sub.submitted_at ? new Date(sub.submitted_at).toLocaleString() : '—'}
                         </td>
                         <td className="px-4 py-3">
+                          <button
+                            onClick={() => setResetAttempt({ attemptId: sub.id, learnerName: sub.learner_name, source: 'all' })}
+                            className="p-1.5 text-[#006770] hover:bg-[#E8F6F7] rounded-lg transition"
+                            title="Reset this learner's entire test history"
+                            aria-label={`Reset ${sub.learner_name}'s ${sub.quiz_title} test`}
+                          >
+                            <ArrowPathIcon className="w-4 h-4" />
+                          </button>
                           <button
                             onClick={() => setConfirmDelete({ type: 'submission', item: sub, label: sub.learner_name })}
                             className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition"
@@ -1362,8 +1401,11 @@ const QuizManagement = () => {
               ))}
             </div>
             <div className="flex items-center justify-between gap-3 px-5 py-4 border-t border-gray-100 flex-shrink-0">
-              <button onClick={handleResetAttempt} className="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-100 transition">
-                Reset — Allow Retake
+              <button
+                onClick={handleResetAttempt}
+                className="px-4 py-2 bg-[#E8F6F7] text-[#006770] border border-[#B9D9DD] rounded-lg text-sm font-medium hover:bg-[#D9F1F4] transition"
+              >
+                Reset Test — Start Afresh
               </button>
               <div className="flex gap-2">
                 {/* AI Grade button */}
@@ -1542,6 +1584,45 @@ const QuizManagement = () => {
                   ? <><div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Importing…</>
                   : `📥 Import ${bulkParsed.length > 0 ? bulkParsed.length + ' ' : ''}Question${bulkParsed.length !== 1 ? 's' : ''}`
                 }
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {resetAttempt && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[80] p-4">
+          <div className="bg-[#FFF9EC] rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+            <div className="bg-[#006770] px-5 py-4 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-[#D9F1F4] flex items-center justify-center">
+                <ArrowPathIcon className="w-5 h-5 text-[#007F9E]" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Reset learner's test?</h3>
+                <p className="text-[10px] text-[#D9F1F4] mt-0.5">Start afresh</p>
+              </div>
+            </div>
+            <div className="px-5 py-4">
+              <p className="text-xs text-[#526C70]">
+                This will permanently clear all saved attempts and answers for
+                <span className="font-bold text-[#004B55]"> {resetAttempt.learnerName}</span> on this quiz.
+                They will be able to start again with both attempts available.
+              </p>
+            </div>
+            <div className="flex gap-2 px-5 pb-5">
+              <button
+                onClick={() => setResetAttempt(null)}
+                disabled={resettingAttempt}
+                className="flex-1 py-2.5 border border-[#B9D9DD] rounded-xl text-sm font-semibold text-[#006770] hover:bg-[#E8F6F7] transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmResetLearnerQuiz}
+                disabled={resettingAttempt}
+                className="flex-1 py-2.5 bg-[#007F9E] hover:bg-[#006B86] text-white rounded-xl text-sm font-semibold transition shadow-sm disabled:opacity-50"
+              >
+                {resettingAttempt ? 'Resetting…' : 'Reset Test'}
               </button>
             </div>
           </div>
