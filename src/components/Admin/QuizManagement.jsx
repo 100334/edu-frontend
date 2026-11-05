@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   PlusIcon, PencilIcon, TrashIcon, EyeIcon, XMarkIcon,
   DocumentTextIcon, ClockIcon, QuestionMarkCircleIcon,
@@ -51,6 +51,7 @@ const QuizManagement = () => {
   const [bulkImporting,    setBulkImporting]    = useState(false);
   const [bulkFileLoading,  setBulkFileLoading]  = useState(false);
   const [bulkFileName,     setBulkFileName]     = useState('');
+  const bulkFileInputRef = useRef(null);
   const [loadingSubs,         setLoadingSubs]         = useState(false);
   const [gradingQuizId,       setGradingQuizId]       = useState(null);
   const [allSubmissions,      setAllSubmissions]      = useState([]);
@@ -308,6 +309,43 @@ const QuizManagement = () => {
   };
 
   // ── Bulk import helpers ──────────────────────────────────────────────────
+  const parseCsvRow = (line) => {
+    const fields = [];
+    let field = '';
+    let quoted = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"' && quoted && line[i + 1] === '"') {
+        field += '"';
+        i++;
+      } else if (char === '"') {
+        quoted = !quoted;
+      } else if (char === ',' && !quoted) {
+        fields.push(field.trim());
+        field = '';
+      } else {
+        field += char;
+      }
+    }
+    fields.push(field.trim());
+    return fields;
+  };
+
+  const normalizeImportedQuestion = (question) => {
+    const rawType = String(question.question_type || question.type || '').toLowerCase().replace(/[-\s]+/g, '_');
+    const questionType = ['multiple_choice', 'mcq'].includes(rawType)
+      ? 'multiple_choice'
+      : ['short_answer', 'essay', 'written'].includes(rawType) || !question.options
+        ? 'short_answer'
+        : 'multiple_choice';
+    return {
+      ...question,
+      question_text: question.question_text || question.question || '',
+      question_type: questionType,
+      expected_answer: question.expected_answer || question.model_answer || question.answer || '',
+    };
+  };
+
   const parseBulk = (text) => {
     setBulkParseError('');
     const t = text.trim();
@@ -318,7 +356,7 @@ const QuizManagement = () => {
       try {
         const raw = JSON.parse(t);
         const arr = Array.isArray(raw) ? raw : [raw];
-        setBulkParsed(arr);
+        setBulkParsed(arr.map(normalizeImportedQuestion));
         return;
       } catch (e) {
         setBulkParseError('Invalid JSON: ' + e.message);
@@ -327,27 +365,69 @@ const QuizManagement = () => {
       }
     }
 
-    // CSV: question_text, option_a, option_b, option_c, option_d, correct(0-3), marks, section
+    // Supports the legacy MCQ layout and explicit/header-based short-answer rows.
     const lines = t.split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#'));
     const parsed = [];
-    for (const line of lines) {
-      const cols = line.split(',').map(c => c.trim().replace(/^"|"$/g, ''));
-      if (cols.length < 2) continue;
-      const [question_text, a, b, c, d, correct, marks, section] = cols;
-      if (!question_text) continue;
-      const hasOptions = a && b;
-      parsed.push({
-        question_text,
-        question_type:   hasOptions ? 'multiple_choice' : 'short_answer',
-        options:         hasOptions ? [a, b || '', c || '', d || ''] : null,
-        correct_answer:  hasOptions ? (parseInt(correct) || 0) : null,
-        expected_answer: !hasOptions ? (a || '') : null,
-        marks:           parseInt(marks) || 1,
-        section:         (section || 'A').toUpperCase() === 'B' ? 'B' : 'A',
-      });
+    const rows = lines.map(parseCsvRow);
+    const headerNames = rows[0].map(value => value.toLowerCase().replace(/[\s-]+/g, '_'));
+    const hasHeader = headerNames.some(name =>
+      ['question', 'question_text', 'question_type', 'type', 'expected_answer', 'model_answer'].includes(name)
+    );
+
+    try {
+      if (hasHeader) {
+        const headers = headerNames;
+        for (const cols of rows.slice(1)) {
+          const row = Object.fromEntries(headers.map((header, idx) => [header, cols[idx] || '']));
+          const optionValues = row.options
+            ? (row.options.trim().startsWith('[')
+                ? JSON.parse(row.options)
+                : row.options.split('|').map(option => option.trim()))
+            : ['option_a', 'option_b', 'option_c', 'option_d']
+                .map(key => row[key]).filter(Boolean);
+          parsed.push(normalizeImportedQuestion({
+            ...row,
+            question_type: row.question_type || row.type || (optionValues.length ? 'multiple_choice' : 'short_answer'),
+            options: optionValues.length ? optionValues : null,
+            correct_answer: row.correct_answer || row.correct || 0,
+            expected_answer: row.expected_answer || row.model_answer || row.answer || '',
+          }));
+        }
+      } else {
+        for (const cols of rows) {
+          if (cols.length < 2) continue;
+          const [question_text, a, b, c, d, correct, marks, section] = cols;
+          if (!question_text) continue;
+          const isLegacyMcq = Boolean(a && b && cols.length >= 6);
+          parsed.push({
+            question_text,
+            question_type:   isLegacyMcq ? 'multiple_choice' : 'short_answer',
+            options:         isLegacyMcq ? [a, b, c || '', d || ''] : null,
+            correct_answer:  isLegacyMcq ? (parseInt(correct, 10) || 0) : null,
+            expected_answer: isLegacyMcq ? null : a,
+            marks:           parseInt(isLegacyMcq ? marks : b, 10) || 1,
+            section:         ((isLegacyMcq ? section : cols[3]) || 'A').toUpperCase() === 'B' ? 'B' : 'A',
+          });
+        }
+      }
+      if (parsed.length === 0) {
+        setBulkParseError('No valid questions found. Check the format.');
+        setBulkParsed([]);
+        return;
+      }
+      setBulkParsed(parsed.map(normalizeImportedQuestion));
+    } catch (error) {
+      setBulkParseError(`Could not parse a CSV row: ${error.message}`);
+      setBulkParsed([]);
     }
-    if (parsed.length === 0) setBulkParseError('No valid questions found. Check the format.');
-    setBulkParsed(parsed);
+  };
+
+  const clearBulkImport = () => {
+    setBulkText('');
+    setBulkParsed([]);
+    setBulkParseError('');
+    setBulkFileName('');
+    if (bulkFileInputRef.current) bulkFileInputRef.current.value = '';
   };
 
   const runBulkImport = async () => {
@@ -362,9 +442,7 @@ const QuizManagement = () => {
       if (res.data.success) {
         toast.success(res.data.message);
         setShowBulkModal(false);
-        setBulkText('');
-        setBulkParsed([]);
-        setBulkFileName('');
+        clearBulkImport();
         const updated = await api.get(`/api/admin/quizzes/${selectedQuiz.id}/questions`, { headers: { Authorization: `Bearer ${token}` } });
         setSelectedQuiz({ ...selectedQuiz, questions: updated.data.questions || [] });
         loadQuizzes();
@@ -438,8 +516,9 @@ const QuizManagement = () => {
       }, { headers: { Authorization: `Bearer ${token}` } });
 
       if (res.data.success && res.data.questions?.length > 0) {
-        setBulkParsed(res.data.questions);
-        setBulkText(JSON.stringify(res.data.questions, null, 2));
+        const parsedQuestions = res.data.questions.map(normalizeImportedQuestion);
+        setBulkParsed(parsedQuestions);
+        setBulkText(JSON.stringify(parsedQuestions, null, 2));
         toast.success(`✅ AI extracted ${res.data.questions.length} questions from ${file.name}`);
       } else {
         // Fall back to raw text for manual editing
@@ -889,7 +968,7 @@ const QuizManagement = () => {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => { setBulkText(''); setBulkParsed([]); setBulkParseError(''); setShowBulkModal(true); }}
+                onClick={() => { clearBulkImport(); setShowBulkModal(true); }}
                 className="flex items-center gap-1 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold transition"
                 title="Bulk import questions"
               >
@@ -1268,7 +1347,7 @@ const QuizManagement = () => {
                 <h3 className="text-sm font-bold text-[#003B46]">📥 Bulk Import Questions</h3>
                 <p className="text-[10px] text-gray-400 mt-0.5">{selectedQuiz.title}</p>
               </div>
-              <button onClick={() => setShowBulkModal(false)} className="p-1 hover:bg-gray-100 rounded-lg transition">
+              <button onClick={() => { setShowBulkModal(false); clearBulkImport(); }} className="p-1 hover:bg-gray-100 rounded-lg transition">
                 <XMarkIcon className="w-4 h-4 text-gray-400" />
               </button>
             </div>
@@ -1303,6 +1382,7 @@ const QuizManagement = () => {
                     </>
                   )}
                   <input
+                    ref={bulkFileInputRef}
                     type="file"
                     accept=".pdf,.doc,.docx,.csv,.txt,.json"
                     className="hidden"
@@ -1324,13 +1404,17 @@ const QuizManagement = () => {
               {/* Format guide */}
               <div className="bg-[#F5F2EB] rounded-xl p-3 text-xs text-slate-600 space-y-1.5">
                 <p className="font-bold text-[#003B46] text-[11px]">Manual format</p>
-                <p className="font-semibold">📋 CSV:</p>
+                <p className="font-semibold">📋 CSV — MCQ:</p>
                 <code className="block bg-white rounded px-2 py-1.5 text-[10px] text-slate-500 font-mono">
                   question, opt_a, opt_b, opt_c, opt_d, correct(0-3), marks, section
                 </code>
+                <p className="font-semibold mt-1">📋 CSV — short answer:</p>
+                <code className="block bg-white rounded px-2 py-1.5 text-[10px] text-slate-500 font-mono">
+                  question, model_answer, marks, section
+                </code>
                 <p className="font-semibold mt-1">📄 JSON:</p>
                 <code className="block bg-white rounded px-2 py-1.5 text-[10px] text-slate-500 font-mono break-all">
-                  {`[{"question_text":"...","options":["A","B","C","D"],"correct_answer":0,"marks":1,"section":"A"}]`}
+                  {`[{"question_text":"...","question_type":"short_answer","expected_answer":"Model answer","marks":2,"section":"A"}]`}
                 </code>
               </div>
 
@@ -1343,12 +1427,23 @@ const QuizManagement = () => {
                   value={bulkText}
                   onChange={e => { setBulkText(e.target.value); parseBulk(e.target.value); }}
                   rows={7}
-                  placeholder={`What is photosynthesis?, Light energy, Heat, Sound, Gravity, 0, 2, A`}
+                  placeholder={`MCQ: What is photosynthesis?, Light energy, Heat, Sound, Gravity, 0, 2, A\nShort answer: Explain photosynthesis, Plants use light to make food, 2, A`}
                   className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#006770] font-mono resize-none"
                 />
                 {bulkParseError && (
                   <p className="text-xs text-red-500 mt-1">⚠ {bulkParseError}</p>
                 )}
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={clearBulkImport}
+                  disabled={bulkFileLoading || bulkImporting}
+                  className="px-3 py-1.5 border border-red-200 text-red-600 rounded-lg text-xs font-semibold hover:bg-red-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Clear All
+                </button>
               </div>
 
               {/* Preview */}
@@ -1369,7 +1464,7 @@ const QuizManagement = () => {
                             <p className="text-[10px] text-slate-400 mt-0.5">
                               {q.question_type === 'multiple_choice'
                                 ? `MCQ · correct: ${String.fromCharCode(65 + (q.correct_answer || 0))}`
-                                : 'Short answer'} · {q.marks || 1} mark{(q.marks || 1) !== 1 ? 's' : ''}
+                                : `Short answer · model: ${q.expected_answer || '(missing)'}`} · {q.marks || 1} mark{(q.marks || 1) !== 1 ? 's' : ''}
                             </p>
                           </div>
                         </div>
@@ -1383,7 +1478,7 @@ const QuizManagement = () => {
             {/* Footer */}
             <div className="flex gap-2 px-5 py-4 border-t border-gray-100 flex-shrink-0">
               <button
-                onClick={() => { setShowBulkModal(false); setBulkFileName(''); }}
+                onClick={() => { setShowBulkModal(false); clearBulkImport(); }}
                 className="flex-1 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-50 transition"
               >
                 Cancel
@@ -1406,27 +1501,26 @@ const QuizManagement = () => {
       {/* ── CONFIRM DELETE MODAL ──────────────────────────────────────────────── */}
       {confirmDelete && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[70] p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
-            {/* Red top band */}
-            <div className="bg-red-500 px-5 py-4 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                <ExclamationTriangleIcon className="w-5 h-5 text-white" />
+          <div className="bg-[#FFF9EC] rounded-2xl w-full max-w-sm shadow-2xl overflow-hidden">
+            <div className="bg-[#006770] px-5 py-4 flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-[#D9F1F4] flex items-center justify-center flex-shrink-0">
+                <ExclamationTriangleIcon className="w-5 h-5 text-[#007F9E]" />
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white">
                   Delete {confirmDelete.type === 'quiz' ? 'Quiz' : confirmDelete.type === 'question' ? 'Question' : 'Submission'}
                 </h3>
-                <p className="text-[10px] text-white/70 mt-0.5 capitalize">{confirmDelete.type}</p>
+                <p className="text-[10px] text-[#D9F1F4] mt-0.5 capitalize">{confirmDelete.type}</p>
               </div>
             </div>
             {/* Body */}
             <div className="px-5 py-4">
-              <p className="text-xs text-gray-500 mb-2">You are about to permanently delete:</p>
-              <p className="text-sm font-semibold text-[#003B46] bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 break-words line-clamp-3">
+              <p className="text-xs text-[#526C70] mb-2">You are about to permanently delete:</p>
+              <p className="text-sm font-semibold text-[#004B55] bg-[#E8F6F7] border border-[#B9E0E5] rounded-lg px-3 py-2 break-words line-clamp-3">
                 "{confirmDelete.label}"
               </p>
-              <p className="text-xs text-red-500 mt-3 flex items-center gap-1.5">
-                <ExclamationTriangleIcon className="w-3.5 h-3.5 flex-shrink-0" />
+              <p className="text-xs text-[#007F9E] mt-3 flex items-center gap-1.5">
+                <ExclamationTriangleIcon className="w-3.5 h-3.5 flex-shrink-0 text-[#007F9E]" />
                 This action cannot be undone.
               </p>
             </div>
@@ -1434,13 +1528,13 @@ const QuizManagement = () => {
             <div className="flex gap-2 px-5 pb-5">
               <button
                 onClick={() => setConfirmDelete(null)}
-                className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-50 transition"
+                className="flex-1 py-2.5 border border-[#B9D9DD] rounded-xl text-sm font-semibold text-[#006770] hover:bg-[#E8F6F7] transition"
               >
                 Cancel
               </button>
               <button
                 onClick={executeConfirmedDelete}
-                className="flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl text-sm font-semibold transition shadow-sm"
+                className="flex-1 py-2.5 bg-[#007F9E] hover:bg-[#006B86] text-white rounded-xl text-sm font-semibold transition shadow-sm"
               >
                 Delete
               </button>
