@@ -192,8 +192,7 @@ toast.dismiss(loadingToast);
     <div className="min-h-screen bg-gradient-to-br from-teal-50/60 to-white">
       {/* Sticky header in the learner dashboard's teal palette */}
       <div 
-        className="sticky top-0 z-30 text-white shadow-lg" 
-        style={{ background: 'linear-gradient(90deg, #003B46 0%, #006770 50%, #003B46 100%)' }}
+        className="sticky top-0 z-30 bg-[#006770] text-white shadow-lg"
       >
         <div className="max-w-7xl mx-auto px-4 py-2 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -269,17 +268,17 @@ toast.dismiss(loadingToast);
                             onClick={() => handleAnswer(globalIdx, optIdx)}
                             className={`w-full text-left p-2.5 rounded-lg border transition-all ${
                               answers[globalIdx] === optIdx
-                                ? 'border-teal bg-teal/5 shadow-sm'
+                                ? 'border-[#006770] bg-[#006770] text-white shadow-sm'
                                 : 'border-slate-200 hover:border-teal/40 hover:bg-slate-50'
                             }`}
                           >
                             <div className="flex items-start gap-2">
                               <div className={`flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center mt-0.5 ${
-                                answers[globalIdx] === optIdx ? 'border-teal bg-teal' : 'border-slate-300'
+                                answers[globalIdx] === optIdx ? 'border-white bg-white/20' : 'border-slate-300'
                               }`}>
                                 {answers[globalIdx] === optIdx && <CheckCircleSolid className="w-2.5 h-2.5 text-white" />}
                               </div>
-                              <span className={`text-sm ${answers[globalIdx] === optIdx ? 'text-teal font-medium' : 'text-slate-700'}`}>{opt}</span>
+                              <span className={`text-sm ${answers[globalIdx] === optIdx ? 'text-white font-semibold' : 'text-slate-700'}`}>{opt}</span>
                             </div>
                           </button>
                         ))
@@ -368,8 +367,7 @@ toast.dismiss(loadingToast);
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen">&#8203;</span>
             <div className="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
               <div 
-                className="px-5 py-3 flex justify-between items-center"
-                style={{ background: 'linear-gradient(90deg, #003B46 0%, #006770 50%, #003B46 100%)' }}
+                className="px-5 py-3 flex justify-between items-center bg-[#006770]"
               >
                 <h3 className="text-lg font-bold text-white">Review Your Answers</h3>
                 <div className="flex gap-2">
@@ -443,7 +441,7 @@ toast.dismiss(loadingToast);
           color: '#0F1923' 
         }}>
           <div style={{ 
-            backgroundColor: '#003B46', 
+            backgroundColor: '#006770', 
             color: 'white', 
             padding: '20px', 
             textAlign: 'center', 
