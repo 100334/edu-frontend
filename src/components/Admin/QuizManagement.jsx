@@ -215,7 +215,7 @@ const QuizManagement = () => {
     if (!selectedQuiz) { toast.error('No quiz selected'); return; }
     if (!qForm.question_text && !qForm.question_image) { toast.error('Enter question text or upload a diagram'); return; }
     if (qForm.question_type === 'multiple_choice' && qForm.options.some(o => !o.trim())) { toast.error('All options must be filled'); return; }
-    if (qForm.question_type !== 'multiple_choice' && !qForm.expected_answer.trim() && !qForm.answer_image) { toast.error('Provide expected answer'); return; }
+    if (qForm.question_type === 'short_answer' && !qForm.expected_answer.trim()) { toast.error('Provide a model answer'); return; }
     setSubmitting(true);
     try {
       const token = localStorage.getItem('token');
@@ -338,12 +338,35 @@ const QuizManagement = () => {
       : ['short_answer', 'essay', 'written'].includes(rawType) || !question.options
         ? 'short_answer'
         : 'multiple_choice';
+    const rawExpectedAnswer = question.expected_answer
+      ?? question.model_answer
+      ?? question.modelAnswer
+      ?? question.suggested_answers
+      ?? question.marking_key
+      ?? question.answer_key
+      ?? question.answer
+      ?? '';
     return {
       ...question,
       question_text: question.question_text || question.question || '',
       question_type: questionType,
-      expected_answer: question.expected_answer || question.model_answer || question.answer || '',
+      expected_answer: Array.isArray(rawExpectedAnswer)
+        ? rawExpectedAnswer.join('\n')
+        : String(rawExpectedAnswer),
     };
+  };
+
+  const setImportedQuestions = (questions) => {
+    const normalized = questions.map(normalizeImportedQuestion);
+    const missingAnswerIndex = normalized.findIndex(
+      question => question.question_type === 'short_answer' && !question.expected_answer.trim()
+    );
+    setBulkParsed(normalized);
+    setBulkParseError(
+      missingAnswerIndex === -1
+        ? ''
+        : `Short-answer question ${missingAnswerIndex + 1} needs a model answer. Add an expected_answer or model_answer field.`
+    );
   };
 
   const parseBulk = (text) => {
@@ -356,7 +379,7 @@ const QuizManagement = () => {
       try {
         const raw = JSON.parse(t);
         const arr = Array.isArray(raw) ? raw : [raw];
-        setBulkParsed(arr.map(normalizeImportedQuestion));
+        setImportedQuestions(arr);
         return;
       } catch (e) {
         setBulkParseError('Invalid JSON: ' + e.message);
@@ -390,7 +413,6 @@ const QuizManagement = () => {
             question_type: row.question_type || row.type || (optionValues.length ? 'multiple_choice' : 'short_answer'),
             options: optionValues.length ? optionValues : null,
             correct_answer: row.correct_answer || row.correct || 0,
-            expected_answer: row.expected_answer || row.model_answer || row.answer || '',
           }));
         }
       } else {
@@ -415,7 +437,7 @@ const QuizManagement = () => {
         setBulkParsed([]);
         return;
       }
-      setBulkParsed(parsed.map(normalizeImportedQuestion));
+      setImportedQuestions(parsed);
     } catch (error) {
       setBulkParseError(`Could not parse a CSV row: ${error.message}`);
       setBulkParsed([]);
@@ -517,7 +539,7 @@ const QuizManagement = () => {
 
       if (res.data.success && res.data.questions?.length > 0) {
         const parsedQuestions = res.data.questions.map(normalizeImportedQuestion);
-        setBulkParsed(parsedQuestions);
+        setImportedQuestions(parsedQuestions);
         setBulkText(JSON.stringify(parsedQuestions, null, 2));
         toast.success(`✅ AI extracted ${res.data.questions.length} questions from ${file.name}`);
       } else {
