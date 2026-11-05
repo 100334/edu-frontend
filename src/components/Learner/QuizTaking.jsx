@@ -182,18 +182,18 @@ toast.dismiss(loadingToast);
 
   if (!quiz || questions.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-azure/5 to-white">
-        <div className="text-center"><div className="w-10 h-10 border-4 border-azure border-t-transparent rounded-full animate-spin mx-auto mb-3"></div><p className="text-sm text-gray-500">Loading assessment...</p></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 to-white">
+        <div className="text-center"><div className="w-10 h-10 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div><p className="text-sm text-gray-500">Loading assessment...</p></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white">
-      {/* Sticky Header – Dark Blue → Azure → Dark Blue gradient */}
+    <div className="min-h-screen bg-gradient-to-br from-teal-50/60 to-white">
+      {/* Sticky header in the learner dashboard's teal palette */}
       <div 
         className="sticky top-0 z-30 text-white shadow-lg" 
-        style={{ background: 'linear-gradient(90deg, #0A192F 0%, #00B0FF 50%, #0A192F 100%)' }}
+        style={{ background: 'linear-gradient(90deg, #003B46 0%, #006770 50%, #003B46 100%)' }}
       >
         <div className="max-w-7xl mx-auto px-4 py-2 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -242,7 +242,7 @@ toast.dismiss(loadingToast);
                   {/* Compact header */}
                   <div className="px-4 py-2 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100 flex justify-between items-center">
                     <div className="flex gap-2">
-                      <span className="px-2 py-0.5 bg-azure/10 text-azure rounded-md text-xs font-bold">Q{globalIdx+1}</span>
+                      <span className="px-2 py-0.5 bg-teal-700/10 text-teal-800 rounded-md text-xs font-bold">Q{globalIdx+1}</span>
                       {q.question_image && (
                         <span className="px-2 py-0.5 bg-teal/10 text-teal rounded-md text-xs font-bold flex items-center gap-1">
                           <PhotoIcon className="w-3 h-3" /> Diagram
@@ -336,9 +336,9 @@ toast.dismiss(loadingToast);
                     }}
                     className={`aspect-square rounded-md text-xs font-semibold transition ${
                       Math.floor(idx / QUESTIONS_PER_PAGE) === currentPage
-                        ? 'bg-gray-600 text-white shadow-sm'
+                        ? 'bg-teal-700 text-white shadow-sm'
                         : answers[idx] !== undefined
-                          ? 'bg-gray-300 text-gray-700 hover:bg-gray-400'
+                            ? 'bg-teal-200 text-teal-900 hover:bg-teal-300'
                           : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                     }`}
                   >
@@ -347,8 +347,8 @@ toast.dismiss(loadingToast);
                 ))}
               </div>
               <div className="mt-4 pt-3 border-t border-slate-100 flex justify-center gap-3 text-[10px]">
-                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-gray-600" /><span>Current</span></div>
-                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-gray-300 border border-gray-400" /><span>Answered</span></div>
+                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-teal-700" /><span>Current</span></div>
+                <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-full bg-teal-200 border border-teal-400" /><span>Answered</span></div>
               </div>
             </div>
             <div className="bg-teal-50 rounded-lg p-3 border border-teal-200">
@@ -360,7 +360,7 @@ toast.dismiss(loadingToast);
         </div>
       </div>
 
-      {/* Review Modal – Same gradient */}
+      {/* Review modal uses the same teal header as the quiz screen */}
       {showReviewModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
@@ -369,7 +369,7 @@ toast.dismiss(loadingToast);
             <div className="inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
               <div 
                 className="px-5 py-3 flex justify-between items-center"
-                style={{ background: 'linear-gradient(90deg, #0A192F 0%, #00B0FF 50%, #0A192F 100%)' }}
+                style={{ background: 'linear-gradient(90deg, #003B46 0%, #006770 50%, #003B46 100%)' }}
               >
                 <h3 className="text-lg font-bold text-white">Review Your Answers</h3>
                 <div className="flex gap-2">
@@ -443,7 +443,7 @@ toast.dismiss(loadingToast);
           color: '#0F1923' 
         }}>
           <div style={{ 
-            backgroundColor: '#0A192F', 
+            backgroundColor: '#003B46', 
             color: 'white', 
             padding: '20px', 
             textAlign: 'center', 
@@ -455,7 +455,7 @@ toast.dismiss(loadingToast);
             <p style={{ fontSize: '12px', marginTop: '5px', opacity: 0.8, color: 'white' }}>
               Subject Code: {quiz.subject_code || 'M073/II'} | Time: {quiz.duration} minutes | Total marks: {quiz.total_marks || 100}
             </p>
-            <hr style={{ borderColor: '#00B0FF', width: '80%', margin: '10px auto' }} />
+            <hr style={{ borderColor: '#2A9D8F', width: '80%', margin: '10px auto' }} />
             <p style={{ fontSize: '14px', fontWeight: 'bold', margin: 0, color: 'white' }}>CANDIDATE'S ANSWER REVIEW</p>
           </div>
           <div style={{ backgroundColor: '#E2E8F0', padding: '12px', margin: '20px 20px 0 20px', borderRadius: '6px', fontSize: '11px' }}>
