@@ -253,7 +253,7 @@ const QuizResults = ({ onRetake }) => {
                       {/* Feedback preview */}
                       {attempt.feedback && (
                         <p className="mt-1.5 text-[11px] text-slate-400 line-clamp-1 pl-14">
-                          💬 {attempt.feedback}
+                          💬 {String(attempt.feedback)}
                         </p>
                       )}
 
@@ -345,7 +345,7 @@ const QuizResults = ({ onRetake }) => {
                 {selectedAttempt.feedback && (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
                     <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wide mb-1">💬 Teacher Feedback</p>
-                    <p className="text-sm text-amber-800">{selectedAttempt.feedback}</p>
+                    <p className="text-sm text-amber-800">{String(selectedAttempt.feedback)}</p>
                   </div>
                 )}
 
@@ -389,14 +389,14 @@ const QuizResults = ({ onRetake }) => {
                                   <span className="font-semibold">Your answer: </span>
                                   {ans.selected_answer_text || '(no answer)'}
                                 </p>
-                                {ans.correct_answer && !full && (
+                                {ans.correct_answer != null && !full && (
                                   <p className="text-[11px] text-green-700">
-                                    <span className="font-semibold">Correct: </span>{ans.correct_answer}
+                                    <span className="font-semibold">Correct: </span>{String(ans.correct_answer)}
                                   </p>
                                 )}
                                 {(ans.feedback || ans.explanation) && (
                                   <p className="text-[11px] text-blue-700 bg-blue-50 rounded px-2 py-1">
-                                    💡 {ans.feedback || ans.explanation}
+                                    💡 {String(ans.feedback || ans.explanation)}
                                   </p>
                                 )}
                               </div>
@@ -456,7 +456,7 @@ const QuizResults = ({ onRetake }) => {
                 )}
                 {selectedAttempt.feedback && (
                   <div style={{ background: '#FFF3E0', padding: '10px', borderRadius: '6px', marginBottom: '16px', fontSize: '12px' }}>
-                    <strong>Teacher Feedback:</strong> {selectedAttempt.feedback}
+                    <strong>Teacher Feedback:</strong> {String(selectedAttempt.feedback)}
                   </div>
                 )}
                 <hr style={{ margin: '10px 0' }} />
@@ -465,11 +465,11 @@ const QuizResults = ({ onRetake }) => {
                     <p><strong>Q{idx + 1}. {ans.question_text}</strong>
                       <span style={{ float: 'right' }}>{ans.points_obtained}/{ans.max_points} marks</span>
                     </p>
-                    <p><strong>Your answer:</strong> {ans.selected_answer_text || '(no answer)'}</p>
-                    {ans.correct_answer && <p><strong>Correct:</strong> {ans.correct_answer}</p>}
+                    <p><strong>Your answer:</strong> {String(ans.selected_answer_text || '(no answer)')}</p>
+                    {ans.correct_answer != null && <p><strong>Correct:</strong> {String(ans.correct_answer)}</p>}
                     {(ans.feedback || ans.explanation) && (
                       <p style={{ background: '#E0F7FA', padding: '6px', borderRadius: '4px' }}>
-                        <strong>Feedback:</strong> {ans.feedback || ans.explanation}
+                        <strong>Feedback:</strong> {String(ans.feedback || ans.explanation)}
                       </p>
                     )}
                     <hr style={{ margin: '8px 0', borderColor: '#eee' }} />

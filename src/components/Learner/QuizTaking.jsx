@@ -236,7 +236,7 @@ toast.dismiss(loadingToast);
           <section className="rounded-2xl border-2 border-[#E9BD35] bg-white/95 p-6 text-center shadow-xl sm:p-9">
             <p className="text-sm font-bold text-[#668082]">Your score</p>
             <p className="my-2 text-5xl font-black text-[#00676B]">{percentage}%</p>
-            <p className="text-sm font-bold text-[#24494B]">{result.earned_points} / {result.total_points} marks</p>
+            <p className="text-sm font-bold text-[#24494B]">{result.earned_points ?? 0} / {result.total_points ?? 0} marks</p>
             <p className={`mt-4 inline-flex rounded-full px-4 py-2 text-xs font-extrabold ${result.passed ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
               {result.passed ? 'Passed' : 'Keep practising'}
             </p>
@@ -252,11 +252,11 @@ toast.dismiss(loadingToast);
                   <div className="flex items-start gap-2">
                     {answer.is_correct ? <CheckCircleSolid className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-600" /> : <XMarkIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />}
                     <div>
-                      <p className="text-sm font-semibold text-slate-800">Q{idx + 1}. {answer.question_text}</p>
-                      <p className="mt-1 text-xs text-slate-600">Your answer: {answer.selected_answer_text || 'Not answered'}</p>
-                      {!answer.is_correct && answer.correct_answer && <p className="mt-1 text-xs text-[#00676B]">Expected answer: {answer.correct_answer}</p>}
-                      {answer.feedback && <p className="mt-2 text-xs text-slate-500">{answer.feedback}</p>}
-                      {answer.explanation && <p className="mt-1 text-xs text-slate-500">{answer.explanation}</p>}
+                      <p className="text-sm font-semibold text-slate-800">Q{idx + 1}. {String(answer.question_text || '')}</p>
+                      <p className="mt-1 text-xs text-slate-600">Your answer: {String(answer.selected_answer_text || 'Not answered')}</p>
+                      {!answer.is_correct && answer.correct_answer != null && <p className="mt-1 text-xs text-[#00676B]">Expected answer: {String(answer.correct_answer)}</p>}
+                      {answer.feedback && <p className="mt-2 text-xs text-slate-500">{String(answer.feedback)}</p>}
+                      {answer.explanation && <p className="mt-1 text-xs text-slate-500">{String(answer.explanation)}</p>}
                     </div>
                   </div>
                   <span className="whitespace-nowrap text-xs font-bold text-[#00676B]">{answer.points_obtained ?? 0}/{answer.max_points}</span>
