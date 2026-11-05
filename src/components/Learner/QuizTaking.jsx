@@ -50,14 +50,14 @@ const QuizTaking = ({ quizId, onComplete }) => {
   const autoSavePage = async (page) => {
     if (!attemptId || !resolvedQuizId) return;
     const startIdx = page * QUESTIONS_PER_PAGE;
-    const endIdx = Math.min(startIdx + QUESTIONS_PER_PAGE, questions.length);
-    for (let idx = startIdx; idx < endIdx; idx++) {
-      const ans = answers[idx];
+    const pageQuestions = displayQuestions.slice(startIdx, startIdx + QUESTIONS_PER_PAGE);
+    for (const { questionIndex } of pageQuestions) {
+      const ans = answers[questionIndex];
       if (ans !== undefined) {
         try {
           const token = localStorage.getItem('token');
           await api.post(`/api/quiz/${encodeURIComponent(resolvedQuizId)}/save-answer`, {
-            question_index: idx,
+            question_index: questionIndex,
             answer: ans,
             attempt_id: attemptId
           }, { headers: { Authorization: `Bearer ${token}` } });
@@ -95,7 +95,11 @@ const QuizTaking = ({ quizId, onComplete }) => {
         return;
       }
       setQuiz(res.data.quiz);
-      const qs = (res.data.questions || []).map(q => ({ ...q, marks: q.marks ?? q.points ?? 1 }));
+      const qs = (res.data.questions || []).map(q => ({
+        ...q,
+        section: String(q.section || 'A').toUpperCase() === 'B' ? 'B' : 'A',
+        marks: q.marks ?? q.points ?? 1
+      }));
       setQuestions(qs);
       setTimeLeft(res.data.quiz.duration * 60);
       if (res.data.saved_answers) setAnswers(res.data.saved_answers);
@@ -173,9 +177,15 @@ toast.dismiss(loadingToast);
     total: questions.length,
     progress: ((Object.keys(answers).length) / questions.length) * 100
   };
+  const displayQuestions = useMemo(() => questions
+    .map((question, questionIndex) => ({ question, questionIndex }))
+    .sort((a, b) => {
+      const sectionOrder = (a.question.section === 'B' ? 1 : 0) - (b.question.section === 'B' ? 1 : 0);
+      return sectionOrder || a.questionIndex - b.questionIndex;
+    }), [questions]);
   const totalPages = Math.ceil(questions.length / QUESTIONS_PER_PAGE);
   const startIdx = currentPage * QUESTIONS_PER_PAGE;
-  const pageQuestions = questions.slice(startIdx, startIdx + QUESTIONS_PER_PAGE);
+  const pageQuestions = displayQuestions.slice(startIdx, startIdx + QUESTIONS_PER_PAGE);
 
   if (!quiz || questions.length === 0) {
     return (
@@ -317,21 +327,32 @@ toast.dismiss(loadingToast);
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
           {/* Questions Area – Compact Cards */}
           <div className="lg:col-span-3 space-y-4" ref={pageRef}>
-            {pageQuestions.map((q, idxInPage) => {
-              const globalIdx = startIdx + idxInPage;
+            {pageQuestions.map(({ question: q, questionIndex }, idxInPage) => {
+              const displayIdx = startIdx + idxInPage;
+              const section = q.section === 'B' ? 'B' : 'A';
+              const previousSection = idxInPage > 0
+                ? (pageQuestions[idxInPage - 1].question.section === 'B' ? 'B' : 'A')
+                : null;
               return (
-                <div key={globalIdx} className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition">
+                <React.Fragment key={questionIndex}>
+                  {(idxInPage === 0 || section !== previousSection) && (
+                    <div className={`rounded-lg px-4 py-3 border shadow-sm ${
+                      section === 'B'
+                        ? 'bg-sky-50 border-sky-200'
+                        : 'bg-teal-50 border-teal-200'
+                    }`}>
+                      <h2 className={`text-sm font-extrabold tracking-wide ${
+                        section === 'B' ? 'text-sky-900' : 'text-teal-900'
+                      }`}>
+                        SECTION {section}
+                      </h2>
+                    </div>
+                  )}
+                  <div id={`q-${questionIndex}`} className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition">
                   {/* Compact header */}
                   <div className="px-4 py-2 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100 flex justify-between items-center">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold tracking-wide ${
-                        q.section === 'B'
-                          ? 'bg-sky-100 text-sky-800 border border-sky-200'
-                          : 'bg-teal-100 text-teal-800 border border-teal-200'
-                      }`}>
-                        SECTION {q.section === 'B' ? 'B' : 'A'}
-                      </span>
-                      <span className="px-2 py-0.5 bg-teal-700/10 text-teal-800 rounded-md text-xs font-bold">Q{globalIdx+1}</span>
+                      <span className="px-2 py-0.5 bg-teal-700/10 text-teal-800 rounded-md text-xs font-bold">Q{displayIdx+1}</span>
                       {q.question_image && (
                         <span className="px-2 py-0.5 bg-teal/10 text-teal rounded-md text-xs font-bold flex items-center gap-1">
                           <PhotoIcon className="w-3 h-3" /> Diagram
@@ -355,27 +376,27 @@ toast.dismiss(loadingToast);
                         q.options.map((opt, optIdx) => (
                           <button
                             key={optIdx}
-                            onClick={() => handleAnswer(globalIdx, optIdx)}
+                            onClick={() => handleAnswer(questionIndex, optIdx)}
                             className={`w-full text-left p-2.5 rounded-lg border transition-all ${
-                              answers[globalIdx] === optIdx
+                              answers[questionIndex] === optIdx
                                 ? 'border-[#006770] bg-[#006770] text-white shadow-sm'
                                 : 'border-slate-200 hover:border-teal/40 hover:bg-slate-50'
                             }`}
                           >
                             <div className="flex items-start gap-2">
                               <div className={`flex-shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center mt-0.5 ${
-                                answers[globalIdx] === optIdx ? 'border-white bg-white/20' : 'border-slate-300'
+                                answers[questionIndex] === optIdx ? 'border-white bg-white/20' : 'border-slate-300'
                               }`}>
-                                {answers[globalIdx] === optIdx && <CheckCircleSolid className="w-2.5 h-2.5 text-white" />}
+                                {answers[questionIndex] === optIdx && <CheckCircleSolid className="w-2.5 h-2.5 text-white" />}
                               </div>
-                              <span className={`text-sm ${answers[globalIdx] === optIdx ? 'text-white font-semibold' : 'text-slate-700'}`}>{opt}</span>
+                              <span className={`text-sm ${answers[questionIndex] === optIdx ? 'text-white font-semibold' : 'text-slate-700'}`}>{opt}</span>
                             </div>
                           </button>
                         ))
                       ) : (
                         <textarea
-                          value={answers[globalIdx] || ''}
-                          onChange={(e) => handleShortAnswer(globalIdx, e.target.value)}
+                          value={answers[questionIndex] || ''}
+                          onChange={(e) => handleShortAnswer(questionIndex, e.target.value)}
                           placeholder="Type your answer here..."
                           className="w-full p-3 border border-slate-200 rounded-lg focus:border-teal focus:ring-1 focus:ring-teal/20 transition min-h-[100px] text-sm"
                         />
@@ -383,6 +404,7 @@ toast.dismiss(loadingToast);
                     </div>
                   </div>
                 </div>
+                </React.Fragment>
               );
             })}
 
@@ -413,9 +435,9 @@ toast.dismiss(loadingToast);
                 <DocumentCheckIcon className="w-4 h-4" /> Question Navigator
               </h3>
               <div className="grid grid-cols-5 gap-1.5">
-                {questions.map((_, idx) => (
+                {displayQuestions.map(({ questionIndex }, idx) => (
                   <button
-                    key={idx}
+                    key={questionIndex}
                     onClick={() => {
                       const targetPage = Math.floor(idx / QUESTIONS_PER_PAGE);
                       if (targetPage !== currentPage) {
@@ -426,7 +448,7 @@ toast.dismiss(loadingToast);
                     className={`aspect-square rounded-md text-xs font-semibold transition ${
                       Math.floor(idx / QUESTIONS_PER_PAGE) === currentPage
                         ? 'bg-teal-700 text-white shadow-sm'
-                        : answers[idx] !== undefined
+                        : answers[questionIndex] !== undefined
                             ? 'bg-teal-200 text-teal-900 hover:bg-teal-300'
                           : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                     }`}
@@ -470,8 +492,8 @@ toast.dismiss(loadingToast);
                 </div>
               </div>
               <div className="max-h-[70vh] overflow-y-auto p-4 space-y-3 bg-slate-50">
-                {questions.map((q, idx) => {
-                  const userAnswer = answers[idx];
+                {displayQuestions.map(({ question: q, questionIndex }, idx) => {
+                  const userAnswer = answers[questionIndex];
                   let answerDisplay = '';
                   if (q.question_type === 'multiple_choice') {
                     if (userAnswer !== undefined && q.options[userAnswer]) answerDisplay = q.options[userAnswer];
@@ -479,17 +501,24 @@ toast.dismiss(loadingToast);
                   } else {
                     answerDisplay = userAnswer || 'Not answered';
                   }
+                  const section = q.section === 'B' ? 'B' : 'A';
+                  const previousSection = idx > 0
+                    ? (displayQuestions[idx - 1].question.section === 'B' ? 'B' : 'A')
+                    : null;
                   return (
-                    <div key={idx} className="bg-white rounded-lg border border-slate-200 p-3 shadow-sm">
+                    <React.Fragment key={questionIndex}>
+                    {(idx === 0 || section !== previousSection) && (
+                      <div className={`rounded-lg px-4 py-2 border ${
+                        section === 'B' ? 'bg-sky-50 border-sky-200' : 'bg-teal-50 border-teal-200'
+                      }`}>
+                        <h4 className={`text-xs font-extrabold tracking-wide ${
+                          section === 'B' ? 'text-sky-900' : 'text-teal-900'
+                        }`}>SECTION {section}</h4>
+                      </div>
+                    )}
+                    <div className="bg-white rounded-lg border border-slate-200 p-3 shadow-sm">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
-                          <span className={`inline-flex mb-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold tracking-wide ${
-                            q.section === 'B'
-                              ? 'bg-sky-100 text-sky-800 border border-sky-200'
-                              : 'bg-teal-100 text-teal-800 border border-teal-200'
-                          }`}>
-                            SECTION {q.section === 'B' ? 'B' : 'A'}
-                          </span>
                           <p className="font-semibold text-slate-800 text-sm">Q{idx+1}: {q.question_text}</p>
                           {q.question_image && (
                             <img src={q.question_image} alt="Diagram" className="mt-2 max-h-28 rounded border border-slate-200" />
@@ -505,7 +534,7 @@ toast.dismiss(loadingToast);
                             const targetPage = Math.floor(idx / QUESTIONS_PER_PAGE);
                             setCurrentPage(targetPage);
                             setTimeout(() => {
-                              const el = document.getElementById(`q-${idx}`);
+                              const el = document.getElementById(`q-${questionIndex}`);
                               if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                             }, 100);
                           }}
@@ -515,6 +544,7 @@ toast.dismiss(loadingToast);
                         </button>
                       </div>
                     </div>
+                    </React.Fragment>
                   );
                 })}
               </div>
@@ -560,14 +590,13 @@ toast.dismiss(loadingToast);
             3. Write your examination number on every page.<br />
             4. Marks for each part are indicated in brackets ( ).
           </div>
-          <div style={{ margin: '20px 20px 0 20px' }}>
-            <div style={{ backgroundColor: '#2A9D8F', display: 'inline-block', padding: '5px 15px', borderRadius: '4px', color: 'white', fontWeight: 'bold' }}>SECTION A</div>
-            <span style={{ marginLeft: '10px', fontSize: '12px', fontStyle: 'italic' }}>({quiz.section_a_marks || 75} marks)</span>
-            <p style={{ fontSize: '12px', marginTop: '5px' }}>Answer all questions in this section.</p>
-          </div>
           <div style={{ margin: '0 20px' }}>
-            {questions.map((q, idx) => {
-              const userAnswer = answers[idx];
+            {displayQuestions.map(({ question: q, questionIndex }, idx) => {
+              const section = q.section === 'B' ? 'B' : 'A';
+              const previousSection = idx > 0
+                ? (displayQuestions[idx - 1].question.section === 'B' ? 'B' : 'A')
+                : null;
+              const userAnswer = answers[questionIndex];
               let answerDisplay = '';
               if (q.question_type === 'multiple_choice') {
                 if (userAnswer !== undefined && q.options[userAnswer]) answerDisplay = q.options[userAnswer];
@@ -576,31 +605,41 @@ toast.dismiss(loadingToast);
                 answerDisplay = userAnswer || 'Not answered';
               }
               return (
-                <div key={idx} style={{ marginBottom: '25px', pageBreakInside: 'avoid' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <h3 style={{ fontSize: '14px', fontWeight: 'bold', margin: '0 0 5px 0' }}>{idx+1}. {q.question_text}</h3>
-                    <span style={{ fontSize: '11px', color: '#2A9D8F', fontStyle: 'italic' }}>({q.marks} marks)</span>
-                  </div>
-                  {q.question_image && (
-                    <img 
-                      src={q.question_image} 
-                      alt="Diagram" 
-                      style={{ maxWidth: '100%', maxHeight: '200px', margin: '10px 0', border: '1px solid #CBD5E1', borderRadius: '4px' }}
-                      crossOrigin="anonymous"
-                    />
+                <React.Fragment key={questionIndex}>
+                  {(idx === 0 || section !== previousSection) && (
+                    <div style={{ margin: '20px 0 15px' }}>
+                      <div style={{ backgroundColor: '#2A9D8F', display: 'inline-block', padding: '5px 15px', borderRadius: '4px', color: 'white', fontWeight: 'bold' }}>
+                        SECTION {section}
+                      </div>
+                      <span style={{ marginLeft: '10px', fontSize: '12px', fontStyle: 'italic' }}>
+                        ({section === 'A' ? quiz.section_a_marks || 75 : quiz.section_b_marks || 25} marks)
+                      </span>
+                      <p style={{ fontSize: '12px', marginTop: '5px' }}>
+                        {section === 'A' ? 'Answer all questions in this section.' : 'Answer the questions in this section.'}
+                      </p>
+                    </div>
                   )}
-                  <div style={{ backgroundColor: '#F1F5F9', padding: '10px', borderRadius: '4px', border: '1px solid #CBD5E1', marginTop: '5px' }}>
-                    <strong style={{ fontSize: '11px' }}>Candidate's answer:</strong>
-                    <p style={{ margin: '5px 0 0 0', fontSize: '12px', whiteSpace: 'pre-wrap' }}>{answerDisplay}</p>
+                  <div style={{ marginBottom: '25px', pageBreakInside: 'avoid' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                      <h3 style={{ fontSize: '14px', fontWeight: 'bold', margin: '0 0 5px 0' }}>{idx+1}. {q.question_text}</h3>
+                      <span style={{ fontSize: '11px', color: '#2A9D8F', fontStyle: 'italic' }}>({q.marks} marks)</span>
+                    </div>
+                    {q.question_image && (
+                      <img
+                        src={q.question_image}
+                        alt="Diagram"
+                        style={{ maxWidth: '100%', maxHeight: '200px', margin: '10px 0', border: '1px solid #CBD5E1', borderRadius: '4px' }}
+                        crossOrigin="anonymous"
+                      />
+                    )}
+                    <div style={{ backgroundColor: '#F1F5F9', padding: '10px', borderRadius: '4px', border: '1px solid #CBD5E1', marginTop: '5px' }}>
+                      <strong style={{ fontSize: '11px' }}>Candidate's answer:</strong>
+                      <p style={{ margin: '5px 0 0 0', fontSize: '12px', whiteSpace: 'pre-wrap' }}>{answerDisplay}</p>
+                    </div>
                   </div>
-                </div>
+                </React.Fragment>
               );
             })}
-          </div>
-          <div style={{ margin: '0 20px 20px 20px' }}>
-            <div style={{ backgroundColor: '#2A9D8F', display: 'inline-block', padding: '5px 15px', borderRadius: '4px', color: 'white', fontWeight: 'bold' }}>SECTION B</div>
-            <span style={{ marginLeft: '10px', fontSize: '12px', fontStyle: 'italic' }}>({quiz.section_b_marks || 25} marks)</span>
-            <p style={{ fontSize: '12px', marginTop: '5px' }}>Answer one question only from this section. (No questions available in this review.)</p>
           </div>
           <div style={{ marginTop: '40px', textAlign: 'center', fontSize: '9px', color: '#64748B', borderTop: '1px solid #CBD5E1', paddingTop: '10px' }}>
             Progress Secondary School – {quiz.title} – Candidate Review
