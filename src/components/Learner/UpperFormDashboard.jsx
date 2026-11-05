@@ -25,11 +25,12 @@ import toast from 'react-hot-toast';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-// ─── Theme ────────────────────────────────────────────────────────────────────
-const HEADER_BG   = '#003B46';
-const NAVBAR_BG   = '#006770';
-const TEAL_ACCENT  = '#2A9D8F';
-const AZURE_ACCENT = '#00B4D8';
+// ─── Theme (matches PrimaryLearnerDashboard) ──────────────────────────────────
+const HEADER_BG    = '#00676B';
+const NAVBAR_BG    = '#005C62';
+const TEAL_ACCENT  = '#00777A';
+const GOLD_ACCENT  = '#F3C34A';
+const PAGE_BG      = '#F2FBFC';
 
 // ─── Grade helpers ────────────────────────────────────────────────────────────
 const getGradeFromScore = (score) => {
@@ -63,12 +64,12 @@ const getOverallGradeFromPoints = (pts) => {
   return          { description: 'Fail' };
 };
 
-// ─── Slide-in panel ───────────────────────────────────────────────────────────
+// ─── Slide-in panel (kept for potential future use, themed) ──────────────────
 const Panel = ({ title, icon, onClose, children }) => (
   <div className="fixed inset-0 z-40 flex justify-end">
     <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px]" onClick={onClose} />
-    <div className="relative z-50 w-full max-w-lg h-full bg-[#F5F2EB] shadow-2xl flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 bg-[#003B46] flex-shrink-0">
+    <div className="relative z-50 w-full max-w-lg h-full bg-[#F2FBFC] shadow-2xl flex flex-col overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 bg-[#00676B] flex-shrink-0">
         <div className="flex items-center gap-2 text-white">
           {icon}
           <h2 className="text-sm font-bold">{title}</h2>
@@ -83,20 +84,20 @@ const Panel = ({ title, icon, onClose, children }) => (
 );
 
 // ─── Quick-action card ────────────────────────────────────────────────────────
-const QuickCard = ({ emoji, label, sub, onClick, accent = '#2A9D8F' }) => (
+const QuickCard = ({ emoji, label, sub, onClick, accent = '#00777A' }) => (
   <button
     onClick={onClick}
-    className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-[#e2e8f0] shadow-sm hover:shadow-md hover:border-[#2A9D8F]/30 transition-all text-left w-full active:scale-[0.98]"
+    className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border border-[#D3EEEE] shadow-sm hover:shadow-md hover:border-[#12BFC0]/40 transition-all text-left w-full active:scale-[0.98]"
   >
     <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-xl"
-      style={{ backgroundColor: `${accent}15` }}>
+      style={{ backgroundColor: `${accent}18` }}>
       {emoji}
     </div>
     <div className="flex-1 min-w-0">
-      <p className="text-sm font-bold text-[#003B46]">{label}</p>
-      {sub && <p className="text-[10px] text-gray-400 mt-0.5 truncate">{sub}</p>}
+      <p className="text-sm font-bold text-[#00565B]">{label}</p>
+      {sub && <p className="text-[10px] text-slate-400 mt-0.5 truncate">{sub}</p>}
     </div>
-    <span className="text-gray-300 text-sm flex-shrink-0">›</span>
+    <span className="text-slate-300 text-sm flex-shrink-0">›</span>
   </button>
 );
 
@@ -412,9 +413,12 @@ export default function UpperFormDashboard() {
   // ── Quiz overlay ──────────────────────────────────────────────────────────
   if (showQuiz) {
     return (
-      <div className="min-h-screen bg-[#F5F2EB]">
-        <div className="container mx-auto px-4 py-6">
-          <button onClick={() => setShowQuiz(null)} className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition text-sm">
+      <div className="min-h-screen bg-[#F2FBFC] px-4 py-5">
+        <div className="mx-auto max-w-[720px]">
+          <button
+            onClick={() => setShowQuiz(null)}
+            className="mb-4 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#00666B] shadow-sm ring-1 ring-[#D6EEEE] transition hover:bg-[#E9F8F8]"
+          >
             ← Back to Dashboard
           </button>
           <QuizTaking quizId={showQuiz} onComplete={handleQuizComplete} />
@@ -432,22 +436,22 @@ export default function UpperFormDashboard() {
     <div className="space-y-4">
 
       {/* Profile */}
-      <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">
-        <div className="h-1" style={{ background: `linear-gradient(90deg, ${TEAL_ACCENT}, ${AZURE_ACCENT})` }} />
+      <div className="bg-white rounded-xl border border-[#D3EEEE] overflow-hidden">
+        <div className="h-1.5 bg-gradient-to-r from-[#009B9D] via-[#00777C] to-[#00585F]" />
         <div className="flex items-center gap-3 p-4">
-          <div className="w-11 h-11 rounded-full bg-[#2A9D8F]/15 flex items-center justify-center flex-shrink-0">
-            <UserCircleIcon className="w-6 h-6 text-[#2A9D8F]" />
+          <div className="w-11 h-11 rounded-full bg-[#C9F5F3] flex items-center justify-center flex-shrink-0">
+            <UserCircleIcon className="w-6 h-6 text-[#00686D]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-[#0A2540] truncate">{getUserName()}</p>
-            <p className="text-[10px] text-gray-400">{user?.reg_number || user?.regNumber || '—'}</p>
+            <p className="text-sm font-black text-[#00565B] truncate">{getUserName()}</p>
+            <p className="text-[10px] text-slate-400">{user?.reg_number || user?.regNumber || '—'}</p>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span className="px-2 py-0.5 bg-[#2A9D8F]/10 text-[#2A9D8F] text-[10px] font-semibold rounded-full">
+              <span className="px-2 py-0.5 bg-[#DDF6F2] text-[#00666B] text-[10px] font-bold rounded-full">
                 {user?.form || 'Upper Form'}
               </span>
               {user?.phone
-                ? <span className="text-[10px] text-gray-500">📱 {user.phone}</span>
-                : <span className="text-[10px] text-gray-400 italic">No phone on record</span>
+                ? <span className="text-[10px] text-slate-500">{user.phone}</span>
+                : <span className="text-[10px] text-slate-400 italic">No phone on record</span>
               }
             </div>
           </div>
@@ -457,16 +461,18 @@ export default function UpperFormDashboard() {
       {/* Stats 2×2 */}
       <div className="grid grid-cols-2 gap-3">
         {[
-          { emoji: '📄', value: stats.reportsCount,     label: 'Reports'    },
-          { emoji: '📅', value: stats.attendanceRate,   label: 'Attendance' },
-          { emoji: '📊', value: stats.averageScore,     label: 'Average'    },
-          { emoji: '📝', value: stats.quizzesCompleted, label: 'Quizzes'    },
+          { Icon: DocumentTextIcon,        value: stats.reportsCount,     label: 'Reports',    border: 'border-[#F3C34A]', iconBg: 'bg-[#FFF0B5]', iconColor: 'text-[#936500]' },
+          { Icon: CalendarIcon,            value: stats.attendanceRate,   label: 'Attendance', border: 'border-[#12BFC0]', iconBg: 'bg-[#C9F5F3]', iconColor: 'text-[#00686D]' },
+          { Icon: ChartBarIcon,            value: stats.averageScore,     label: 'Average',    border: 'border-[#F3C34A]', iconBg: 'bg-[#FFF0B5]', iconColor: 'text-[#936500]' },
+          { Icon: BookOpenIcon,            value: stats.quizzesCompleted, label: 'Quizzes',    border: 'border-[#12BFC0]', iconBg: 'bg-[#C9F5F3]', iconColor: 'text-[#00686D]' },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-xl border border-[#e2e8f0] p-3 flex items-center gap-3">
-            <span className="text-2xl">{s.emoji}</span>
+          <div key={s.label} className={`bg-white rounded-xl border-2 ${s.border} p-3 flex items-center gap-3`}>
+            <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${s.iconBg} ${s.iconColor}`}>
+              <s.Icon className="w-5 h-5 stroke-[2.2]" />
+            </div>
             <div>
-              <p className="text-lg font-black text-[#003B46] leading-none">{s.value}</p>
-              <p className="text-[9px] text-gray-400 font-semibold uppercase tracking-wide mt-0.5">{s.label}</p>
+              <p className="text-lg font-black text-[#07575A] leading-none">{s.value}</p>
+              <p className="text-[9px] text-[#173F43] font-bold uppercase tracking-wide mt-0.5">{s.label}</p>
             </div>
           </div>
         ))}
@@ -476,10 +482,10 @@ export default function UpperFormDashboard() {
       {latestReport && (() => {
         const valid = (latestReport.subjects || []).filter(s => s?.score != null);
         return (
-          <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#e2e8f0]">
-              <span className="text-xs font-bold text-[#003B46]">Latest Report — {latestReport.term}</span>
-              <button onClick={() => downloadReportPDF(latestReport)} className="p-1 text-[#2A9D8F] hover:bg-[#2A9D8F]/10 rounded transition">
+          <div className="bg-white rounded-xl border border-[#D3EEEE] overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#D8EEEE] bg-gradient-to-r from-[#E7F8F7] to-[#F7FCFA]">
+              <span className="text-xs font-black text-[#00565B]">Latest Report — {latestReport.term}</span>
+              <button onClick={() => downloadReportPDF(latestReport)} className="p-1 text-[#00777A] hover:bg-[#DDF6F2] rounded transition">
                 <ArrowDownTrayIcon className="w-4 h-4" />
               </button>
             </div>
@@ -488,8 +494,8 @@ export default function UpperFormDashboard() {
                 const g = getGradeFromScore(s.score);
                 return (
                   <div key={i} className="flex items-center gap-2">
-                    <span className="text-[11px] text-gray-500 w-28 truncate flex-shrink-0">{s.name}</span>
-                    <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <span className="text-[11px] text-slate-500 w-28 truncate flex-shrink-0">{s.name}</span>
+                    <div className="flex-1 h-1.5 bg-[#E4FAFA] rounded-full overflow-hidden">
                       <div className="h-full rounded-full" style={{ width: `${s.score}%`, backgroundColor: g.color }} />
                     </div>
                     <span className="text-[11px] font-bold w-14 text-right flex-shrink-0" style={{ color: g.color }}>
@@ -498,45 +504,45 @@ export default function UpperFormDashboard() {
                   </div>
                 );
               })}
-              {valid.length > 5 && <p className="text-[10px] text-gray-400 text-center">+{valid.length - 5} more</p>}
+              {valid.length > 5 && <p className="text-[10px] text-slate-400 text-center">+{valid.length - 5} more</p>}
             </div>
           </div>
         );
       })()}
 
       {/* Attendance summary */}
-      <div className="bg-white rounded-xl border border-[#e2e8f0] overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#e2e8f0]">
-          <span className="text-xs font-bold text-[#003B46]">Attendance Summary</span>
+      <div className="bg-white rounded-xl border border-[#D3EEEE] overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#D8EEEE] bg-gradient-to-r from-[#E7F8F7] to-[#F7FCFA]">
+          <span className="text-xs font-black text-[#00565B]">Attendance Summary</span>
           {attendanceRecords.length > 0 && (
-            <button onClick={downloadAttendancePDF} className="p-1 text-[#2A9D8F] hover:bg-[#2A9D8F]/10 rounded transition">
+            <button onClick={downloadAttendancePDF} className="p-1 text-[#00777A] hover:bg-[#DDF6F2] rounded transition">
               <ArrowDownTrayIcon className="w-4 h-4" />
             </button>
           )}
         </div>
         <div className="p-4">
           <div className="flex items-center justify-center mb-3">
-            <div className="w-16 h-16 rounded-full border-4 border-[#2A9D8F]/20 flex items-center justify-center">
-              <span className="text-lg font-black text-[#2A9D8F]">{stats.attendanceRate}</span>
+            <div className="w-16 h-16 rounded-full border-4 border-[#12BFC0]/30 flex items-center justify-center">
+              <span className="text-lg font-black text-[#00666B]">{stats.attendanceRate}</span>
             </div>
           </div>
           {stats.totalDays > 0 ? (
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="bg-green-50 rounded-lg p-2 border border-green-100">
                 <p className="font-bold text-green-600">{stats.presentCount}</p>
-                <p className="text-[10px] text-gray-500">Present</p>
+                <p className="text-[10px] text-slate-500">Present</p>
               </div>
-              <div className="bg-yellow-50 rounded-lg p-2 border border-yellow-100">
-                <p className="font-bold text-yellow-600">{stats.lateCount}</p>
-                <p className="text-[10px] text-gray-500">Late</p>
+              <div className="bg-amber-50 rounded-lg p-2 border border-amber-100">
+                <p className="font-bold text-amber-600">{stats.lateCount}</p>
+                <p className="text-[10px] text-slate-500">Late</p>
               </div>
               <div className="bg-red-50 rounded-lg p-2 border border-red-100">
                 <p className="font-bold text-red-500">{stats.absentCount}</p>
-                <p className="text-[10px] text-gray-500">Absent</p>
+                <p className="text-[10px] text-slate-500">Absent</p>
               </div>
             </div>
           ) : (
-            <p className="text-xs text-gray-400 text-center">No attendance records yet</p>
+            <p className="text-xs text-slate-400 text-center">No attendance records yet</p>
           )}
         </div>
       </div>
@@ -550,9 +556,9 @@ export default function UpperFormDashboard() {
     const report = sorted.find(r => r.id === selectedId) || sorted[0] || null;
 
     if (sorted.length === 0) return (
-      <div className="text-center py-12 bg-white rounded-xl border border-[#e2e8f0]">
-        <DocumentTextIcon className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-        <p className="text-sm text-gray-400">No reports available</p>
+      <div className="text-center py-12 bg-white rounded-xl border border-[#D3EEEE]">
+        <DocumentTextIcon className="w-10 h-10 text-[#D3EEEE] mx-auto mb-2" />
+        <p className="text-sm text-slate-400">No reports available</p>
       </div>
     );
 
@@ -571,11 +577,13 @@ export default function UpperFormDashboard() {
               const isSel = r.id === selectedId;
               return (
                 <button key={r.id} onClick={() => setSelectedId(r.id)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                    isSel ? 'bg-[#003B46] text-white border-[#003B46]' : 'bg-white text-gray-500 border-gray-200 hover:border-[#2A9D8F] hover:text-[#2A9D8F]'
+                  className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${
+                    isSel
+                      ? 'bg-gradient-to-b from-[#FFE77B] to-[#FFBF19] text-[#073F43] border-[#F3C34A]'
+                      : 'bg-white text-slate-500 border-[#D3EEEE] hover:border-[#12BFC0] hover:text-[#00666B]'
                   }`}>
                   {r.term || `Report ${idx + 1}`}
-                  {idx === 0 && <span className={`ml-1 text-[9px] ${isSel ? 'text-white/70' : 'text-[#2A9D8F]'}`}>●</span>}
+                  {idx === 0 && <span className={`ml-1 text-[9px] ${isSel ? 'text-[#073F43]/60' : 'text-[#12BFC0]'}`}>●</span>}
                 </button>
               );
             })}
@@ -583,23 +591,122 @@ export default function UpperFormDashboard() {
         )}
 
         {/* Card */}
-        <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-[#e2e8f0] flex items-center justify-between">
+        <div className="bg-white rounded-xl border border-[#D3EEEE] shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#D8EEEE] bg-gradient-to-r from-[#E7F8F7] to-[#F7FCFA] flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-sm font-bold text-[#003B46] truncate">{report.term || 'Report'}</span>
-              <span className="text-[10px] text-gray-400">{report.academic_year}</span>
-              <span className="px-2 py-0.5 bg-[#2A9D8F]/10 text-[#2A9D8F] text-[10px] rounded-full">{report.form || user?.form}</span>
+              <span className="text-sm font-black text-[#00565B] truncate">{report.term || 'Report'}</span>
+              <span className="text-[10px] text-slate-400">{report.academic_year}</span>
+              <span className="px-2 py-0.5 bg-[#DDF6F2] text-[#00666B] text-[10px] font-bold rounded-full">{report.form || user?.form}</span>
             </div>
-            <span className="text-xs font-bold flex-shrink-0 ml-2" style={{ color: grade.color }}>{avg}% · {grade.letter}</span>
+            <span className="text-xs font-black flex-shrink-0 ml-2" style={{ color: grade.color }}>{avg}% · {grade.letter}</span>
           </div>
           <div className="px-4 pt-4 pb-3 space-y-2">
             {valid.map((s, i) => {
               const g = getGradeFromScore(s.score);
               return (
                 <div key={i} className="flex items-center gap-2">
-                  <span className="text-[11px] text-gray-500 w-28 truncate flex-shrink-0">{s.name}</span>
-                  <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <span className="text-[11px] text-slate-500 w-28 truncate flex-shrink-0">{s.name}</span>
+                  <div className="flex-1 h-1.5 bg-[#E4FAFA] rounded-full overflow-hidden">
                     <div className="h-full rounded-full" style={{ width: `${s.score}%`, backgroundColor: g.color }} />
+                  </div>
+                  <span className="text-[11px] font-bold font-mono w-16 text-right flex-shrink-0" style={{ color: g.color }}>
+                    {s.score}% {g.letter}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mx-4 mb-4 px-3 py-2 bg-[#F0FAF8] rounded-lg border border-[#D3EEEE] flex items-center justify-between">
+            <span className="text-[11px] text-slate-500">Best 6: <span className="font-bold text-[#00565B]">{best6pts} pts</span></span>
+            <span className="text-[11px] font-bold text-[#00666B]">{overallDesc}</span>
+          </div>
+          <div className="flex border-t border-[#D8EEEE]">
+            <button onClick={() => { setSelectedReport(report); setShowReportModal(true); }}
+              className="flex-1 py-2.5 text-xs font-bold text-[#00666B] hover:bg-[#F0FAF8] transition border-r border-[#D8EEEE] flex items-center justify-center gap-1.5">
+              View Report
+            </button>
+            <button onClick={() => downloadReportPDF(report)}
+              className="flex-1 py-2.5 text-xs font-bold text-slate-500 hover:bg-[#F0FAF8] transition flex items-center justify-center gap-1.5">
+              <ArrowDownTrayIcon className="w-3.5 h-3.5" /> Download PDF
+            </button>
+          </div>
+        </div>
+
+        {/* View modal */}
+        {showReportModal && selectedReport && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+              <div className="flex items-center justify-between px-5 py-3 bg-[#00676B] flex-shrink-0">
+                <span className="text-sm font-black text-white truncate">
+                  {selectedReport.term} — {selectedReport.form || user?.form} {selectedReport.academic_year}
+                </span>
+                <button onClick={() => setShowReportModal(false)}
+                  className="w-7 h-7 rounded-lg bg-white/10 hover:bg-red-500 flex items-center justify-center transition ml-2 flex-shrink-0">
+                  <XMarkIcon className="w-4 h-4 text-white" />
+                </button>
+              </div>
+              <div className="overflow-y-auto flex-1 p-5 space-y-4">
+                {(() => {
+                  const v   = (selectedReport.subjects || []).filter(s => s?.score != null);
+                  const a   = calculateAverage(v);
+                  const g   = getGradeFromScore(a);
+                  const b6  = calculateBestSubjects(v);
+                  const pts = calculateTotalPoints(b6);
+                  return (
+                    <>
+                      <div className="grid grid-cols-3 gap-3">
+                        {[{ label: 'Average', value: `${a}%` }, { label: 'Grade', value: g.letter }, { label: 'Points', value: `${pts} pts` }].map(c => (
+                          <div key={c.label} className="text-center bg-[#F0FAF8] rounded-xl p-3 border border-[#D3EEEE]">
+                            <p className="text-lg font-black text-[#00565B]">{c.value}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase">{c.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="space-y-1.5">
+                        {v.map((s, i) => {
+                          const sg = getGradeFromScore(s.score);
+                          return (
+                            <div key={i} className="flex items-center gap-2">
+                              <span className="text-xs text-slate-600 w-32 truncate flex-shrink-0">{s.name}</span>
+                              <div className="flex-1 h-1.5 bg-[#E4FAFA] rounded-full overflow-hidden">
+                                <div className="h-full rounded-full" style={{ width: `${s.score}%`, backgroundColor: sg.color }} />
+                              </div>
+                              <span className="text-xs font-bold font-mono w-16 text-right flex-shrink-0" style={{ color: sg.color }}>
+                                {s.score}% {sg.letter}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="flex items-center justify-between px-3 py-2.5 bg-[#F0FAF8] rounded-lg border border-[#D3EEEE]">
+                        <span className="text-xs text-slate-500">Best 6 Aggregate</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-black text-[#00565B]">{pts} pts</span>
+                          <span className="px-2 py-0.5 bg-[#DDF6F2] text-[#00666B] text-[10px] rounded-full font-bold">
+                            {getOverallGradeFromPoints(pts).description}
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+              <div className="px-5 py-3 border-t border-[#D8EEEE] flex gap-2 flex-shrink-0">
+                <button onClick={() => setShowReportModal(false)}
+                  className="flex-1 py-2.5 border border-[#D3EEEE] rounded-xl text-sm font-bold text-slate-500 hover:bg-[#F0FAF8] transition">
+                  Close
+                </button>
+                <button onClick={() => { downloadReportPDF(selectedReport); setShowReportModal(false); }}
+                  className="flex-1 py-2.5 bg-[#00676B] text-white rounded-xl text-sm font-bold hover:bg-[#005060] transition flex items-center justify-center gap-2">
+                  <ArrowDownTrayIcon className="w-4 h-4" /> Download PDF
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };core}%`, backgroundColor: g.color }} />
                   </div>
                   <span className="text-[11px] font-bold font-mono w-16 text-right flex-shrink-0" style={{ color: g.color }}>
                     {s.score}% {g.letter}
@@ -704,38 +811,38 @@ export default function UpperFormDashboard() {
   const AttendancePanelContent = () => (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-500">Your daily attendance history</p>
+        <p className="text-xs text-slate-500">Your daily attendance history</p>
         {attendanceRecords.length > 0 && (
           <button onClick={downloadAttendancePDF}
-            className="px-3 py-1.5 bg-[#2A9D8F] text-white rounded-lg text-xs font-medium hover:bg-[#1e7e6e] transition flex items-center gap-1.5">
+            className="px-3 py-1.5 bg-[#00676B] text-white rounded-lg text-xs font-bold hover:bg-[#005060] transition flex items-center gap-1.5">
             <ArrowDownTrayIcon className="w-3.5 h-3.5" /> PDF
           </button>
         )}
       </div>
-      <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm overflow-hidden">
+      <div className="bg-white rounded-xl border border-[#D3EEEE] shadow-sm overflow-hidden">
         <table className="w-full">
-          <thead className="bg-gray-50">
+          <thead className="bg-gradient-to-r from-[#E7F8F7] to-[#F7FCFA]">
             <tr>
-              <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase">Date</th>
-              <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase hidden sm:table-cell">Day</th>
-              <th className="px-4 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase">Status</th>
+              <th className="px-4 py-2.5 text-left text-[10px] font-black text-[#00565B] uppercase tracking-wide">Date</th>
+              <th className="px-4 py-2.5 text-left text-[10px] font-black text-[#00565B] uppercase tracking-wide hidden sm:table-cell">Day</th>
+              <th className="px-4 py-2.5 text-left text-[10px] font-black text-[#00565B] uppercase tracking-wide">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-[#E4FAFA]">
             {attendanceRecords.length === 0 ? (
-              <tr><td colSpan="3" className="px-4 py-6 text-center text-sm text-gray-400">No attendance records yet</td></tr>
+              <tr><td colSpan="3" className="px-4 py-6 text-center text-sm text-slate-400">No attendance records yet</td></tr>
             ) : [...attendanceRecords].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 20).map(record => (
-              <tr key={record.id} className="hover:bg-gray-50">
-                <td className="px-4 py-2.5 text-xs">
+              <tr key={record.id} className="hover:bg-[#F0FAF8]">
+                <td className="px-4 py-2.5 text-xs text-[#073F43]">
                   {new Date(record.date).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </td>
-                <td className="px-4 py-2.5 text-xs hidden sm:table-cell">
+                <td className="px-4 py-2.5 text-xs text-slate-400 hidden sm:table-cell">
                   {new Date(record.date).toLocaleDateString('en', { weekday: 'short' })}
                 </td>
                 <td className="px-4 py-2.5">
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                     record.status === 'present' ? 'bg-green-100 text-green-700' :
-                    record.status === 'late'    ? 'bg-yellow-100 text-yellow-700' :
+                    record.status === 'late'    ? 'bg-amber-100 text-amber-700' :
                                                   'bg-red-100 text-red-700'
                   }`}>
                     {record.status === 'present' ? 'Present' : record.status === 'late' ? 'Late' : 'Absent'}
@@ -754,17 +861,17 @@ export default function UpperFormDashboard() {
     <div className="space-y-4">
       {leaderboardLoading ? (
         <div className="flex items-center justify-center py-16">
-          <div className="w-8 h-8 border-4 border-[#2A9D8F]/20 border-t-[#2A9D8F] rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-[#12BFC0]/20 border-t-[#12BFC0] rounded-full animate-spin" />
         </div>
       ) : leaderboard.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-xl border border-[#e2e8f0]">
-          <span className="text-4xl">🏆</span>
-          <p className="text-sm text-gray-400 mt-2">No leaderboard data yet</p>
+        <div className="text-center py-12 bg-white rounded-xl border border-[#D3EEEE]">
+          <TrophyIcon className="w-10 h-10 text-[#D3EEEE] mx-auto mb-2" />
+          <p className="text-sm text-slate-400 mt-2">No leaderboard data yet</p>
         </div>
       ) : (
         <>
           {currentUserRank && (
-            <div className="bg-gradient-to-r from-[#2A9D8F] to-[#1e6b60] text-white rounded-xl p-4 flex items-center justify-between">
+            <div className="bg-gradient-to-r from-[#009B9D] via-[#00777C] to-[#00585F] text-white rounded-xl p-4 flex items-center justify-between">
               <div>
                 <p className="text-xs opacity-80 mb-0.5">Your Rank</p>
                 <div className="flex items-end gap-1.5">
@@ -772,34 +879,34 @@ export default function UpperFormDashboard() {
                   <span className="text-xs opacity-70 mb-1">of {leaderboard.length}</span>
                 </div>
               </div>
-              <span className="text-3xl opacity-60">🏆</span>
+              <TrophyIcon className="w-8 h-8 text-[#FFE77B]" />
             </div>
           )}
-          <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm overflow-hidden">
+          <div className="bg-white rounded-xl border border-[#D3EEEE] shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[380px]">
-                <thead className="bg-gray-50">
+                <thead className="bg-gradient-to-r from-[#E7F8F7] to-[#F7FCFA]">
                   <tr>
                     {['#', 'Student', 'Quiz', 'Report', 'Overall'].map(h => (
-                      <th key={h} className="px-3 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase">{h}</th>
+                      <th key={h} className="px-3 py-2.5 text-left text-[10px] font-black text-[#00565B] uppercase tracking-wide">{h}</th>
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-[#E4FAFA]">
                   {leaderboard.map(s => (
-                    <tr key={s.id} className={`hover:bg-gray-50 ${s.id === user?.id ? 'bg-[#2A9D8F]/5 border-l-4 border-l-[#2A9D8F]' : ''}`}>
-                      <td className="px-3 py-2.5 text-xs font-bold text-gray-500">#{s.rank}</td>
+                    <tr key={s.id} className={`hover:bg-[#F0FAF8] ${s.id === user?.id ? 'bg-[#DDF6F2] border-l-4 border-l-[#12BFC0]' : ''}`}>
+                      <td className="px-3 py-2.5 text-xs font-black text-[#00565B]">#{s.rank}</td>
                       <td className="px-3 py-2.5">
-                        <p className="text-xs font-medium text-gray-900 leading-none">{s.name}</p>
-                        <p className="text-[10px] text-gray-400 mt-0.5">{s.reg_number}</p>
+                        <p className="text-xs font-bold text-[#073F43] leading-none">{s.name}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{s.reg_number}</p>
                       </td>
-                      <td className="px-3 py-2.5 text-xs font-semibold">{s.quiz_score}%</td>
-                      <td className="px-3 py-2.5 text-xs font-semibold">{s.report_score}%</td>
+                      <td className="px-3 py-2.5 text-xs font-bold text-[#073F43]">{s.quiz_score}%</td>
+                      <td className="px-3 py-2.5 text-xs font-bold text-[#073F43]">{s.report_score}%</td>
                       <td className="px-3 py-2.5">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           s.overall_score >= 80 ? 'bg-green-100 text-green-700' :
-                          s.overall_score >= 60 ? 'bg-blue-100 text-blue-700'  :
-                          s.overall_score >= 40 ? 'bg-yellow-100 text-yellow-700' :
+                          s.overall_score >= 60 ? 'bg-[#DDF6F2] text-[#00666B]'  :
+                          s.overall_score >= 40 ? 'bg-amber-100 text-amber-700' :
                                                   'bg-red-100 text-red-700'
                         }`}>{s.overall_score}%</span>
                       </td>
@@ -818,76 +925,87 @@ export default function UpperFormDashboard() {
   // RENDER
   // ══════════════════════════════════════════════════════════════════════════
   return (
-    <div className="min-h-screen bg-[#F5F2EB] flex flex-col">
+    <div className="min-h-screen bg-[#F2FBFC] flex flex-col text-[#073F43]">
 
-      {/* ── HEADER (matches admin pattern) ─────────────────────────────────── */}
+      {/* ── HEADER ────────────────────────────────────────────────────────────── */}
       <header className="w-full flex-shrink-0" style={{ backgroundColor: HEADER_BG }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-4">
 
           {/* Top row */}
           <div className="flex justify-between items-start mb-3">
             <div>
-              <p className="text-[10px] font-extrabold tracking-wider text-[#2A9D8F] mb-0.5">
-                LEARNER PORTAL
+              <p className="text-[10px] font-extrabold tracking-wider text-[#8EE5E1] mb-0.5 uppercase">
+                Learner Portal
               </p>
-              <h1 className="text-lg lg:text-2xl font-bold text-white">
+              <h1 className="text-lg lg:text-2xl font-black text-white leading-tight">
                 {getGreeting()}, {getUserName()}
               </h1>
               <p className="text-xs text-white/70 mt-0.5">
                 {user?.form || 'Upper Form'} — Secondary School
-                {user?.phone && <span className="ml-2 text-white/40">📱 {user.phone}</span>}
+                {user?.phone && <span className="ml-2 text-white/40">{user.phone}</span>}
               </p>
             </div>
             <div className="flex items-center gap-2">
               {/* Bell */}
               <div className="relative" ref={notificationRef}>
                 <button onClick={() => setShowNotifications(n => !n)}
-                  className="relative w-9 h-9 lg:w-11 lg:h-11 bg-white/10 rounded-xl flex items-center justify-center hover:bg-white/20 transition">
-                  <BellIcon className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
+                  className="relative w-9 h-9 lg:w-11 lg:h-11 border border-[#25D2CE] bg-[#004F54]/80 rounded-xl flex items-center justify-center hover:bg-[#004F54] transition text-[#FFD84D]">
+                  <BellIcon className="w-4 h-4 lg:w-5 lg:h-5" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 w-4 h-4 lg:w-5 lg:h-5 bg-red-500 text-white text-[10px] lg:text-xs rounded-full flex items-center justify-center font-bold">
+                    <span className="absolute -top-1 -right-1 w-4 h-4 lg:w-5 lg:h-5 bg-red-500 text-white text-[10px] lg:text-xs rounded-full flex items-center justify-center font-bold border border-[#005C61]">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
                 </button>
                 {showNotifications && (
-                  <div className="absolute right-0 mt-2 w-72 lg:w-96 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-gray-100 font-semibold text-sm text-gray-700">Notifications</div>
+                  <div className="absolute right-0 mt-2 w-72 lg:w-80 bg-white rounded-xl shadow-xl border border-[#D3EEEE] z-50 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-[#D3EEEE] bg-[#F0FAF8] font-semibold text-sm text-[#00565B]">Notifications</div>
                     <div className="max-h-64 overflow-y-auto">
                       {notifications.length === 0 ? (
-                        <div className="px-4 py-6 text-center text-sm text-gray-400">No notifications</div>
+                        <div className="px-4 py-6 text-center text-sm text-slate-500">No notifications</div>
                       ) : notifications.map(n => (
                         <div key={n.id} onClick={() => { markAsRead(n.id); setShowNotifications(false); }}
-                          className={`px-4 py-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50 ${!n.is_read ? 'bg-teal-50' : ''}`}>
-                          <p className="text-xs font-medium text-gray-800">{n.title}</p>
-                          <p className="text-[10px] text-gray-400 mt-0.5">{n.message}</p>
+                          className={`px-4 py-3 border-b border-slate-100 cursor-pointer hover:bg-[#F3FAF9] ${!n.is_read ? 'bg-[#E8F8F7]' : ''}`}>
+                          <p className="text-xs font-medium text-[#073F43]">{n.title}</p>
+                          <p className="text-[10px] text-slate-500 mt-0.5">{n.message}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
               </div>
-              {/* Logout */}
-              <button onClick={handleLogout}
-                className="w-9 h-9 lg:w-11 lg:h-11 bg-white/10 rounded-xl flex items-center justify-center hover:bg-white/20 transition">
-                <ArrowRightOnRectangleIcon className="w-4 h-4 lg:w-5 lg:h-5 text-white" />
-              </button>
+              {/* User chip */}
+              <div className="flex items-center gap-1.5 rounded-full border border-[#25D2CE] bg-[#004F54]/75 py-0.5 pl-0.5 pr-2">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[#F7D34D] bg-[#EAFBFA] text-[#00858A]">
+                  <UserCircleIcon className="h-6 w-6" />
+                </div>
+                <div className="hidden sm:block min-w-0 text-left">
+                  <p className="truncate text-[10px] font-black text-white leading-tight max-w-[100px]">{getUserName()}</p>
+                  <p className="truncate text-[9px] font-semibold text-[#D7F6F3]">{user?.form || 'Upper Form'}</p>
+                </div>
+                <button onClick={handleLogout} title="Log out" aria-label="Log out"
+                  className="ml-1 text-white/70 hover:text-white transition">
+                  <ArrowRightOnRectangleIcon className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Stats cards — like admin's Learners/Teachers/Classes row */}
-          <div className="grid grid-cols-4 gap-2 lg:gap-4 mt-4">
+          {/* Stats cards — gold/teal bordered like PrimaryLearnerDashboard */}
+          <div className="grid grid-cols-4 gap-2 lg:gap-3 mt-4">
             {[
-              { Icon: DocumentTextIcon, value: stats.reportsCount,       label: 'Reports'    },
-              { Icon: CalendarIcon,      value: stats.attendanceRate,     label: 'Attendance' },
-              { Icon: ChartBarIcon,      value: stats.averageScore,       label: 'Average'    },
-              { Icon: BookOpenIcon,      value: stats.quizzesCompleted,   label: 'Quizzes'    },
+              { Icon: DocumentTextIcon,          value: stats.reportsCount,     label: 'Reports',    border: 'border-[#F3C34A]', iconBg: 'bg-[#FFF0B5]', iconColor: 'text-[#936500]', cardBg: 'from-white to-[#FFF8E6]' },
+              { Icon: CalendarIcon,              value: stats.attendanceRate,   label: 'Attendance', border: 'border-[#12BFC0]', iconBg: 'bg-[#C9F5F3]', iconColor: 'text-[#00686D]', cardBg: 'from-white to-[#E4FAFA]' },
+              { Icon: ChartBarIcon,              value: stats.averageScore,     label: 'Average',    border: 'border-[#F3C34A]', iconBg: 'bg-[#FFF0B5]', iconColor: 'text-[#936500]', cardBg: 'from-white to-[#FFF8E6]' },
+              { Icon: BookOpenIcon,              value: stats.quizzesCompleted, label: 'Quizzes',    border: 'border-[#12BFC0]', iconBg: 'bg-[#C9F5F3]', iconColor: 'text-[#00686D]', cardBg: 'from-white to-[#E4FAFA]' },
             ].map(s => (
-              <div key={s.label} className="bg-white/10 backdrop-blur rounded-xl p-2 lg:p-4 flex items-center gap-2 lg:gap-3">
-                <s.Icon className="w-5 h-5 lg:w-7 lg:h-7 text-white/60 flex-shrink-0" />
-                <div className="min-w-0">
-                  <div className="text-lg lg:text-2xl font-black text-white leading-none">{s.value}</div>
-                  <div className="text-[9px] lg:text-xs text-white/60 font-semibold uppercase tracking-wide mt-0.5">{s.label}</div>
+              <div key={s.label} className={`flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2 lg:gap-3 rounded-[17px] border-2 ${s.border} bg-gradient-to-br ${s.cardBg} px-2 py-2 lg:px-3 lg:py-3 shadow-sm`}>
+                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${s.iconBg} ${s.iconColor}`}>
+                  <s.Icon className="w-4 h-4 lg:w-5 lg:h-5 stroke-[2.2]" />
+                </div>
+                <div className="min-w-0 text-center sm:text-left">
+                  <div className="text-base lg:text-xl font-black text-[#07575A] leading-none">{s.value}</div>
+                  <div className="text-[9px] lg:text-[10px] text-[#173F43] font-bold uppercase tracking-wide mt-0.5">{s.label}</div>
                 </div>
               </div>
             ))}
@@ -895,80 +1013,93 @@ export default function UpperFormDashboard() {
         </div>
       </header>
 
-      {/* ── DESKTOP NAV BAR (matches admin NavItem style) ────────────────────── */}
-      <div className="hidden lg:block sticky top-0 z-20 border-b border-[#005a62] shadow-sm" style={{ backgroundColor: NAVBAR_BG }}>
+      {/* ── DESKTOP NAV BAR ──────────────────────────────────────────────────── */}
+      <div className="hidden lg:block sticky top-0 z-20 shadow-sm" style={{ backgroundColor: NAVBAR_BG }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex overflow-x-auto scrollbar-none gap-1 py-2">
+          <div className="flex overflow-x-auto scrollbar-none gap-0.5 py-1.5">
             {[
-              { id: 'learning',    Icon: AcademicCapIcon,    label: 'Learning',     onClick: () => setMainView('learning'),   active: mainView === 'learning' && !openPanel },
-              { id: 'library',     Icon: RectangleStackIcon,  label: 'Library',      onClick: () => setMainView('library'),     active: mainView === 'library' && !openPanel },
-              { id: 'overview',    Icon: HomeIcon,            label: 'Overview',     onClick: () => togglePanel('overview'),    active: openPanel === 'overview'    },
-              { id: 'reports',     Icon: DocumentTextIcon,   label: 'Report Cards', onClick: () => togglePanel('reports'),     active: openPanel === 'reports'     },
-              { id: 'attendance',  Icon: CalendarIcon,       label: 'Attendance',    onClick: () => togglePanel('attendance'),  active: openPanel === 'attendance'  },
-              { id: 'leaderboard', Icon: TrophyIcon,          label: 'Leaderboard',   onClick: () => togglePanel('leaderboard'), active: openPanel === 'leaderboard' },
+              { id: 'learning',    Icon: AcademicCapIcon,   label: 'Learning',     onClick: () => setMainView('learning'),   active: mainView === 'learning' && !openPanel },
+              { id: 'library',     Icon: RectangleStackIcon, label: 'Library',      onClick: () => setMainView('library'),    active: mainView === 'library' && !openPanel  },
+              { id: 'overview',    Icon: HomeIcon,           label: 'Overview',     onClick: () => togglePanel('overview'),   active: openPanel === 'overview'    },
+              { id: 'reports',     Icon: DocumentTextIcon,  label: 'Report Cards', onClick: () => togglePanel('reports'),    active: openPanel === 'reports'     },
+              { id: 'attendance',  Icon: CalendarIcon,      label: 'Attendance',   onClick: () => togglePanel('attendance'), active: openPanel === 'attendance'  },
+              { id: 'leaderboard', Icon: TrophyIcon,         label: 'Leaderboard',  onClick: () => togglePanel('leaderboard'), active: openPanel === 'leaderboard' },
             ].map(item => (
               <button key={item.id} onClick={item.onClick}
-                className={`flex flex-col items-center gap-1 px-3 lg:px-4 py-2 border-b-2 transition-all duration-200 whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 lg:px-4 py-2.5 rounded-full text-[11px] lg:text-xs font-black transition-all duration-200 whitespace-nowrap ${
                   item.active
-                    ? 'border-[#2A9D8F] text-white'
-                    : 'border-transparent text-white/70 hover:border-white/30 hover:text-white'
+                    ? 'bg-gradient-to-b from-[#FFE77B] to-[#FFBF19] text-[#073F43] shadow-md'
+                    : 'text-white/80 hover:bg-white/10 hover:text-white'
                 }`}>
-                <item.Icon className="w-5 h-5 lg:w-6 lg:h-6" />
-                <span className="text-[10px] lg:text-xs font-medium">{item.label}</span>
+                <item.Icon className="w-4 h-4 lg:w-5 lg:h-5 shrink-0 stroke-[2]" />
+                <span>{item.label}</span>
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ── MOBILE NAV (compact, same icon style) ───────────────────────────── */}
-      <div className="lg:hidden bg-[#003B46] flex-shrink-0">
-        <div className="px-4">
-          <div className="flex gap-1 pb-3 overflow-x-auto scrollbar-none">
+      {/* ── MOBILE NAV ───────────────────────────────────────────────────────── */}
+      <div className="lg:hidden flex-shrink-0 border-b border-[#004F54]" style={{ backgroundColor: NAVBAR_BG }}>
+        <div className="px-3">
+          <div className="flex gap-1 py-2 overflow-x-auto scrollbar-none">
             {[
-              { id: 'learning',    Icon: AcademicCapIcon,    label: 'Learning',     onClick: () => setMainView('learning'),   active: mainView === 'learning'    },
-              { id: 'library',     Icon: RectangleStackIcon,  label: 'Library',      onClick: () => setMainView('library'),    active: mainView === 'library'     },
-              { id: 'overview',    Icon: HomeIcon,            label: 'Overview',    onClick: () => togglePanel('overview'),    active: openPanel === 'overview'    },
-              { id: 'reports',     Icon: DocumentTextIcon,   label: 'Reports',      onClick: () => togglePanel('reports'),     active: openPanel === 'reports'     },
-              { id: 'attendance',  Icon: CalendarIcon,       label: 'Attendance',  onClick: () => togglePanel('attendance'),  active: openPanel === 'attendance'  },
-              { id: 'leaderboard', Icon: TrophyIcon,          label: 'Leaderboard', onClick: () => togglePanel('leaderboard'), active: openPanel === 'leaderboard' },
+              { id: 'learning',    Icon: AcademicCapIcon,   label: 'Learning',    onClick: () => setMainView('learning'),   active: mainView === 'learning' && !openPanel },
+              { id: 'library',     Icon: RectangleStackIcon, label: 'Library',     onClick: () => setMainView('library'),    active: mainView === 'library' && !openPanel  },
+              { id: 'overview',    Icon: HomeIcon,           label: 'Overview',    onClick: () => togglePanel('overview'),   active: openPanel === 'overview'    },
+              { id: 'reports',     Icon: DocumentTextIcon,  label: 'Reports',     onClick: () => togglePanel('reports'),    active: openPanel === 'reports'     },
+              { id: 'attendance',  Icon: CalendarIcon,      label: 'Attendance',  onClick: () => togglePanel('attendance'), active: openPanel === 'attendance'  },
+              { id: 'leaderboard', Icon: TrophyIcon,         label: 'Leaderboard', onClick: () => togglePanel('leaderboard'), active: openPanel === 'leaderboard' },
             ].map(item => (
               <button key={item.id} onClick={item.onClick}
-                className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg flex-shrink-0 transition-all ${
-                  item.active ? 'bg-white text-[#003B46] shadow-sm' : 'bg-white/10 text-white/70 hover:bg-white/20'
+                className={`flex items-center gap-1 px-2.5 py-1.5 rounded-full flex-shrink-0 text-[9px] font-black transition-all ${
+                  item.active
+                    ? 'bg-gradient-to-b from-[#FFE77B] to-[#FFBF19] text-[#073F43] shadow-sm'
+                    : 'bg-white/10 text-white/80 hover:bg-white/20 hover:text-white'
                 }`}>
-                <item.Icon className="w-4 h-4" />
-                <span className="text-[9px] font-medium leading-none">{item.label}</span>
+                <item.Icon className="w-3.5 h-3.5 shrink-0 stroke-[2]" />
+                <span>{item.label}</span>
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* ── MAIN CONTENT (matches admin: white card in max-w container) ─────── */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 lg:px-6 py-4 lg:py-6">
-        <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-[#d4cfc6] overflow-hidden">
-          <div className="p-3 sm:p-4 lg:p-6">
-            {openPanel ? (
-              <>
-                {/* Back button for in-card panels */}
+      {/* ── MAIN CONTENT ─────────────────────────────────────────────────────── */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 lg:px-6 py-4 lg:py-6" style={{ backgroundColor: PAGE_BG }}>
+        <div className="overflow-hidden rounded-[26px] border border-[#D3EEEE] bg-white shadow-[0_8px_28px_rgba(0,91,96,0.08)]">
+          {openPanel ? (
+            <>
+              {/* Inner panel header — matches PrimaryLearnerDashboard inner page header */}
+              <div className="flex items-center gap-3 border-b border-[#D8EEEE] bg-gradient-to-r from-[#E7F8F7] to-[#F7FCFA] px-4 py-4 sm:px-6">
                 <button
                   onClick={() => setOpenPanel(null)}
-                  className="flex items-center gap-2 mb-4 text-sm text-gray-500 hover:text-[#003B46] transition"
+                  className="rounded-full bg-white px-4 py-2 text-sm font-bold text-[#00666B] shadow-sm ring-1 ring-[#D2E9E8] transition hover:bg-[#FFF3C5]"
                 >
-                  ← Back to {mainView === 'library' ? 'Library' : 'Learning'}
+                  ← Back
                 </button>
+                <h2 className="text-lg font-black text-[#00565B]">
+                  {openPanel === 'overview'    ? 'Overview'     :
+                   openPanel === 'reports'     ? 'Report Cards' :
+                   openPanel === 'attendance'  ? 'Attendance'   : 'Leaderboard'}
+                </h2>
+              </div>
+              <div className="p-3 sm:p-4 lg:p-6">
                 {openPanel === 'overview'    && <OverviewPanelContent />}
                 {openPanel === 'reports'     && <ReportsPanelContent />}
                 {openPanel === 'attendance'  && <AttendancePanelContent />}
                 {openPanel === 'leaderboard' && <LeaderboardPanelContent />}
-              </>
-            ) : mainView === 'library' ? (
-              <Library />
-            ) : (
-              <LearningSpace onStartQuiz={(quizId) => setShowQuiz(quizId)} />
-            )}
-          </div>
+              </div>
+            </>
+          ) : (
+            <div className="p-3 sm:p-4 lg:p-6">
+              {mainView === 'library' ? (
+                <Library />
+              ) : (
+                <LearningSpace onStartQuiz={(quizId) => setShowQuiz(quizId)} />
+              )}
+            </div>
+          )}
         </div>
       </main>
     </div>

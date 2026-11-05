@@ -319,7 +319,7 @@ toast.error('Could not create PDF');
       <header className="relative z-30 w-full overflow-hidden bg-[#00676B] shadow-lg">
         <div className="relative w-full">
           <img
-            src="/image3.png"
+            src="/image.png"
             alt="Two learners reading together"
             className="block h-auto w-full"
           />
