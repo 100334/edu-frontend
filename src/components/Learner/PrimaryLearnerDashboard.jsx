@@ -273,13 +273,13 @@ const PrimaryLearnerDashboard = () => {
             </section>
 
             {/* Main feature tiles */}
-            <section className="grid grid-cols-2 gap-2.5">
+            <section className="grid grid-cols-2 gap-3">
               {quickLinks.map(({ tab, title, description, Icon, theme }) => (
                 <button
                   key={tab}
                   type="button"
                   onClick={() => setActiveTab(tab)}
-                  className={`group relative flex min-h-[112px] flex-col items-center justify-center overflow-hidden rounded-[19px] px-2 py-3 shadow-[0_8px_0_rgba(0,91,96,0.10)] transition duration-200 hover:-translate-y-1 hover:shadow-xl sm:min-h-[175px] ${
+                  className={`group relative flex min-h-[140px] flex-col items-center justify-center overflow-hidden rounded-[19px] px-3 py-4 shadow-[0_8px_0_rgba(0,91,96,0.10)] transition duration-200 hover:-translate-y-1 hover:shadow-xl sm:min-h-[175px] ${
                     theme === 'teal'
                       ? 'bg-gradient-to-br from-[#009B9D] via-[#00777C] to-[#00585F] text-white'
                       : 'bg-gradient-to-br from-[#FFE47A] via-[#FFC72D] to-[#F3A900] text-[#102F2E]'
@@ -287,15 +287,15 @@ const PrimaryLearnerDashboard = () => {
                 >
                   <div className="pointer-events-none absolute -bottom-10 -left-8 h-28 w-[130%] -rotate-6 rounded-[50%] bg-white/10" />
                   <Icon
-                    className={`relative z-10 h-9 w-9 stroke-[1.9] transition group-hover:scale-105 ${
+                    className={`relative z-10 h-11 w-11 stroke-[1.9] transition group-hover:scale-105 ${
                       theme === 'teal' ? 'text-white' : 'text-[#5C4300]'
                     }`}
                   />
-                  <span className="relative z-10 mt-1 text-sm font-black">
+                  <span className="relative z-10 mt-1 text-base font-black">
                     {title}
                   </span>
                   <span
-                    className={`relative z-10 mt-0.5 text-[9px] font-semibold ${
+                    className={`relative z-10 mt-0.5 text-[10px] font-semibold ${
                       theme === 'teal' ? 'text-white/75' : 'text-[#604900]/80'
                     }`}
                   >
