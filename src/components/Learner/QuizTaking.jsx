@@ -323,7 +323,14 @@ toast.dismiss(loadingToast);
                 <div key={globalIdx} className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition">
                   {/* Compact header */}
                   <div className="px-4 py-2 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100 flex justify-between items-center">
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold tracking-wide ${
+                        q.section === 'B'
+                          ? 'bg-sky-100 text-sky-800 border border-sky-200'
+                          : 'bg-teal-100 text-teal-800 border border-teal-200'
+                      }`}>
+                        SECTION {q.section === 'B' ? 'B' : 'A'}
+                      </span>
                       <span className="px-2 py-0.5 bg-teal-700/10 text-teal-800 rounded-md text-xs font-bold">Q{globalIdx+1}</span>
                       {q.question_image && (
                         <span className="px-2 py-0.5 bg-teal/10 text-teal rounded-md text-xs font-bold flex items-center gap-1">
@@ -476,6 +483,13 @@ toast.dismiss(loadingToast);
                     <div key={idx} className="bg-white rounded-lg border border-slate-200 p-3 shadow-sm">
                       <div className="flex justify-between items-start">
                         <div className="flex-1">
+                          <span className={`inline-flex mb-1 px-2 py-0.5 rounded-md text-[10px] font-extrabold tracking-wide ${
+                            q.section === 'B'
+                              ? 'bg-sky-100 text-sky-800 border border-sky-200'
+                              : 'bg-teal-100 text-teal-800 border border-teal-200'
+                          }`}>
+                            SECTION {q.section === 'B' ? 'B' : 'A'}
+                          </span>
                           <p className="font-semibold text-slate-800 text-sm">Q{idx+1}: {q.question_text}</p>
                           {q.question_image && (
                             <img src={q.question_image} alt="Diagram" className="mt-2 max-h-28 rounded border border-slate-200" />
