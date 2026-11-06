@@ -244,3 +244,26 @@ tr:hover td {
 .animate-slide-in-right {
   animation: slideInRight 0.22s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body,
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.min-h-screen,
+.screen-container {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.h-screen {
+  height: 100vh;
+  height: 100dvh;
+}
