@@ -302,7 +302,7 @@ const LearningSpace = ({ onStartQuiz }) => {
     if (!activeLesson) return STEPS;
     return STEPS.filter(s => {
       if (s.id === 'intro')  return true; // always shown
-      if (s.id === 'notes')  return !!activeLesson.pdf_url;
+      if (s.id === 'notes')  return !!activeLesson.notes_html || !!activeLesson.pdf_url;
       if (s.id === 'video')  return !!activeLesson.video_url;
       if (s.id === 'quiz')   return !!activeLesson.linkedQuiz;
       return false;
@@ -466,7 +466,6 @@ const LearningSpace = ({ onStartQuiz }) => {
       <div className="w-12 h-12 border-4 border-[#006770]/20 border-t-[#006770] rounded-full animate-spin" />
       <div>
         <p className="text-sm font-bold text-[#003B46]">Loading your lessons…</p>
-        <p className="text-[11px] text-slate-400 mt-1">This may take up to 30 seconds if the server is starting up</p>
       </div>
       <div className="flex gap-1.5 mt-1">
         {[0, 1, 2].map(i => (
@@ -483,9 +482,6 @@ const LearningSpace = ({ onStartQuiz }) => {
       <span className="text-5xl">📚</span>
       <div>
         <p className="text-sm font-bold text-[#003B46]">Could not load lessons</p>
-        <p className="text-[11px] text-slate-400 mt-1 max-w-xs">
-          The server may be starting up. Please wait a moment and try again.
-        </p>
       </div>
       <button
         onClick={() => loadData()}
@@ -1028,81 +1024,46 @@ const LearningSpace = ({ onStartQuiz }) => {
             {/* ── STEP: Read Notes ── */}
             {currentStep === 'notes' && (
               <div className="space-y-0 rounded-xl overflow-hidden border border-slate-200 shadow-sm flex flex-col" style={{ height: '80vh' }}>
-
-                {/* Toolbar */}
                 <div className="flex items-center justify-between px-4 py-2.5 bg-[#003B46] flex-shrink-0">
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-white">📄 Lesson Notes</p>
+                    <p className="text-xs font-bold text-white">{activeLesson.notes_html ? '📘 Study Notes' : '📄 Lesson Notes'}</p>
                     <p className="text-[10px] text-white/50 truncate max-w-[180px]">{activeLesson.title}</p>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {/* Open in new tab */}
-                    <a
-                      href={activeLesson.pdf_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[11px] font-semibold transition"
-                      title="Open in new tab"
-                    >
-                      🔗 Open
+                  {activeLesson.pdf_url && (
+                    <a href={activeLesson.pdf_url} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[11px] font-semibold transition">
+                      📄 Original PDF
                     </a>
-                    {/* Download */}
-                    <a
-                      href={activeLesson.pdf_url}
-                      download
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[11px] font-semibold transition"
-                      title="Download PDF"
-                    >
-                      ⬇ Download
-                    </a>
-                    {/* Full screen */}
-                    <button
-                      onClick={() => { setViewerSrc(activeLesson.pdf_url); setViewerTitle(activeLesson.title + ' — Notes'); }}
-                      className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[11px] font-semibold transition"
-                      title="Full screen"
-                    >
-                      ⛶ Full
-                    </button>
-                  </div>
+                  )}
                 </div>
 
-                {/* PDF viewer — Google Docs viewer for cross-device compatibility */}
                 <div className="flex-1 bg-slate-900 relative">
-                  <iframe
-                    src={`https://docs.google.com/viewer?url=${encodeURIComponent(activeLesson.pdf_url)}&embedded=true`}
-                    className="w-full h-full border-none"
-                    title="Lesson Notes"
-                    allow="fullscreen"
-                  />
-                  {/* Fallback overlay — shown if Google Docs viewer fails to load */}
-                  <noscript>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-slate-800 text-white p-6 text-center">
-                      <span className="text-4xl">📄</span>
-                      <p className="text-sm font-semibold">PDF viewer requires JavaScript</p>
-                      <a href={activeLesson.pdf_url} target="_blank" rel="noopener noreferrer"
-                        className="px-4 py-2 bg-[#006770] text-white rounded-lg text-sm font-semibold">
-                        Open PDF
-                      </a>
-                    </div>
-                  </noscript>
+                  {activeLesson.notes_html ? (
+                    <iframe
+                      srcDoc={activeLesson.notes_html}
+                      sandbox=""
+                      className="w-full h-full border-0 bg-[#f7fbfa]"
+                      title={`${activeLesson.title} study notes`}
+                    />
+                  ) : (
+                    <iframe
+                      src={`https://docs.google.com/viewer?url=${encodeURIComponent(activeLesson.pdf_url)}&embedded=true`}
+                      className="w-full h-full border-none"
+                      title="Lesson PDF Notes"
+                      allow="fullscreen"
+                    />
+                  )}
                 </div>
 
-                {/* Mobile fallback hint — if Google Docs doesn't load on phone */}
-                <div className="px-4 py-2 bg-[#003B46]/80 flex-shrink-0 flex items-center justify-between">
-                  <p className="text-[10px] text-white/40">
-                    If the PDF doesn't display, tap Open or Download above.
-                  </p>
-                  <a
-                    href={activeLesson.pdf_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[10px] text-[#2A9D8F] font-semibold hover:text-white transition flex-shrink-0 ml-2"
-                  >
-                    Open PDF →
-                  </a>
-                </div>
+                {!activeLesson.notes_html && activeLesson.pdf_url && (
+                  <div className="px-4 py-2 bg-[#003B46]/80 flex-shrink-0 flex items-center justify-between">
+                    <p className="text-[10px] text-white/40">If the PDF doesn't display, open the original PDF above.</p>
+                    <a href={activeLesson.pdf_url} target="_blank" rel="noopener noreferrer"
+                      className="text-[10px] text-[#2A9D8F] font-semibold hover:text-white transition flex-shrink-0 ml-2">
+                      Open PDF →
+                    </a>
+                  </div>
+                )}
               </div>
             )}
 

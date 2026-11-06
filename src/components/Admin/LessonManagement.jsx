@@ -61,6 +61,8 @@ const LessonManagement = () => {
   const [editingLesson, setEditingLesson] = useState(null);
   const [submitting,    setSubmitting]    = useState(false);
   const [aiGenerating,  setAiGenerating]  = useState(false);
+  const [notesGenerating, setNotesGenerating] = useState(false);
+  const [pdfText,       setPdfText]       = useState('');
   const [uploadStatus,  setUploadStatus]  = useState({ video: false, pdf: false });
   const [confirmLesson, setConfirmLesson] = useState(null);
 
@@ -162,7 +164,7 @@ const LessonManagement = () => {
 
   const emptyForm = {
     title: '', description: '', objectives: '', instructions: '',
-    video_url: '', pdf_url: '',
+    video_url: '', pdf_url: '', notes_html: '',
     subject_id: '', target_form: 'All', quiz_id: '',
     display_order: 0, resource_type: 'video',
     week_number: 1, deadline_date: '', is_weekend_exam: false,
@@ -309,6 +311,36 @@ const LessonManagement = () => {
   const uploadToR2 = async (file, type) => {
     if (!file) return;
     if (!formData.subject_id) { toast.error('Select a subject first.'); return; }
+    let extractedText = '';
+    if (type !== 'video') {
+      if (file.size > 25 * 1024 * 1024) { toast.error('PDF must be smaller than 25 MB.'); return; }
+      try {
+        const pdfjsLib = await import('pdfjs-dist');
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+        const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+        if (pdf.numPages > 100) {
+          await pdf.destroy();
+          toast.error('PDF must have 100 pages or fewer.');
+          return;
+        }
+        const pages = [];
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+          const page = await pdf.getPage(pageNumber);
+          const content = await page.getTextContent();
+          pages.push(content.items.map(item => item.str || '').join(' '));
+          if (pages.join('\n').length >= 50000) break;
+        }
+        await pdf.destroy();
+        extractedText = pages.join('\n').slice(0, 50000).trim();
+        if (extractedText.length < 100) {
+          toast.error('This PDF has too little selectable text. Please use a text-based PDF.');
+          return;
+        }
+      } catch (err) {
+        toast.error(`Could not read PDF: ${err.message}`);
+        return;
+      }
+    }
     const folder = `${formData.resource_type === 'video' ? 'videos' : 'pdfs'}/${getSubjectName(formData.subject_id)}`;
     setUploadStatus(p => ({ ...p, [type]: true }));
     try {
@@ -320,7 +352,8 @@ const LessonManagement = () => {
       if (!upload.ok) throw new Error('Upload failed');
       const fileUrl = data.fileUrl || data.publicUrl || data.url;
       const field   = formData.resource_type === 'video' ? 'video_url' : 'pdf_url';
-      setFormData(p => ({ ...p, [field]: fileUrl }));
+      setFormData(p => ({ ...p, [field]: fileUrl, ...(field === 'pdf_url' ? { notes_html: '' } : {}) }));
+      if (field === 'pdf_url') setPdfText(extractedText);
       toast.success(`Uploaded to ${folder}/`);
     } catch (err) { toast.error(`Upload error: ${err.message}`); }
     finally { setUploadStatus(p => ({ ...p, [type]: false })); }
@@ -343,6 +376,7 @@ const LessonManagement = () => {
         description:     formData.description || '',
         objectives:      formData.objectives  || '',
         instructions:    formData.instructions || '',
+        notes_html:      formData.notes_html || null,
         subject_id:      formData.subject_id || null,
         target_form:     formData.target_form,
         display_order:   parseInt(formData.display_order) || 0,
@@ -379,11 +413,13 @@ const LessonManagement = () => {
   // ── open modal ────────────────────────────────────────────────────────────
   const openModal = (lesson = null) => {
     setEditingLesson(lesson);
+    setPdfText('');
     setFormData(lesson ? {
       title:           lesson.title           || '',
       description:     lesson.description     || '',
       objectives:      lesson.objectives      || '',
       instructions:    lesson.instructions    || '',
+      notes_html:      lesson.notes_html      || '',
       video_url:       lesson.video_url       || '',
       pdf_url:         lesson.pdf_url         || '',
       subject_id:      lesson.subject_id      || '',
@@ -426,6 +462,33 @@ const LessonManagement = () => {
       toast.error(err.response?.data?.message || 'AI generation failed');
     } finally {
       setAiGenerating(false);
+    }
+  };
+
+  const generateHtmlNotes = async () => {
+    if (!pdfText) { toast.error('Upload a text-based PDF first.'); return; }
+    if (!formData.title.trim()) { toast.error('Enter a lesson title first.'); return; }
+    setNotesGenerating(true);
+    try {
+      const token = localStorage.getItem('token');
+      const subjectName = subjects.find(s => String(s.id) === String(formData.subject_id))?.name || '';
+      const res = await api.post('/api/admin/ai-generate-html-notes', {
+        title: formData.title.trim(),
+        subject: subjectName,
+        target_form: formData.target_form,
+        description: formData.description || '',
+        text: pdfText,
+      }, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.data.success && res.data.notes_html) {
+        setFormData(p => ({ ...p, notes_html: res.data.notes_html }));
+        toast.success('HTML study notes generated. Preview them below, then save the lesson.');
+      } else {
+        toast.error(res.data.message || 'Could not generate study notes');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not generate study notes');
+    } finally {
+      setNotesGenerating(false);
     }
   };
 
@@ -887,7 +950,10 @@ const LessonManagement = () => {
                     }`}>
                       <input type="radio" name="resource_type" value={val}
                         checked={formData.resource_type === val}
-                        onChange={e => setFormData(p => ({ ...p, resource_type: e.target.value, video_url: '', pdf_url: '' }))}
+                          onChange={e => {
+                            setPdfText('');
+                            setFormData(p => ({ ...p, resource_type: e.target.value, video_url: '', pdf_url: '', notes_html: '' }));
+                          }}
                         className="sr-only" />
                       <Icon className="w-4 h-4" /> {label}
                     </label>
@@ -917,10 +983,50 @@ const LessonManagement = () => {
                 </div>
                 <input type="text"
                   value={formData.resource_type === 'video' ? formData.video_url : formData.pdf_url}
-                  onChange={e => { const f = formData.resource_type === 'video' ? 'video_url' : 'pdf_url'; setFormData(p => ({ ...p, [f]: e.target.value })); }}
+                  onChange={e => {
+                    const f = formData.resource_type === 'video' ? 'video_url' : 'pdf_url';
+                    setFormData(p => ({ ...p, [f]: e.target.value, ...(f === 'pdf_url' ? { notes_html: '' } : {}) }));
+                    if (f === 'pdf_url') setPdfText('');
+                  }}
                   placeholder="URL auto-filled after upload, or paste manually"
                   className={inp} required />
               </div>
+
+              {formData.resource_type !== 'video' && (
+                <div className="rounded-xl border border-[#006770]/20 bg-[#f3fbfa] p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-[#003B46]">AI HTML Study Notes</p>
+                      <p className="text-[11px] text-slate-500">
+                        {pdfText ? 'PDF text extracted and ready for note generation.' : 'Upload a text-based PDF above to generate readable notes.'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={generateHtmlNotes}
+                      disabled={notesGenerating || !pdfText || !formData.title.trim()}
+                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-2 bg-[#006770] text-white rounded-lg text-xs font-semibold hover:bg-[#005a62] transition disabled:opacity-50"
+                    >
+                      {notesGenerating
+                        ? <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Generating…</>
+                        : formData.notes_html ? 'Regenerate Notes' : 'Generate Notes'}
+                    </button>
+                  </div>
+                  {formData.notes_html && (
+                    <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                      <div className="px-3 py-2 border-b border-slate-100 text-[11px] font-semibold text-slate-600">
+                        Preview · saved with the lesson
+                      </div>
+                      <iframe
+                        title="Generated HTML study notes preview"
+                        srcDoc={formData.notes_html}
+                        sandbox=""
+                        className="w-full h-72 border-0"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Optional quiz */}
               {quizzes.length > 0 && (
