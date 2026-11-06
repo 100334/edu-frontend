@@ -45,7 +45,7 @@ export default function TeacherLogin({ serverStatus }) {
         backgroundSize: 'cover',
       }}
     >
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-md">
         <header className="mb-6 flex flex-col items-center text-center">
           <img
             src="/school-logo.jpeg"
@@ -59,12 +59,12 @@ export default function TeacherLogin({ serverStatus }) {
 
         <section className="overflow-hidden rounded-3xl border border-white/70 bg-white/95 shadow-[0_20px_60px_rgba(0,24,28,0.25)] backdrop-blur-md">
           <div className="h-1 bg-gradient-to-r from-[#00656B] to-[#E7AD20]" />
-          <form onSubmit={handleLogin} className="space-y-5 p-6">
+          <form onSubmit={handleLogin} className="space-y-6 p-8">
             <div>
               <label htmlFor="teacher-username" className="mb-1.5 block text-sm font-semibold text-[#29494b]">
                 Username
               </label>
-              <div className="flex h-12 items-center gap-3 rounded-2xl border border-[#d7e6e5] bg-[#fbfdfd] px-3.5 transition focus-within:border-[#08777B] focus-within:ring-4 focus-within:ring-[#08777B]/10">
+              <div className="flex h-14 items-center gap-3 rounded-2xl border border-[#d7e6e5] bg-[#fbfdfd] px-4 transition focus-within:border-[#08777B] focus-within:ring-4 focus-within:ring-[#08777B]/10">
                 <UserIcon className="h-5 w-5 shrink-0 text-[#08777B]" />
                 <input
                   id="teacher-username"
@@ -83,7 +83,7 @@ export default function TeacherLogin({ serverStatus }) {
               <label htmlFor="teacher-password" className="mb-1.5 block text-sm font-semibold text-[#29494b]">
                 Password
               </label>
-              <div className="flex h-12 items-center gap-3 rounded-2xl border border-[#d7e6e5] bg-[#fbfdfd] px-3.5 transition focus-within:border-[#08777B] focus-within:ring-4 focus-within:ring-[#08777B]/10">
+              <div className="flex h-14 items-center gap-3 rounded-2xl border border-[#d7e6e5] bg-[#fbfdfd] px-4 transition focus-within:border-[#08777B] focus-within:ring-4 focus-within:ring-[#08777B]/10">
                 <LockClosedIcon className="h-5 w-5 shrink-0 text-[#08777B]" />
                 <input
                   id="teacher-password"
@@ -115,7 +115,7 @@ export default function TeacherLogin({ serverStatus }) {
             <button
               type="submit"
               disabled={loading || serverStatus?.status === 'offline'}
-              className="group flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#006b70] text-sm font-bold text-white shadow-sm transition hover:bg-[#00585d] focus:outline-none focus:ring-4 focus:ring-[#08777B]/20 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+              className="group flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[#006b70] text-sm font-bold text-white shadow-sm transition hover:bg-[#00585d] focus:outline-none focus:ring-4 focus:ring-[#08777B]/20 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? 'Signing in…' : <>Sign in <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" /></>}
             </button>
