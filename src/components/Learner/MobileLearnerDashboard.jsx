@@ -309,7 +309,7 @@ toast.error('Could not create PDF');
   }
 
   return (
-    <div className="mx-auto min-h-screen w-full max-w-[520px] overflow-x-hidden bg-[#F2FBFC] pb-24 text-[#073F43] shadow-[0_0_35px_rgba(0,91,96,0.10)]">
+    <div className="learner-dashboard-shell mx-auto min-h-screen w-full max-w-[520px] overflow-x-hidden bg-[#F2FBFC] pb-24 text-[#073F43] shadow-[0_0_35px_rgba(0,91,96,0.10)]">
       <header className="relative z-30 w-full overflow-hidden bg-[#00676B] shadow-lg">
         <div className="relative w-full">
           <img

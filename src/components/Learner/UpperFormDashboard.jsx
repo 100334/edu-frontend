@@ -452,26 +452,6 @@ export default function UpperFormDashboard() {
         </div>
       </div>
 
-      {/* Stats 2×2 */}
-      <div className="grid grid-cols-2 gap-3">
-        {[
-          { Icon: DocumentTextIcon,        value: stats.reportsCount,     label: 'Reports',    border: 'border-[#F3C34A]', iconBg: 'bg-[#FFF0B5]', iconColor: 'text-[#936500]' },
-          { Icon: CalendarIcon,            value: stats.attendanceRate,   label: 'Attendance', border: 'border-[#12BFC0]', iconBg: 'bg-[#C9F5F3]', iconColor: 'text-[#00686D]' },
-          { Icon: ChartBarIcon,            value: stats.averageScore,     label: 'Average',    border: 'border-[#F3C34A]', iconBg: 'bg-[#FFF0B5]', iconColor: 'text-[#936500]' },
-          { Icon: BookOpenIcon,            value: stats.quizzesCompleted, label: 'Quizzes',    border: 'border-[#12BFC0]', iconBg: 'bg-[#C9F5F3]', iconColor: 'text-[#00686D]' },
-        ].map(s => (
-          <div key={s.label} className={`bg-white rounded-xl border-2 ${s.border} p-3 flex items-center gap-3`}>
-            <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${s.iconBg} ${s.iconColor}`}>
-              <s.Icon className="w-5 h-5 stroke-[2.2]" />
-            </div>
-            <div>
-              <p className="text-lg font-black text-[#07575A] leading-none">{s.value}</p>
-              <p className="text-[9px] text-[#173F43] font-bold uppercase tracking-wide mt-0.5">{s.label}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
       {/* Latest report preview */}
       {latestReport && (() => {
         const valid = (latestReport.subjects || []).filter(s => s?.score != null);

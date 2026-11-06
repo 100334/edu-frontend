@@ -280,3 +280,15 @@ body,
   background-repeat: no-repeat;
   border-bottom: 4px solid #f3c34a;
 }
+
+@media (orientation: landscape) {
+  .learner-dashboard-shell {
+    width: 100%;
+    max-width: none;
+    min-height: 100vh;
+    min-height: 100dvh;
+    margin-left: 0;
+    margin-right: 0;
+    box-shadow: none;
+  }
+}
