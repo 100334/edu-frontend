@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { useAuth } from '../../context/AuthContext';
-import { UserIcon, IdentificationIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
+import { UserIcon, IdentificationIcon } from '@heroicons/react/24/outline';
 
 const LearnerLogin = ({ serverStatus }) => {
   const [name, setName] = useState('');
@@ -74,10 +74,10 @@ const LearnerLogin = ({ serverStatus }) => {
         <header className="mb-6 flex flex-col items-center text-center">
           <img
             src="/school-logo.jpeg"
-            alt="Progress Secondary School"
+            alt="Progress Schools"
             className="mb-3 h-14 w-14 rounded-2xl border border-white/50 bg-white object-contain shadow-sm"
           />
-          <p className="text-sm font-semibold text-white/85">Progress Secondary School</p>
+          <p className="text-sm font-semibold text-white/85">Progress Schools</p>
           <h1 className="mt-1 text-2xl font-bold text-white">Student sign in</h1>
         </header>
 
@@ -149,13 +149,6 @@ const LearnerLogin = ({ serverStatus }) => {
           </form>
         </section>
 
-        <button
-          type="button"
-          onClick={() => navigate('/teacher/login')}
-          className="mx-auto mt-5 flex items-center gap-1.5 text-sm font-semibold text-white transition hover:text-white/75"
-        >
-          Staff sign in <ArrowRightIcon className="h-4 w-4" />
-        </button>
       </div>
     </main>
   );

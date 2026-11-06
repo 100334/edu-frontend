@@ -49,11 +49,11 @@ const AdminLogin = ({ serverStatus }) => {
         <header className="mb-6 flex flex-col items-center text-center">
           <img
             src="/school-logo.jpeg"
-            alt="Progress Secondary School"
+            alt="Progress Schools"
             className="mb-3 h-14 w-14 rounded-2xl border border-white/50 bg-white object-contain shadow-sm"
             onError={e => { e.currentTarget.style.display = 'none'; }}
           />
-          <p className="text-sm font-semibold text-white/85">Progress Secondary School</p>
+          <p className="text-sm font-semibold text-white/85">Progress Schools</p>
           <h1 className="mt-1 text-2xl font-bold text-white">Admin sign in</h1>
         </header>
 
@@ -122,13 +122,6 @@ const AdminLogin = ({ serverStatus }) => {
           </form>
         </section>
 
-        <button
-          type="button"
-          onClick={() => navigate('/')}
-          className="mx-auto mt-5 flex items-center gap-1.5 text-sm font-semibold text-white transition hover:text-white/75"
-        >
-          Student sign in <ArrowRightIcon className="h-4 w-4" />
-        </button>
       </div>
     </main>
   );
