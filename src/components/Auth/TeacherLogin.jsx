@@ -37,20 +37,27 @@ export default function TeacherLogin({ serverStatus }) {
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[#edf6f5] via-[#f8faf9] to-[#e8f1f0] px-4 py-8">
+    <main
+      className="flex min-h-screen items-center justify-center bg-[#073F43] px-4 py-8"
+      style={{
+        backgroundImage: "linear-gradient(135deg, rgba(3, 43, 48, 0.76), rgba(8, 77, 78, 0.42)), url('/image2.png')",
+        backgroundPosition: 'center',
+        backgroundSize: 'cover',
+      }}
+    >
       <div className="w-full max-w-sm">
         <header className="mb-6 flex flex-col items-center text-center">
           <img
             src="/school-logo.jpeg"
             alt="Progress Secondary School"
-            className="mb-3 h-14 w-14 rounded-2xl border border-white object-contain shadow-sm"
+            className="mb-3 h-14 w-14 rounded-2xl border border-white/50 bg-white object-contain shadow-sm"
             onError={e => { e.currentTarget.style.display = 'none'; }}
           />
-          <p className="text-sm font-semibold text-[#527174]">Progress Secondary School</p>
-          <h1 className="mt-1 text-2xl font-bold text-[#073F43]">Staff sign in</h1>
+          <p className="text-sm font-semibold text-white/85">Progress Secondary School</p>
+          <h1 className="mt-1 text-2xl font-bold text-white">Staff sign in</h1>
         </header>
 
-        <section className="overflow-hidden rounded-2xl border border-[#dcebea] bg-white shadow-[0_16px_48px_rgba(0,55,60,0.10)]">
+        <section className="overflow-hidden rounded-2xl border border-white/70 bg-white/95 shadow-[0_20px_60px_rgba(0,24,28,0.25)] backdrop-blur-md">
           <div className="h-1 bg-gradient-to-r from-[#00656B] to-[#E7AD20]" />
           <form onSubmit={handleLogin} className="space-y-5 p-6">
             <div>
@@ -118,7 +125,7 @@ export default function TeacherLogin({ serverStatus }) {
         <button
           type="button"
           onClick={() => navigate('/')}
-          className="mx-auto mt-5 flex items-center gap-1.5 text-sm font-semibold text-[#08676C] transition hover:text-[#043f43]"
+          className="mx-auto mt-5 flex items-center gap-1.5 text-sm font-semibold text-white transition hover:text-white/75"
         >
           Student sign in <ArrowRightIcon className="h-4 w-4" />
         </button>
