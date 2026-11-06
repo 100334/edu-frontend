@@ -10,6 +10,7 @@ import {
 } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import { loadPdfJs } from '../../utils/loadPdfJs';
 
 const inp = 'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#00B4D8] focus:border-[#00B4D8] transition';
 
@@ -315,8 +316,7 @@ const LessonManagement = () => {
     if (type !== 'video') {
       if (file.size > 25 * 1024 * 1024) { toast.error('PDF must be smaller than 25 MB.'); return; }
       try {
-        const pdfjsLib = await import('pdfjs-dist');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+        const pdfjsLib = await loadPdfJs();
         const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
         if (pdf.numPages > 100) {
           await pdf.destroy();

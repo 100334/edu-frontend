@@ -12,6 +12,7 @@ import {
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import { loadPdfJs } from '../../utils/loadPdfJs';
 import ImageUploader from '../common/ImageUploader';
 
 // ── shared input style ────────────────────────────────────────────────────────
@@ -523,8 +524,7 @@ const QuizManagement = () => {
 
       if (ext === 'pdf') {
         // Extract text using pdfjs-dist
-        const pdfjsLib = await import('pdfjs-dist');
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+        const pdfjsLib = await loadPdfJs();
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
         const pages = [];
