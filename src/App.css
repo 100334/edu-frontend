@@ -1,11 +1,13 @@
 :root {
-  /* Navy Blue, Azure, and Ice White Palette */
-  --ink: #0f1923;           /* Deep Navy */
-  --paper: #f8fafc;         /* Ice White */
-  --cream: #f1f5f9;         /* Light Slate / Soft Gray */
-  --azure: #007fff;         /* Azure Primary */
-  --azure-light: #3399ff;   /* Azure Hover */
-  --azure-dark: #005bb5;
+  /* Progress Schools teal, gold, and white palette */
+  --ink: #073f43;
+  --paper: #f2fbfc;
+  --cream: #eaf4f2;
+  --azure: #00676b;
+  --azure-light: #00858a;
+  --azure-dark: #00565b;
+  --gold: #f3c34a;
+  --gold-light: #ffd84d;
   --red: #e63946;
   --green: #10b981;
   --muted: #64748b;         /* Slate Gray */
@@ -266,4 +268,15 @@ body,
 .h-screen {
   height: 100vh;
   height: 100dvh;
+}
+
+.dashboard-brand-header {
+  background-color: #003b46;
+  background-image:
+    linear-gradient(90deg, rgba(0, 59, 70, 0.94), rgba(0, 103, 112, 0.78)),
+    url('../public/image3.png');
+  background-position: center 42%;
+  background-size: cover;
+  background-repeat: no-repeat;
+  border-bottom: 4px solid #f3c34a;
 }

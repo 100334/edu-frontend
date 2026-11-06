@@ -4,16 +4,18 @@
 
 @layer base {
   :root {
-    /* Primary Palette - Navy Blue & Ice White */
-    --ink: #0f1923;           /* Deep Navy */
-    --paper: #f8fafc;         /* Ice White Background */
+    /* Progress Schools teal, gold, and white palette */
+    --ink: #073f43;
+    --paper: #f2fbfc;
     --white: #ffffff;
-    --cream: #f1f5f9;         /* Soft Slate */
+    --cream: #eaf4f2;
     
-    /* Brand Accent - Azure Blue */
-    --azure: #007fff;
-    --azure-light: #3399ff;
-    --azure-dark: #005bb5;
+    /* Brand Accents */
+    --azure: #00676b;
+    --azure-light: #00858a;
+    --azure-dark: #00565b;
+    --gold: #f3c34a;
+    --gold-light: #ffd84d;
     
     /* UI Feedback */
     --red: #e63946;
@@ -21,11 +23,8 @@
     --muted: #64748b;         /* Slate Gray */
     --border: #e2e8f0;        /* Clean Ice Blue Border */
     
-    /* Legacy Variable Mappings (Mapping to new theme) */
-    --gold: var(--azure);
-    --gold-light: var(--azure-light);
-    --teal: #1a6b6b;
-    --teal-light: #2a9090;
+    --teal: #00676b;
+    --teal-light: #2a9d8f;
   }
 
   body {
@@ -35,7 +34,7 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     background: 
-      radial-gradient(at 0% 0%, rgba(0, 127, 255, 0.03) 0px, transparent 50%),
+      radial-gradient(at 0% 0%, rgba(0, 103, 107, 0.04) 0px, transparent 50%),
       var(--paper);
     color: var(--ink);
   }

@@ -41,7 +41,7 @@ import TokenManagement from '../../components/Admin/TokenManagement';
 const HEADER_BG = '#003B46';
 const NAVBAR_BG = '#006770';
 const TEAL_ACCENT = '#2A9D8F';
-const PAPER = '#F5F2EB';
+const PAPER = '#F2FBFC';
 const ICE_WHITE = '#F8FAFC';
 
 // Stat Card Component - Mobile Responsive
@@ -471,13 +471,13 @@ toast.error('Failed to load statistics');
       <div className="min-h-screen" style={{ backgroundColor: PAPER }}>
         {/* Header - Mobile Responsive */}
         <div 
-          className="w-full px-3 sm:px-6 pt-4 sm:pt-6 lg:pt-8 pb-4 sm:pb-6"
+          className="dashboard-brand-header w-full px-3 sm:px-6 pt-4 sm:pt-6 lg:pt-8 pb-4 sm:pb-6"
           style={{ backgroundColor: HEADER_BG }}
         >
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-start mb-3 sm:mb-4">
               <div>
-                <p className="text-[10px] sm:text-xs font-extrabold tracking-wider mb-0.5 sm:mb-1 text-[#2A9D8F]">
+                <p className="text-[10px] sm:text-xs font-extrabold tracking-wider mb-0.5 sm:mb-1 text-[#F3C34A]">
                   ADMINISTRATION
                 </p>
                 <h1 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-bold text-white">

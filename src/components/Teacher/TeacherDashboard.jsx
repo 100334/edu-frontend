@@ -7,12 +7,12 @@ import Library from '../Library';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 
 // Theme constants
-const NAVY_DARK = '#0A2540';
-const NAVY_PRIMARY = '#1E3A5F';
-const AZURE_ACCENT = '#00B4D8';
+const NAVY_DARK = '#003B46';
+const NAVY_PRIMARY = '#00676B';
+const AZURE_ACCENT = '#00858A';
 const TEAL_ACCENT = '#2A9D8F';
 const ICE_WHITE = '#F8FAFC';
-const PAPER = '#F5F2EB';
+const PAPER = '#F2FBFC';
 const HEADER_BG = '#003B46';
 const NAVBAR_BG = '#006770';
 
@@ -918,7 +918,7 @@ toast.error('Failed to record attendance');
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: ICE_WHITE }}>
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-[#00B0FF] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-12 h-12 border-4 border-[#00858A] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-500">Loading dashboard...</p>
         </div>
       </div>
@@ -926,13 +926,10 @@ toast.error('Failed to record attendance');
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F2EB]">
+    <div className="min-h-screen bg-[#F2FBFC]">
       {/* Header Section */}
       <div 
-        className="w-full sticky top-0 z-30 shadow-[0_10px_30px_rgba(10,37,64,0.18)]"
-        style={{
-          background: HEADER_BG,
-        }}
+        className="dashboard-brand-header w-full sticky top-0 z-30 shadow-[0_10px_30px_rgba(0,55,60,0.18)]"
       >
         <div className="relative container mx-auto px-4 py-3">
           <div className="flex items-center justify-between min-h-[68px]">
@@ -989,11 +986,11 @@ toast.error('Failed to record attendance');
           {/* Welcome Section Below Header */}
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <div className="inline-flex items-center rounded-full border border-[#7DE3FF]/30 bg-white/5 px-2.5 py-1 text-[10px] font-bold tracking-[0.2em] text-[#7DE3FF]">
+              <div className="inline-flex items-center rounded-full border border-[#F3C34A]/40 bg-white/5 px-2.5 py-1 text-[10px] font-bold tracking-[0.2em] text-[#F3C34A]">
                 TEACHER PORTAL
               </div>
               <h2 className="mt-2 text-xl font-bold text-white sm:text-2xl">
-                Hello, {getUserName()} <span className="text-[#7DE3FF]">👋</span>
+                Hello, {getUserName()} <span className="text-[#F3C34A]">👋</span>
               </h2>
               <p className="text-sm text-white/75">{getGreeting()}! Welcome back to your dashboard.</p>
             </div>
@@ -1006,7 +1003,7 @@ toast.error('Failed to record attendance');
               </div>
               <div className="rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-right backdrop-blur-sm">
                 <div className="text-[9px] uppercase tracking-[0.18em] text-white/70">Status</div>
-                <div className="text-sm font-bold text-[#7DE3FF]">Active</div>
+                <div className="text-sm font-bold text-[#F3C34A]">Active</div>
               </div>
             </div>
           </div>
@@ -1139,7 +1136,7 @@ toast.error('Failed to record attendance');
                         <div key={learner.id} className="flex items-center justify-between py-2 lg:py-3 border-b border-[#ede9e1] last:border-0">
                           <div className="flex-1 min-w-0">
                             <div className="font-semibold text-[#0A2540] text-sm lg:text-base truncate">{learner.name}</div>
-                            <div className="font-mono text-[10px] lg:text-xs bg-[#0A2540] text-[#7DE3FF] px-2 py-1 rounded mt-1 inline-block">
+                            <div className="font-mono text-[10px] lg:text-xs bg-[#003B46] text-[#F3C34A] px-2 py-1 rounded mt-1 inline-block">
                               {learner.reg_number || learner.reg}
                             </div>
                           </div>
@@ -1181,13 +1178,13 @@ toast.error('Failed to record attendance');
                   <h2 className="font-semibold text-[#0A2540] text-sm lg:text-base">Quick Actions</h2>
                 </div>
                 <div className="p-4 lg:p-6 flex flex-col gap-2 lg:gap-3">
-                  <button onClick={() => setShowAddLearnersModal(true)}                   className="px-3 lg:px-4 py-2 lg:py-2.5 bg-[#0A2540] text-white rounded-lg hover:bg-[#1E3A5F] transition text-sm font-medium">
+                  <button onClick={() => setShowAddLearnersModal(true)}                   className="px-3 lg:px-4 py-2 lg:py-2.5 bg-[#00676B] text-white rounded-lg hover:bg-[#00565B] transition text-sm font-medium">
                     ➕ Add Learners to Class
                   </button>
                   <button onClick={() => setActiveTab('reports')} className="px-3 lg:px-4 py-2 lg:py-2.5 bg-[#2A9D8F] text-white rounded-lg hover:bg-[#238579] transition text-sm font-medium">
                     📋 Generate Report Card
                   </button>
-                  <button onClick={() => setActiveTab('attendance')} className="px-3 lg:px-4 py-2 lg:py-2.5 bg-[#00B4D8] text-white rounded-lg hover:bg-[#009fbe] transition text-sm font-medium">
+                  <button onClick={() => setActiveTab('attendance')} className="px-3 lg:px-4 py-2 lg:py-2.5 bg-[#2A9D8F] text-white rounded-lg hover:bg-[#238579] transition text-sm font-medium">
                     📅 Record Attendance
                   </button>
                 </div>
@@ -1209,7 +1206,7 @@ toast.error('Failed to record attendance');
                   )}
                 </p>
               </div>
-              <button onClick={() => setShowAddLearnersModal(true)} className="w-full sm:w-auto px-4 py-2 bg-[#0A2540] text-white rounded-lg hover:bg-[#1E3A5F] transition font-semibold text-sm">
+              <button onClick={() => setShowAddLearnersModal(true)} className="w-full sm:w-auto px-4 py-2 bg-[#00676B] text-white rounded-lg hover:bg-[#00565B] transition font-semibold text-sm">
                 ➕ Add Learners
               </button>
             </div>

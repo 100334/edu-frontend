@@ -35,12 +35,12 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 // THEME CONSTANTS
-const DARK_BLUE = '#0A2540';
-const NAVY_PRIMARY = '#1E3A5F';
-const AZURE_ACCENT = '#00B4D8';
+const DARK_BLUE = '#003B46';
+const NAVY_PRIMARY = '#00676B';
+const AZURE_ACCENT = '#00858A';
 const TEAL_ACCENT = '#2A9D8F';
 const ICE_WHITE = '#F8FAFC';
-const PAPER = '#F5F2EB';
+const PAPER = '#F2FBFC';
 const HEADER_BG = '#003B46';
 const NAVBAR_BG = '#006770';
 
@@ -983,7 +983,7 @@ toast.error('Failed to generate PDF');
 
   if (showQuiz) {
     return (
-      <div className="min-h-screen bg-[#F5F2EB]">
+      <div className="min-h-screen bg-[#F2FBFC]">
         <div className="container mx-auto px-4 py-6">
           <button
             onClick={() => setShowQuiz(null)}
@@ -999,15 +999,12 @@ toast.error('Failed to generate PDF');
 
   // --- Main Render ---
   return (
-    <div className="min-h-screen bg-[#F5F2EB] font-roboto">
+    <div className="min-h-screen bg-[#F2FBFC] font-roboto">
       {/* Header with darker teal (#003B46) - REDESIGNED */}
       <div
-        className="w-full sticky top-0 z-30 shadow-[0_10px_30px_rgba(10,37,64,0.18)]"
-        style={{
-          background: `linear-gradient(135deg, ${HEADER_BG} 0%, #0b4a59 42%, ${NAVBAR_BG} 100%)`
-        }}
+        className="dashboard-brand-header w-full sticky top-0 z-30 shadow-[0_10px_30px_rgba(0,55,60,0.18)]"
       >
-        <div className="absolute inset-0 opacity-80" style={{ background: 'radial-gradient(circle at top left, rgba(0,180,216,0.22), transparent 30%)' }} />
+        <div className="absolute inset-0 opacity-80" style={{ background: 'radial-gradient(circle at top left, rgba(243,195,74,0.16), transparent 30%)' }} />
         <div className="relative container mx-auto px-4 py-3">
           <div className="flex items-center justify-between min-h-[68px]">
             <div className="flex items-center gap-3 flex-shrink-0">
@@ -1037,7 +1034,7 @@ toast.error('Failed to generate PDF');
 
             <div className="flex items-center gap-2 flex-shrink-0">
               <div className="hidden md:flex items-center gap-3 rounded-2xl border border-white/10 bg-white/10 px-3 py-1.5 backdrop-blur-sm shadow-sm">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#2A9D8F] to-[#00B4D8] shadow-inner">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#2A9D8F] to-[#F3C34A] shadow-inner">
                   <UserCircleIcon className="h-4 w-4 text-white" />
                 </div>
                 <div>
@@ -1098,10 +1095,10 @@ toast.error('Failed to generate PDF');
 
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <div className="inline-flex items-center rounded-full border border-[#7DE3FF]/30 bg-white/5 px-2.5 py-1 text-[10px] font-bold tracking-[0.2em] text-[#7DE3FF]">
+              <div className="inline-flex items-center rounded-full border border-[#F3C34A]/40 bg-white/5 px-2.5 py-1 text-[10px] font-bold tracking-[0.2em] text-[#F3C34A]">
                 LEARNER PORTAL
               </div>
-              <h2 className="mt-2 text-xl font-bold text-white sm:text-2xl">Hello, {getUserName()} <span className="text-[#7DE3FF]">👋</span></h2>
+              <h2 className="mt-2 text-xl font-bold text-white sm:text-2xl">Hello, {getUserName()} <span className="text-[#F3C34A]">👋</span></h2>
               <p className="text-sm text-white/75">{getGreeting()}! Welcome back to your dashboard.</p>
             </div>
 
@@ -1112,7 +1109,7 @@ toast.error('Failed to generate PDF');
               </div>
               <div className="rounded-xl border border-white/10 bg-white/10 px-3 py-2 text-right backdrop-blur-sm">
                 <div className="text-[9px] uppercase tracking-[0.18em] text-white/70">Status</div>
-                <div className="text-sm font-bold text-[#7DE3FF]">Active</div>
+                <div className="text-sm font-bold text-[#F3C34A]">Active</div>
               </div>
             </div>
           </div>

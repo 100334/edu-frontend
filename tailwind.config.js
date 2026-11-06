@@ -6,24 +6,29 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Navy & Ice White Palette
-        ink: '#0F172A',          // Deep Navy Blue (Primary Text/Headers)
+        // Progress Schools teal, gold, and white palette
+        ink: '#073F43',
         navy: {
-          700: '#1E293B',
-          800: '#0F172A',
-          900: '#020617',
-          darkblue: '#0A192F',
-          azure: '#007FFF',
-          teal: '#14B8A6',
-        emerald: '#10B981',
-          ice: '#F0F9FF'
+          700: '#00676B',
+          800: '#00565B',
+          900: '#003B46',
+          darkblue: '#003B46',
+          azure: '#00858A',
+          teal: '#00676B',
+          emerald: '#2A9D8F',
+          ice: '#F2FBFC'
         },
-        paper: '#F8FAFC',         // Ice White (Main Background)
-        cream: '#F1F5F9',         // Subtle Slate (Card Backgrounds)
+        paper: '#F2FBFC',
+        cream: '#EAF4F2',
         azure: {
-          DEFAULT: '#007FFF',     // Azure (Primary Action)
-          light: '#3399FF',
-          dark: '#005BB5',
+          DEFAULT: '#00676B',
+          light: '#00858A',
+          dark: '#00565B',
+        },
+        gold: {
+          DEFAULT: '#F3C34A',
+          light: '#FFD84D',
+          dark: '#D9A923',
         },
         // Semantic Colors
         red: '#E63946',
