@@ -433,7 +433,7 @@ const LearningSpace = ({ onStartQuiz }) => {
 
   // Token required gate
   if (tokenRequired) return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[400px] items-center justify-center gap-4 px-6 text-center">
+    <div className="bg-white rounded-2xl border border-[#D3EEEE] shadow-sm overflow-hidden flex flex-col min-h-[400px] items-center justify-center gap-4 px-6 text-center">
       <div className="w-16 h-16 rounded-2xl bg-amber-100 flex items-center justify-center">
         <span className="text-3xl">🎫</span>
       </div>
@@ -443,9 +443,9 @@ const LearningSpace = ({ onStartQuiz }) => {
           You need a valid access token to view lessons. Please contact your school administrator to get your token.
         </p>
       </div>
-      <div className="w-full max-w-xs bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-left space-y-1">
-        <p className="text-[11px] font-bold text-amber-700 uppercase tracking-wide">How to get access</p>
-        <p className="text-[11px] text-amber-600 leading-relaxed">
+      <div className="w-full max-w-xs bg-[#FFF8DF] border border-[#F3C34A]/60 rounded-xl px-4 py-3 text-left space-y-1">
+        <p className="text-[11px] font-bold text-[#765A08] uppercase tracking-wide">How to get access</p>
+        <p className="text-[11px] text-[#856A18] leading-relaxed">
           1. Contact your teacher or school admin<br/>
           2. Ask them to generate a token for you<br/>
           3. Once issued, your access will be activated automatically
@@ -462,7 +462,7 @@ const LearningSpace = ({ onStartQuiz }) => {
 
   // Loading state
   if (dataLoading) return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[400px] items-center justify-center gap-4 px-6 text-center">
+    <div className="bg-white rounded-2xl border border-[#D3EEEE] shadow-sm overflow-hidden flex flex-col min-h-[400px] items-center justify-center gap-4 px-6 text-center">
       <div className="w-12 h-12 border-4 border-[#006770]/20 border-t-[#006770] rounded-full animate-spin" />
       <div>
         <p className="text-sm font-bold text-[#003B46]">Loading your lessons…</p>
@@ -479,7 +479,7 @@ const LearningSpace = ({ onStartQuiz }) => {
 
   // Error state
   if (dataError && lessons.length === 0) return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[400px] items-center justify-center gap-4 px-6 text-center">
+    <div className="bg-white rounded-2xl border border-[#D3EEEE] shadow-sm overflow-hidden flex flex-col min-h-[400px] items-center justify-center gap-4 px-6 text-center">
       <span className="text-5xl">📚</span>
       <div>
         <p className="text-sm font-bold text-[#003B46]">Could not load lessons</p>
@@ -497,10 +497,18 @@ const LearningSpace = ({ onStartQuiz }) => {
   );
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+    <div className="bg-white rounded-2xl border border-[#D3EEEE] shadow-sm overflow-hidden flex flex-col min-h-[500px]">
 
       {/* ── Top nav bar ── */}
-      <div className="flex items-center gap-3 px-4 py-2.5 bg-[#003B46] flex-shrink-0">
+      <div
+        className="flex items-center gap-3 border-b-2 border-[#F3C34A] px-4 py-2.5 text-white flex-shrink-0"
+        style={{
+          backgroundColor: '#003B46',
+          backgroundImage: "linear-gradient(90deg, rgba(0, 59, 70, 0.96), rgba(0, 103, 112, 0.82)), url('/image2.png')",
+          backgroundPosition: 'center 38%',
+          backgroundSize: 'cover',
+        }}
+      >
         <button
           onClick={goBack}
           disabled={!canGoBack}
@@ -525,7 +533,7 @@ const LearningSpace = ({ onStartQuiz }) => {
       )}
 
       {/* ── Content ── */}
-      <div className="flex-1 overflow-y-auto bg-[#F5F2EB]">
+      <div className="flex-1 overflow-y-auto bg-[#F2FBFC]">
 
         {/* ════ LEVEL 1 — Week list ══════════════════════════════════════════ */}
         {activeWeek === null && !activeFolderId && (
@@ -632,7 +640,7 @@ const LearningSpace = ({ onStartQuiz }) => {
                 <div
                   key={exam.id}
                   onClick={() => isQuiz && !isClosed ? handleQuizClick(exam) : undefined}
-                  className={`flex items-center gap-3 p-4 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl transition-all ${
+                  className={`flex items-center gap-3 border border-[#F3C34A]/70 p-4 bg-gradient-to-r from-[#00676B] to-[#2A9D8F] rounded-2xl transition-all ${
                     isQuiz && !isClosed ? 'cursor-pointer hover:shadow-lg' : 'cursor-default opacity-75'
                   }`}
                 >
@@ -678,9 +686,9 @@ const LearningSpace = ({ onStartQuiz }) => {
                       >
                         <svg viewBox="0 0 56 44" fill="none" xmlns="http://www.w3.org/2000/svg"
                           className="w-14 h-11 flex-shrink-0 transition-transform group-hover:scale-105">
-                          <rect x="0" y="0" width="20" height="7" rx="3" fill="#005BB5" />
-                          <rect x="0" y="5" width="56" height="36" rx="4" fill="#007FFF" />
-                          <rect x="0" y="5" width="56" height="8" rx="4" fill="#3399FF" opacity="0.6" />
+                          <rect x="0" y="0" width="20" height="7" rx="3" fill="#D9A923" />
+                          <rect x="0" y="5" width="56" height="36" rx="4" fill="#00676B" />
+                          <rect x="0" y="5" width="56" height="8" rx="4" fill="#2A9D8F" opacity="0.7" />
                         </svg>
                         <div className="text-center w-full">
                           <p className="text-xs font-bold text-slate-700 leading-tight truncate">Quizzes</p>
@@ -917,10 +925,10 @@ const LearningSpace = ({ onStartQuiz }) => {
 
                 {/* Instructions */}
                 {activeLesson.instructions && (
-                  <div className="bg-white rounded-xl border border-blue-100 overflow-hidden">
-                    <div className="px-4 py-2.5 bg-blue-50 border-b border-blue-100 flex items-center gap-2">
+                  <div className="bg-white rounded-xl border border-[#D3EEEE] overflow-hidden">
+                    <div className="px-4 py-2.5 bg-[#E4F4F4] border-b border-[#D3EEEE] flex items-center gap-2">
                       <span className="text-base">📋</span>
-                      <span className="text-xs font-bold text-blue-800 uppercase tracking-wide">Instructions</span>
+                      <span className="text-xs font-bold text-[#00565B] uppercase tracking-wide">Instructions</span>
                     </div>
                     <div className="px-4 py-3">
                       <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{activeLesson.instructions}</p>
