@@ -108,22 +108,6 @@ const LearnerLogin = ({ serverStatus }) => {
               <p className="text-sm font-black text-[#075B60]">Progress Secondary School</p>
               <p className="text-[11px] text-[#527174]">Sign in to continue learning</p>
             </div>
-            <style>{`
-              .learner-login-wave-fill {
-                fill: #F0FAF9;
-              }
-              @media (orientation: portrait) {
-                .learner-login-page {
-                  background-color: #01919F;
-                }
-                .learner-login-wave-fill {
-                  fill: #01919F;
-                }
-                .learner-login-content {
-                  margin-top: 0;
-                }
-              }
-            `}</style>
           </div>
 
           {/* Card */}
@@ -238,6 +222,24 @@ const LearnerLogin = ({ serverStatus }) => {
             </button>
           </div>
         </div>
+        <style>{`
+          .learner-login-wave-fill {
+            fill: #F0FAF9;
+          }
+          @media (orientation: portrait) {
+            .learner-login-page {
+              background-color: #01919F;
+            }
+            .learner-login-wave-fill {
+              fill: #01919F;
+            }
+            .learner-login-content {
+              position: relative;
+              z-index: 5;
+              margin-top: calc(150px - max(180px, min(42vh, 320px)));
+            }
+          }
+        `}</style>
       </div>
     </div>
   );
