@@ -803,7 +803,15 @@ export default function UpperFormDashboard() {
     <div className="min-h-screen bg-[#F2FBFC] flex flex-col text-[#073F43]">
 
       {/* ── HEADER ────────────────────────────────────────────────────────────── */}
-      <header className="dashboard-brand-header w-full flex-shrink-0" style={{ backgroundColor: HEADER_BG }}>
+      <header
+        className="dashboard-brand-header w-full flex-shrink-0"
+        style={{
+          backgroundColor: HEADER_BG,
+          backgroundImage: "linear-gradient(90deg, rgba(0, 59, 70, 0.94) 0%, rgba(0, 76, 82, 0.78) 52%, rgba(0, 103, 112, 0.68) 100%), url('/image3.png')",
+          backgroundPosition: 'center 44%',
+          backgroundSize: 'cover',
+        }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-4 pb-4">
 
           {/* Top row */}
