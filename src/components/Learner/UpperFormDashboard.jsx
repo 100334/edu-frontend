@@ -413,17 +413,11 @@ export default function UpperFormDashboard() {
   // ── Quiz overlay ──────────────────────────────────────────────────────────
   if (showQuiz) {
     return (
-      <div className="min-h-screen bg-[#F2FBFC] px-4 py-5">
-        <div className="mx-auto max-w-[720px]">
-          <button
-            onClick={() => setShowQuiz(null)}
-            className="mb-4 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#00666B] shadow-sm ring-1 ring-[#D6EEEE] transition hover:bg-[#E9F8F8]"
-          >
-            ← Back to Dashboard
-          </button>
-          <QuizTaking quizId={showQuiz} onComplete={handleQuizComplete} />
-        </div>
-      </div>
+      <QuizTaking
+        quizId={showQuiz}
+        onComplete={handleQuizComplete}
+        onExit={() => setShowQuiz(null)}
+      />
     );
   }
 
@@ -892,25 +886,6 @@ export default function UpperFormDashboard() {
             </div>
           </div>
 
-          {/* Stats cards — gold/teal bordered like PrimaryLearnerDashboard */}
-          <div className="grid grid-cols-4 gap-2 lg:gap-3 mt-4">
-            {[
-              { Icon: DocumentTextIcon,          value: stats.reportsCount,     label: 'Reports',    border: 'border-[#F3C34A]', iconBg: 'bg-[#FFF0B5]', iconColor: 'text-[#936500]', cardBg: 'from-white to-[#FFF8E6]' },
-              { Icon: CalendarIcon,              value: stats.attendanceRate,   label: 'Attendance', border: 'border-[#12BFC0]', iconBg: 'bg-[#C9F5F3]', iconColor: 'text-[#00686D]', cardBg: 'from-white to-[#E4FAFA]' },
-              { Icon: ChartBarIcon,              value: stats.averageScore,     label: 'Average',    border: 'border-[#F3C34A]', iconBg: 'bg-[#FFF0B5]', iconColor: 'text-[#936500]', cardBg: 'from-white to-[#FFF8E6]' },
-              { Icon: BookOpenIcon,              value: stats.quizzesCompleted, label: 'Quizzes',    border: 'border-[#12BFC0]', iconBg: 'bg-[#C9F5F3]', iconColor: 'text-[#00686D]', cardBg: 'from-white to-[#E4FAFA]' },
-            ].map(s => (
-              <div key={s.label} className={`flex flex-col sm:flex-row items-center gap-1.5 sm:gap-2 lg:gap-3 rounded-[17px] border-2 ${s.border} bg-gradient-to-br ${s.cardBg} px-2 py-2 lg:px-3 lg:py-3 shadow-sm`}>
-                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${s.iconBg} ${s.iconColor}`}>
-                  <s.Icon className="w-4 h-4 lg:w-5 lg:h-5 stroke-[2.2]" />
-                </div>
-                <div className="min-w-0 text-center sm:text-left">
-                  <div className="text-base lg:text-xl font-black text-[#07575A] leading-none">{s.value}</div>
-                  <div className="text-[9px] lg:text-[10px] text-[#173F43] font-bold uppercase tracking-wide mt-0.5">{s.label}</div>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </header>
 

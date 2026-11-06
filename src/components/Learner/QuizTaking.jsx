@@ -21,7 +21,7 @@ function normalizeQuizId(value) {
 // Keep old name as alias for internal use
 const normalizeQuizIdProp = normalizeQuizId;
 
-const QuizTaking = ({ quizId, onComplete, questionsPerPage = 1 }) => {
+const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1 }) => {
   const [quiz, setQuiz] = useState(null);
   const [result, setResult] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -277,6 +277,16 @@ toast.dismiss(loadingToast);
         <header className="w-full border-b-[3px] border-[#F3C33D] bg-gradient-to-r from-[#004F55] via-[#00777A] to-[#008E8D] text-white shadow-lg">
           <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
             <div className="flex min-w-0 items-center gap-3">
+              {onExit && (
+                <button
+                  type="button"
+                  onClick={onExit}
+                  aria-label="Exit quiz"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 transition hover:bg-white/20"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              )}
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10">
                 <DocumentCheckIcon className="h-5 w-5 text-[#FFD84D]" />
               </div>
@@ -359,11 +369,21 @@ toast.dismiss(loadingToast);
 
   // ── QUIZ QUESTIONS PAGE ─────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen w-full bg-[#F2FBFC]">
+    <div className="min-h-screen w-full bg-[#F2FBFC] flex flex-col">
       {/* Sticky header */}
       <header className="sticky top-0 z-30 border-b-[3px] border-[#F3C33D] bg-gradient-to-r from-[#004F55] via-[#00777A] to-[#008E8D] text-white shadow-lg">
         <div className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
           <div className="flex min-w-0 items-center gap-2">
+            {onExit && (
+              <button
+                type="button"
+                onClick={onExit}
+                aria-label="Exit quiz"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 transition hover:bg-white/20"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            )}
             {/* Back to details */}
             <button
               onClick={() => setShowDetails(true)}
@@ -388,7 +408,7 @@ toast.dismiss(loadingToast);
         </div>
       </header>
 
-      <main className="w-full px-0 py-0 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
+      <main className="w-full flex-1 px-0 py-0 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
         {/*
           Portrait  → single column, navigator hidden, questions full-width
           Landscape / sm+ → two columns: questions | navigator (compact)

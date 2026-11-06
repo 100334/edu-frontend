@@ -300,17 +300,11 @@ toast.error('Could not create PDF');
 
   if (showQuiz) {
     return (
-      <div className="min-h-screen bg-[#F2FBFC] px-4 py-5">
-        <div className="mx-auto max-w-[520px]">
-          <button
-            onClick={() => setShowQuiz(null)}
-            className="mb-4 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#00666B] shadow-sm ring-1 ring-[#D6EEEE]"
-          >
-            ← Back to learning
-          </button>
-          <QuizTaking quizId={showQuiz} onComplete={() => setShowQuiz(null)} />
-        </div>
-      </div>
+      <QuizTaking
+        quizId={showQuiz}
+        onComplete={() => setShowQuiz(null)}
+        onExit={() => setShowQuiz(null)}
+      />
     );
   }
 

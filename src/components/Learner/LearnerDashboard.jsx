@@ -983,17 +983,11 @@ toast.error('Failed to generate PDF');
 
   if (showQuiz) {
     return (
-      <div className="min-h-screen bg-[#F2FBFC]">
-        <div className="container mx-auto px-4 py-6">
-          <button
-            onClick={() => setShowQuiz(null)}
-            className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
-          >
-            ← Back to Dashboard
-          </button>
-          <QuizTaking quizId={showQuiz} onComplete={handleQuizComplete} />
-        </div>
-      </div>
+      <QuizTaking
+        quizId={showQuiz}
+        onComplete={handleQuizComplete}
+        onExit={() => setShowQuiz(null)}
+      />
     );
   }
 
