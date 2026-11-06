@@ -57,14 +57,14 @@ const AdminLogin = ({ serverStatus }) => {
           <h1 className="mt-1 text-2xl font-bold text-white">Admin sign in</h1>
         </header>
 
-        <section className="overflow-hidden rounded-2xl border border-white/70 bg-white/95 shadow-[0_20px_60px_rgba(0,24,28,0.25)] backdrop-blur-md">
+        <section className="overflow-hidden rounded-3xl border border-white/70 bg-white/95 shadow-[0_20px_60px_rgba(0,24,28,0.25)] backdrop-blur-md">
           <div className="h-1 bg-gradient-to-r from-[#073F43] to-[#E7AD20]" />
           <form onSubmit={handleLogin} className="space-y-5 p-6">
             <div>
               <label htmlFor="admin-email" className="mb-1.5 block text-sm font-semibold text-[#29494b]">
                 Email
               </label>
-              <div className="flex h-12 items-center gap-3 rounded-xl border border-[#d7e6e5] bg-[#fbfdfd] px-3.5 transition focus-within:border-[#08777B] focus-within:ring-4 focus-within:ring-[#08777B]/10">
+              <div className="flex h-12 items-center gap-3 rounded-2xl border border-[#d7e6e5] bg-[#fbfdfd] px-3.5 transition focus-within:border-[#08777B] focus-within:ring-4 focus-within:ring-[#08777B]/10">
                 <EnvelopeIcon className="h-5 w-5 shrink-0 text-[#08777B]" />
                 <input
                   id="admin-email"
@@ -83,7 +83,7 @@ const AdminLogin = ({ serverStatus }) => {
               <label htmlFor="admin-password" className="mb-1.5 block text-sm font-semibold text-[#29494b]">
                 Password
               </label>
-              <div className="flex h-12 items-center gap-3 rounded-xl border border-[#d7e6e5] bg-[#fbfdfd] px-3.5 transition focus-within:border-[#08777B] focus-within:ring-4 focus-within:ring-[#08777B]/10">
+              <div className="flex h-12 items-center gap-3 rounded-2xl border border-[#d7e6e5] bg-[#fbfdfd] px-3.5 transition focus-within:border-[#08777B] focus-within:ring-4 focus-within:ring-[#08777B]/10">
                 <LockClosedIcon className="h-5 w-5 shrink-0 text-[#08777B]" />
                 <input
                   id="admin-password"
@@ -115,7 +115,7 @@ const AdminLogin = ({ serverStatus }) => {
             <button
               type="submit"
               disabled={loading || serverStatus?.status === 'offline'}
-              className="group flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#073F43] text-sm font-bold text-white shadow-sm transition hover:bg-[#00585d] focus:outline-none focus:ring-4 focus:ring-[#08777B]/20 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+              className="group flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#073F43] text-sm font-bold text-white shadow-sm transition hover:bg-[#00585d] focus:outline-none focus:ring-4 focus:ring-[#08777B]/20 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? 'Signing in…' : <>Sign in <ArrowRightIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" /></>}
             </button>
