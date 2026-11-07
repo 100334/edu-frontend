@@ -29,6 +29,7 @@ const TABS = [
 const QuizManagement = () => {
   const [quizzes,        setQuizzes]        = useState([]);
   const [subjects,       setSubjects]       = useState([]);
+  const [subjectsLoading, setSubjectsLoading] = useState(false);
   const [loading,        setLoading]        = useState(true);
   const [activeTab,      setActiveTab]      = useState('all');
   const [selectedQuiz,   setSelectedQuiz]   = useState(null);
@@ -88,11 +89,17 @@ const QuizManagement = () => {
 
   // ── loaders ─────────────────────────────────────────────────────────────────
   const loadSubjects = async () => {
+    setSubjectsLoading(true);
     try {
       const token = localStorage.getItem('token');
       const res = await api.get('/api/admin/quiz-subjects', { headers: { Authorization: `Bearer ${token}` } });
       if (res.data.success) setSubjects(res.data.subjects || []);
-    } catch { /* silent */ }
+      else toast.error(res.data.message || 'Failed to load subjects');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to load subjects');
+    } finally {
+      setSubjectsLoading(false);
+    }
   };
 
   const loadQuizzes = async () => {
@@ -637,6 +644,7 @@ const QuizManagement = () => {
   });
 
   const openEditQuiz = (quiz) => {
+    loadSubjects();
     setEditingQuiz(quiz);
     setQuizForm({
       subject_id:      quiz.subject_id      || '',
@@ -757,7 +765,7 @@ const QuizManagement = () => {
           ))}
         </div>
         <button
-          onClick={() => { setEditingQuiz(null); resetQuizForm(); setShowQuizModal(true); }}
+          onClick={() => { loadSubjects(); setEditingQuiz(null); resetQuizForm(); setShowQuizModal(true); }}
           className="flex items-center gap-1.5 px-4 py-2 bg-[#006770] text-white rounded-lg text-sm font-medium hover:bg-[#005a62] transition"
         >
           <PlusIcon className="w-4 h-4" /> New Quiz
@@ -948,7 +956,7 @@ const QuizManagement = () => {
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm text-center py-12">
             <ArchiveBoxIcon className="w-10 h-10 text-gray-200 mx-auto mb-2" />
             <p className="text-sm text-gray-400">No papers found.</p>
-            <button onClick={() => setShowQuizModal(true)} className="mt-2 text-xs text-[#006770] hover:underline">Create the first paper →</button>
+            <button onClick={() => { loadSubjects(); setEditingQuiz(null); resetQuizForm(); setShowQuizModal(true); }} className="mt-2 text-xs text-[#006770] hover:underline">Create the first paper →</button>
           </div>
         ) : (
           <div className="space-y-3">
@@ -1137,8 +1145,8 @@ const QuizManagement = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-gray-600 mb-1">Subject *</label>
-                    <select value={quizForm.subject_id} onChange={e => setQuizForm(p => ({ ...p, subject_id: e.target.value }))} className={inp} required>
-                      <option value="">Select subject…</option>
+                    <select value={quizForm.subject_id} onChange={e => setQuizForm(p => ({ ...p, subject_id: e.target.value }))} className={inp} required disabled={subjectsLoading}>
+                      <option value="">{subjectsLoading ? 'Loading subjects…' : 'Select subject…'}</option>
                       {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                   </div>
