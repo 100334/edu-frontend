@@ -1,10 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { PhotoIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import api from '../../services/api';
 
 const editorStyles = `
   body { font: 15px/1.7 system-ui, sans-serif; color: #173b40; }
   h1, h2, h3 { color: #005b62; line-height: 1.3; }
   p { margin: 0 0 0.8em; }
+  img { display: block; max-width: 100%; height: auto; margin: 1em auto; }
   ul, ol { padding-left: 1.5em; }
   blockquote { border-left: 3px solid #00838b; margin: 1em 0; padding-left: 1em; color: #52666a; }
   table { border-collapse: collapse; width: 100%; }
@@ -37,8 +40,11 @@ const StudyNotesEditor = ({ value, onChange }) => {
   const editorRef = useRef(null);
   const lastValueRef = useRef(null);
   const stylesRef = useRef('');
-  const fileInputRef = useRef(null);
+  const imageInputRef = useRef(null);
+  const wordInputRef = useRef(null);
+  const savedSelectionRef = useRef(null);
   const [importing, setImporting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     const nextValue = value || '';
@@ -60,6 +66,84 @@ const StudyNotesEditor = ({ value, onChange }) => {
     editorRef.current?.focus();
     document.execCommand(command, false, commandValue);
     publishEditorHtml();
+  };
+
+  const saveSelection = () => {
+    const selection = window.getSelection();
+    if (selection?.rangeCount && editorRef.current?.contains(selection.anchorNode)) {
+      savedSelectionRef.current = selection.getRangeAt(0).cloneRange();
+    }
+  };
+
+  const uploadAndInsertImage = async (file) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Choose an image file.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Images must be smaller than 5 MB.');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const body = new FormData();
+      body.append('image', file);
+      const { data } = await api.post('/api/upload', body, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      if (!data.imageUrl) throw new Error('Image upload did not return a URL.');
+
+      editorRef.current?.focus();
+      const selection = window.getSelection();
+      const range = savedSelectionRef.current;
+      if (range && editorRef.current?.contains(range.commonAncestorContainer)) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+
+      const image = document.createElement('img');
+      image.src = data.imageUrl;
+      image.alt = file.name.replace(/\.[^.]+$/, '');
+      image.style.maxWidth = '100%';
+      image.style.height = 'auto';
+      image.style.display = 'block';
+      image.style.margin = '1em auto';
+      if (selection?.rangeCount && editorRef.current?.contains(selection.anchorNode)) {
+        const insertRange = selection.getRangeAt(0);
+        insertRange.deleteContents();
+        insertRange.insertNode(image);
+        insertRange.setStartAfter(image);
+        insertRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(insertRange);
+        savedSelectionRef.current = insertRange.cloneRange();
+      } else {
+        editorRef.current?.appendChild(image);
+        savedSelectionRef.current = null;
+      }
+      publishEditorHtml();
+      toast.success('Image added to study notes.');
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || 'Image upload failed.');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handlePaste = async (event) => {
+    const imageFiles = Array.from(event.clipboardData?.items || [])
+      .filter(item => item.type.startsWith('image/'))
+      .map(item => item.getAsFile())
+      .filter(Boolean);
+    if (imageFiles.length === 0) return;
+
+    event.preventDefault();
+    saveSelection();
+    for (const file of imageFiles) {
+      await uploadAndInsertImage(file);
+    }
   };
 
   const importWordDocument = async (event) => {
@@ -144,14 +228,40 @@ const StudyNotesEditor = ({ value, onChange }) => {
         {toolButton('Clear formatting', 'Clear formatting', 'removeFormat')}
         <button
           type="button"
-          onClick={() => fileInputRef.current?.click()}
+          title="Insert image"
+          aria-label="Insert image"
+          onMouseDown={event => {
+            event.preventDefault();
+            saveSelection();
+          }}
+          onClick={() => imageInputRef.current?.click()}
+          disabled={uploadingImage}
+          className="flex items-center gap-1 rounded border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-[#e8f5f4] disabled:opacity-50"
+        >
+          <PhotoIcon className="h-4 w-4" />
+          {uploadingImage ? 'Uploading…' : 'Image'}
+        </button>
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/gif,image/webp"
+          className="hidden"
+          onChange={event => {
+            const file = event.target.files?.[0];
+            event.target.value = '';
+            uploadAndInsertImage(file);
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => wordInputRef.current?.click()}
           disabled={importing}
           className="rounded bg-[#006770]/10 px-2.5 py-1 text-xs font-semibold text-[#006770] hover:bg-[#006770]/20 disabled:opacity-50"
         >
           {importing ? 'Importing…' : 'Import Word .docx'}
         </button>
         <input
-          ref={fileInputRef}
+          ref={wordInputRef}
           type="file"
           accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
           className="hidden"
@@ -166,11 +276,14 @@ const StudyNotesEditor = ({ value, onChange }) => {
         aria-label="Study notes editor"
         aria-multiline="true"
         onInput={publishEditorHtml}
+        onKeyUp={saveSelection}
+        onMouseUp={saveSelection}
+        onPaste={handlePaste}
         className="prose prose-sm min-h-48 max-w-none overflow-y-auto p-4 text-slate-800 focus:outline-none"
         style={{ minHeight: 192 }}
       />
       <div className="border-t border-slate-100 bg-slate-50 px-3 py-2 text-[10px] text-slate-500">
-        Format the notes above, or import a .docx file. Changes are saved with the lesson when you publish it.
+        Format the notes, insert or paste images, or import a .docx file. Changes are saved with the lesson when you publish it.
       </div>
     </div>
   );
