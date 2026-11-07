@@ -221,6 +221,8 @@ export default function UpperFormDashboard() {
       if (ar.status === 'fulfilled') {
         const d = ar.value.data;
         attendanceData = d?.stats && d?.records ? d : (d?.data || { stats: {}, records: Array.isArray(d) ? d : [] });
+      } else {
+        toast.error('Could not load your visit history');
       }
       if (qr.status === 'fulfilled' && qr.value.data?.attempts) quizData = qr.value.data.attempts;
 
@@ -234,14 +236,10 @@ export default function UpperFormDashboard() {
       extractFilters(processedReports);
 
       setAttendanceRecords((attendanceData.records || []).map(r => ({
-        id: r.id, date: r.date, status: r.status, term: r.term, year: r.year,
+        id: r.id, date: r.date, logged_in_at: r.logged_in_at || r.date, status: r.status,
       })));
 
-      const attendanceRate = attendanceData.stats?.rate
-        ? `${attendanceData.stats.rate}%`
-        : attendanceData.stats?.percentage
-        ? `${attendanceData.stats.percentage}%`
-        : '—';
+      const attendanceVisits = attendanceData.stats?.visits ?? attendanceData.stats?.total ?? 0;
 
       const allSubjects = processedReports.flatMap(r => r.subjects.filter(s => s?.score != null));
       const averageScore = allSubjects.length
@@ -250,12 +248,12 @@ export default function UpperFormDashboard() {
 
       setStats({
         reportsCount:     processedReports.length,
-        attendanceRate,
+        attendanceRate: attendanceVisits,
         averageScore,
-        totalDays:        attendanceData.stats?.total   || 0,
-        presentCount:     attendanceData.stats?.present || 0,
-        lateCount:        attendanceData.stats?.late    || 0,
-        absentCount:      attendanceData.stats?.absent  || 0,
+        totalDays:        attendanceVisits,
+        presentCount:     attendanceVisits,
+        lateCount:        0,
+        absentCount:      0,
         quizzesCompleted: quizData.length,
       });
     } catch { /* silent */ }
@@ -376,7 +374,7 @@ export default function UpperFormDashboard() {
   };
 
   const downloadAttendancePDF = () => {
-    if (!attendanceRecords.length) { toast.error('No attendance records'); return; }
+    if (!attendanceRecords.length) { toast.error('No visit records'); return; }
     try {
       const doc = new jsPDF();
       const pw = doc.internal.pageSize.getWidth();
@@ -385,7 +383,7 @@ export default function UpperFormDashboard() {
       doc.setTextColor(255, 255, 255); doc.setFontSize(20); doc.setFont('helvetica', 'bold');
       doc.text('PROGRESS SECONDARY SCHOOL', pw / 2, 25, { align: 'center' });
       doc.setFontSize(11); doc.setFont('helvetica', 'normal'); doc.setTextColor(200, 200, 200);
-      doc.text('Attendance Record', pw / 2, 38, { align: 'center' });
+      doc.text('Learner Visit History', pw / 2, 38, { align: 'center' });
       let y = 65;
       doc.setFillColor(...lightGray); doc.roundedRect(20, y, pw - 40, 35, 3, 3, 'F');
       doc.setDrawColor(...teal);      doc.roundedRect(20, y, pw - 40, 35, 3, 3, 'S');
@@ -397,18 +395,18 @@ export default function UpperFormDashboard() {
       y += 45;
       autoTable(doc, {
         startY: y, margin: { left: 20, right: 20 },
-        head: [['Date', 'Day', 'Status']],
+        head: [['Date', 'Time', 'Visit']],
         body: attendanceRecords.map(r => [
-          new Date(r.date).toLocaleDateString('en', { year: 'numeric', month: 'short', day: 'numeric' }),
-          new Date(r.date).toLocaleDateString('en', { weekday: 'long' }),
-          r.status === 'present' ? 'Present' : r.status === 'late' ? 'Late' : 'Absent',
+          new Date(r.logged_in_at || r.date).toLocaleDateString('en', { year: 'numeric', month: 'short', day: 'numeric' }),
+          new Date(r.logged_in_at || r.date).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' }),
+          'Login',
         ]),
         theme: 'grid',
         headStyles: { fillColor: darkBlue, textColor: 255, fontStyle: 'bold', halign: 'center' },
         alternateRowStyles: { fillColor: lightGray },
       });
-      doc.save(`${user?.name?.replace(/\s+/g, '_') || 'student'}_Attendance.pdf`);
-      toast.success('Attendance downloaded!');
+      doc.save(`${user?.name?.replace(/\s+/g, '_') || 'student'}_Visits.pdf`);
+      toast.success('Visit history downloaded!');
     } catch { /* silent */ }
   };
 
@@ -489,7 +487,7 @@ export default function UpperFormDashboard() {
       {/* Attendance summary */}
       <div className="bg-white rounded-xl border border-[#D3EEEE] overflow-hidden">
         <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#D8EEEE] bg-gradient-to-r from-[#E7F8F7] to-[#F7FCFA]">
-          <span className="text-xs font-black text-[#00565B]">Attendance Summary</span>
+          <span className="text-xs font-black text-[#00565B]">Visit Summary</span>
           {attendanceRecords.length > 0 && (
             <button onClick={downloadAttendancePDF} className="p-1 text-[#00777A] hover:bg-[#DDF6F2] rounded transition">
               <ArrowDownTrayIcon className="w-4 h-4" />
@@ -688,7 +686,7 @@ export default function UpperFormDashboard() {
   const AttendancePanelContent = () => (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-slate-500">Your daily attendance history</p>
+        <p className="text-xs text-slate-500">Your successful learner logins</p>
         {attendanceRecords.length > 0 && (
           <button onClick={downloadAttendancePDF}
             className="px-3 py-1.5 bg-[#00676B] text-white rounded-lg text-xs font-bold hover:bg-[#005060] transition flex items-center gap-1.5">
@@ -701,29 +699,23 @@ export default function UpperFormDashboard() {
           <thead className="bg-gradient-to-r from-[#E7F8F7] to-[#F7FCFA]">
             <tr>
               <th className="px-4 py-2.5 text-left text-[10px] font-black text-[#00565B] uppercase tracking-wide">Date</th>
-              <th className="px-4 py-2.5 text-left text-[10px] font-black text-[#00565B] uppercase tracking-wide hidden sm:table-cell">Day</th>
-              <th className="px-4 py-2.5 text-left text-[10px] font-black text-[#00565B] uppercase tracking-wide">Status</th>
+              <th className="px-4 py-2.5 text-left text-[10px] font-black text-[#00565B] uppercase tracking-wide hidden sm:table-cell">Time</th>
+              <th className="px-4 py-2.5 text-left text-[10px] font-black text-[#00565B] uppercase tracking-wide">Visit</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#E4FAFA]">
             {attendanceRecords.length === 0 ? (
-              <tr><td colSpan="3" className="px-4 py-6 text-center text-sm text-slate-400">No attendance records yet</td></tr>
+              <tr><td colSpan="3" className="px-4 py-6 text-center text-sm text-slate-400">No visit records yet</td></tr>
             ) : [...attendanceRecords].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 20).map(record => (
               <tr key={record.id} className="hover:bg-[#F0FAF8]">
                 <td className="px-4 py-2.5 text-xs text-[#073F43]">
-                  {new Date(record.date).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {new Date(record.logged_in_at || record.date).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}
                 </td>
                 <td className="px-4 py-2.5 text-xs text-slate-400 hidden sm:table-cell">
-                  {new Date(record.date).toLocaleDateString('en', { weekday: 'short' })}
+                  {new Date(record.logged_in_at || record.date).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}
                 </td>
                 <td className="px-4 py-2.5">
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                    record.status === 'present' ? 'bg-green-100 text-green-700' :
-                    record.status === 'late'    ? 'bg-amber-100 text-amber-700' :
-                                                  'bg-red-100 text-red-700'
-                  }`}>
-                    {record.status === 'present' ? 'Present' : record.status === 'late' ? 'Late' : 'Absent'}
-                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold">Login</span>
                 </td>
               </tr>
             ))}

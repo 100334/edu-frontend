@@ -404,7 +404,8 @@ function LowerFormDashboard() {
           else if (Array.isArray(attendanceRes.data)) attendanceData = { stats: {}, records: attendanceRes.data };
         }
       } catch (attendanceError) {
-}
+        toast.error('Could not load visit history');
+      }
       try {
         const quizRes = await api.get('/api/quiz/history');
         if (quizRes.data && quizRes.data.attempts) {
@@ -427,15 +428,15 @@ setQuizAttempts([]);
       const processedAttendance = (attendanceData.records || []).map(record => ({
         id: record.id,
         date: record.date,
+        logged_in_at: record.logged_in_at || record.date,
         status: record.status,
         term: record.term,
         year: record.year,
-        recorded_at: record.recorded_at || record.created_at
+        recorded_at: record.logged_in_at || record.date
       }));
       setAttendanceRecords(processedAttendance);
       const reportsCount = processedReports.length;
-      const attendanceRate = attendanceData.stats?.rate ? `${attendanceData.stats.rate}%` : 
-                            attendanceData.stats?.percentage ? `${attendanceData.stats.percentage}%` : '—';
+      const attendanceVisits = attendanceData.stats?.visits ?? attendanceData.stats?.total ?? 0;
       let averageScore = '—';
       if (processedReports.length > 0) {
         let allValidSubjects = [];
@@ -466,12 +467,12 @@ setQuizAttempts([]);
       }
       setStats({
         reportsCount,
-        attendanceRate,
+        attendanceRate: attendanceVisits,
         averageScore,
-        totalDays: attendanceData.stats?.total || 0,
-        presentCount: attendanceData.stats?.present || 0,
-        lateCount: attendanceData.stats?.late || 0,
-        absentCount: attendanceData.stats?.absent || 0,
+        totalDays: attendanceVisits,
+        presentCount: attendanceVisits,
+        lateCount: 0,
+        absentCount: 0,
         quizScore: totalQuizScore > 0 ? `${totalQuizScore}%` : '—',
         quizzesCompleted,
         totalMarks,
@@ -800,7 +801,7 @@ toast.error('Failed to generate PDF');
 
   const downloadAttendancePDF = () => {
     if (attendanceRecords.length === 0) {
-      toast.error('No attendance records');
+      toast.error('No visit records');
       return;
     }
     try {
@@ -818,7 +819,7 @@ toast.error('Failed to generate PDF');
       doc.setFontSize(11);
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(200, 200, 200);
-      doc.text('Attendance Record', pageWidth / 2, 38, { align: 'center' });
+      doc.text('Learner Visit History', pageWidth / 2, 38, { align: 'center' });
       let yPos = 65;
       doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
       doc.roundedRect(20, yPos, pageWidth - 40, 35, 3, 3, 'F');
@@ -833,21 +834,21 @@ toast.error('Failed to generate PDF');
       doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 75, yPos + 18);
       yPos += 45;
       const tableRows = attendanceRecords.map(record => [
-        new Date(record.date).toLocaleDateString('en', { year: 'numeric', month: 'short', day: 'numeric' }),
-        new Date(record.date).toLocaleDateString('en', { weekday: 'long' }),
-        record.status === 'present' ? 'Present' : record.status === 'late' ? 'Late' : 'Absent'
+        new Date(record.logged_in_at || record.date).toLocaleDateString('en', { year: 'numeric', month: 'short', day: 'numeric' }),
+        new Date(record.logged_in_at || record.date).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' }),
+        'Login'
       ]);
       autoTable(doc, {
         startY: yPos,
         margin: { left: 20, right: 20 },
-        head: [['Date', 'Day', 'Status']],
+        head: [['Date', 'Time', 'Visit']],
         body: tableRows,
         theme: 'grid',
         headStyles: { fillColor: darkBlue, textColor: 255, fontStyle: 'bold', halign: 'center' },
         alternateRowStyles: { fillColor: lightGray }
       });
-      doc.save(`${user?.name?.replace(/\s+/g, '_') || 'student'}_Attendance.pdf`);
-      toast.success('Attendance downloaded!');
+      doc.save(`${user?.name?.replace(/\s+/g, '_') || 'student'}_Visits.pdf`);
+      toast.success('Visit history downloaded!');
     } catch (error) {
 toast.error('Failed to generate PDF');
     }
@@ -1178,7 +1179,7 @@ toast.error('Failed to generate PDF');
             {/* Stats Cards - using Heroicons instead of emojis */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <StatCard icon={<DocumentTextIcon className="w-5 h-5" />} value={stats.reportsCount} label="Reports" color={TEAL_ACCENT} />
-              <StatCard icon={<CalendarIcon className="w-5 h-5" />} value={stats.attendanceRate} label="Attendance" color={AZURE_ACCENT} />
+              <StatCard icon={<CalendarIcon className="w-5 h-5" />} value={stats.attendanceRate} label="Visits" color={AZURE_ACCENT} />
               <StatCard icon={<ChartBarIcon className="w-5 h-5" />} value={stats.averageScore} label="Average" color={TEAL_ACCENT} />
               <StatCard icon={<BookOpenIcon className="w-5 h-5" />} value={stats.quizzesCompleted} label="Quizzes" color="#6C63FF" />
             </div>
@@ -1306,12 +1307,12 @@ toast.error('Failed to generate PDF');
                   </div>
                 </div>
 
-                {/* Attendance Summary */}
+                {/* Visit Summary */}
                 <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm overflow-hidden">
                   <div className="px-4 py-3 border-b border-[#e2e8f0] flex justify-between items-center">
                     <h2 className="text-lg font-bold text-[#0A2540] flex items-center gap-2">
                       <ChartBarIcon className="w-5 h-5 text-[#2A9D8F]" />
-                      Attendance
+                      Visits
                     </h2>
                     {attendanceRecords.length > 0 && (
                       <button onClick={downloadAttendancePDF} className="p-2 text-[#2A9D8F] hover:bg-[#2A9D8F]/10 rounded-lg transition">
@@ -1325,24 +1326,9 @@ toast.error('Failed to generate PDF');
                         <span className="text-2xl font-bold text-[#2A9D8F]">{stats.attendanceRate}</span>
                       </div>
                     </div>
-                    {stats.totalDays > 0 ? (
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="text-center p-2 bg-green-50 rounded-xl border border-green-200">
-                          <div className="text-green-600 font-bold text-lg">{stats.presentCount}</div>
-                          <div className="text-xs text-gray-500">Present</div>
-                        </div>
-                        <div className="text-center p-2 bg-[#2A9D8F]/5 rounded-xl border border-[#e2e8f0]">
-                          <div className="text-[#2A9D8F] font-bold text-lg">{stats.lateCount}</div>
-                          <div className="text-xs text-gray-500">Late</div>
-                        </div>
-                        <div className="text-center p-2 bg-red-50 rounded-xl border border-red-200">
-                          <div className="text-red-600 font-bold text-lg">{stats.absentCount}</div>
-                          <div className="text-xs text-gray-500">Absent</div>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-gray-500 text-center">No attendance records yet</p>
-                    )}
+                    <p className="text-sm text-gray-500 text-center">
+                      {stats.totalDays === 1 ? 'Successful login' : 'Successful logins'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1480,14 +1466,14 @@ toast.error('Failed to generate PDF');
         {activeTab === 'attendance' && (
           <div className="space-y-5">
             <div>
-              <h1 className="text-2xl font-bold text-[#0A2540]">Attendance Records</h1>
-              <p className="text-sm text-gray-500">Your daily attendance history</p>
+              <h1 className="text-2xl font-bold text-[#0A2540]">Visit History</h1>
+              <p className="text-sm text-gray-500">Your successful learner logins</p>
             </div>
             <div className="bg-white rounded-xl border border-[#e2e8f0] shadow-sm overflow-hidden">
               <div className="px-5 py-3 border-b border-[#e2e8f0] flex justify-between items-center">
                 <h2 className="font-semibold text-[#0A2540] flex items-center gap-2">
                   <CalendarIcon className="w-5 h-5" />
-                  Attendance Log
+                  Login History
                 </h2>
                 {attendanceRecords.length > 0 && (
                   <button onClick={downloadAttendancePDF} className="px-3 py-1.5 text-sm bg-[#2A9D8F] text-white rounded-lg hover:bg-[#1e6b60] transition">PDF</button>
@@ -1498,29 +1484,23 @@ toast.error('Failed to generate PDF');
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Day</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Status</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Time</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Visit</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {attendanceRecords.length > 0 ? (
                       [...attendanceRecords].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 15).map(record => (
                         <tr key={record.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm">{new Date(record.date).toLocaleDateString('en', { month: 'short', day: 'numeric' })}</td>
-                          <td className="px-4 py-3 text-sm hidden sm:table-cell">{new Date(record.date).toLocaleDateString('en', { weekday: 'short' })}</td>
+                          <td className="px-4 py-3 text-sm">{new Date(record.logged_in_at || record.date).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                          <td className="px-4 py-3 text-sm hidden sm:table-cell">{new Date(record.logged_in_at || record.date).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}</td>
                           <td className="px-4 py-3">
-                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                              record.status === 'present' ? 'bg-green-100 text-green-700' :
-                              record.status === 'late' ? 'bg-yellow-100 text-yellow-700' :
-                              'bg-red-100 text-red-700'
-                            }`}>
-                              {record.status === 'present' ? 'Present' : record.status === 'late' ? 'Late' : 'Absent'}
-                            </span>
+                            <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">Login</span>
                           </td>
                         </tr>
                       ))
                     ) : (
-                      <tr><td colSpan="3" className="px-4 py-6 text-center text-gray-500">No attendance records yet</td></tr>
+                      <tr><td colSpan="3" className="px-4 py-6 text-center text-gray-500">No visit records yet</td></tr>
                     )}
                   </tbody>
                 </table>

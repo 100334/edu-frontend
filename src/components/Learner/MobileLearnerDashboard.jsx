@@ -51,7 +51,6 @@ const quickLinks = [
   { tab: 'quizzes', title: 'Quizzes', description: 'Practice with assessments', Icon: ClipboardDocumentCheckIcon, theme: 'gold' },
   { tab: 'library', title: 'Library', description: 'Explore your books', Icon: AcademicCapIcon, theme: 'gold' },
   { tab: 'reports', title: 'Results', description: 'Review your progress', Icon: ChartBarIcon, theme: 'teal' },
-  { tab: 'attendance', title: 'Attendance', description: 'Check your school days', Icon: ClipboardDocumentCheckIcon, theme: 'gold' },
 ];
 
 export default function MobileLearnerDashboard() {
@@ -125,7 +124,7 @@ toast.error('Could not load dashboard data');
     logout();
   };
 
-  const attendanceRate = attendance.stats?.rate ?? attendance.stats?.percentage ?? '—';
+  const attendanceRate = attendance.stats?.visits ?? attendance.stats?.total ?? 0;
   const availableYears = useMemo(
     () => [...new Set(reports.map(report => report.academic_year || (report.created_at ? new Date(report.created_at).getFullYear() : null)).filter(Boolean))].sort((a, b) => b - a),
     [reports]
@@ -432,9 +431,9 @@ toast.error('Could not create PDF');
                   <ClipboardDocumentCheckIcon className="h-5 w-5 stroke-[2.2]" />
                 </div>
                 <p className="mt-1 text-xl font-black leading-none text-[#07575A]">
-                  {attendanceRate === '—' ? '—' : `${attendanceRate}%`}
+                  {attendanceRate}
                 </p>
-                <p className="mt-1 text-[10px] font-bold leading-tight text-[#173F43]">Attendance</p>
+                <p className="mt-1 text-[10px] font-bold leading-tight text-[#173F43]">Visits</p>
               </div>
 
               <div className="flex min-h-[92px] min-w-0 flex-col items-center justify-center rounded-[17px] border-2 border-[#F3C34A] bg-gradient-to-br from-white to-[#FFF8E6] px-1 py-2 text-center shadow-[0_4px_0_rgba(232,181,45,0.12)]">
@@ -591,15 +590,13 @@ toast.error('Could not create PDF');
               {activeTab === 'attendance' && (
                 <div className="space-y-3">
                   <div className="rounded-2xl border border-[#D5E9E7] bg-gradient-to-r from-[#DDF7F5] to-[#EFFBFA] p-5 text-center shadow-sm">
-              <div className="text-4xl font-black text-[#00666B]">{attendanceRate === '—' ? '—' : `${attendanceRate}%`}</div>
-              <div className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-500">Overall Attendance Rate</div>
+              <div className="text-4xl font-black text-[#00666B]">{attendanceRate}</div>
+              <div className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-500">Total Visits</div>
             </div>
             {attendance.records.length ? attendance.records.slice(0, 12).map(record => (
-              <div key={record.id || `${record.date}-${record.status}`} className="flex items-center justify-between rounded-xl border border-[#D5E9E7] bg-white p-4 shadow-sm">
-                <span className="text-sm text-slate-600">{record.date ? new Date(record.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }) : 'Date unavailable'}</span>
-                <span className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${record.status === 'present' ? 'bg-green-100 text-green-700' : record.status === 'late' ? 'bg-amber-100 text-amber-700' : 'bg-red-100 text-red-700'}`}>
-                  {record.status || 'unknown'}
-                </span>
+              <div key={record.id || record.logged_in_at} className="flex items-center justify-between rounded-xl border border-[#D5E9E7] bg-white p-4 shadow-sm">
+                <span className="text-sm text-slate-600">{record.logged_in_at ? new Date(record.logged_in_at).toLocaleString() : 'Date unavailable'}</span>
+                <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">Login</span>
               </div>
                   )) : <p className="rounded-2xl bg-[#F3FAF9] p-6 text-center text-sm text-slate-500">No records yet.</p>}
                 </div>

@@ -57,13 +57,6 @@ const quickLinks = [
     Icon: ChartBarIcon,
     theme: 'teal',
   },
-  {
-    tab: 'attendance',
-    title: 'Attendance',
-    description: 'Check your school days',
-    Icon: ClipboardDocumentCheckIcon,
-    theme: 'gold',
-  },
 ];
 
 const PrimaryLearnerDashboard = () => {
@@ -104,7 +97,7 @@ const PrimaryLearnerDashboard = () => {
         records: payload.records || [],
       });
     } else {
-      toast.error('Could not load your attendance');
+      toast.error('Could not load your visit history');
     }
 
     setLoading(false);
@@ -136,7 +129,7 @@ const PrimaryLearnerDashboard = () => {
     ) / (reports[0]?.subjects?.length || 1);
 
   const attendanceRate =
-    attendance.stats?.rate ?? attendance.stats?.percentage;
+    attendance.stats?.visits ?? attendance.stats?.total ?? 0;
 
   const learnerName = user?.name || 'Learner';
   const firstName = learnerName.trim().split(' ')[0];
@@ -258,9 +251,9 @@ const PrimaryLearnerDashboard = () => {
                 </div>
                 <div>
                   <p className="mt-1 text-xl font-black leading-none text-[#07575A]">
-                    {loading ? '…' : attendanceRate == null ? '—' : `${attendanceRate}%`}
+                    {loading ? '…' : attendanceRate}
                   </p>
-                  <p className="mt-1 text-[10px] font-bold leading-tight text-[#173F43]">Attendance</p>
+                  <p className="mt-1 text-[10px] font-bold leading-tight text-[#173F43]">Visits</p>
                 </div>
               </div>
 
@@ -407,14 +400,10 @@ const PrimaryLearnerDashboard = () => {
                       <CheckCircleIcon className="h-9 w-9" />
                     </div>
                     <p className="text-4xl font-black text-[#00666B]">
-                      {loading
-                        ? '…'
-                        : attendanceRate == null
-                          ? '—'
-                          : `${attendanceRate}%`}
+                      {loading ? '…' : attendanceRate}
                     </p>
                     <p className="mt-1 text-xs font-black uppercase tracking-[0.16em] text-[#527174]">
-                      My attendance
+                      Total visits
                     </p>
                   </div>
 
@@ -425,30 +414,20 @@ const PrimaryLearnerDashboard = () => {
                         className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#D5E9E7] px-4 py-3"
                       >
                         <span className="text-sm font-medium text-slate-600">
-                          {record.date
-                            ? new Date(record.date).toLocaleDateString(undefined, {
-                                weekday: 'short',
-                                month: 'short',
-                                day: 'numeric',
-                              })
+                          {record.logged_in_at
+                            ? new Date(record.logged_in_at).toLocaleString()
                             : 'Date unavailable'}
                         </span>
                         <span
-                          className={`rounded-full px-4 py-1.5 text-xs font-black capitalize ${
-                            record.status === 'present'
-                              ? 'bg-green-100 text-green-700'
-                              : record.status === 'late'
-                                ? 'bg-amber-100 text-amber-700'
-                                : 'bg-red-100 text-red-700'
-                          }`}
+                          className="rounded-full bg-green-100 px-4 py-1.5 text-xs font-black text-green-700"
                         >
-                          {record.status_display || record.status || 'Unknown'}
+                          Login
                         </span>
                       </div>
                     ))
                   ) : (
                     <p className="rounded-2xl bg-[#F3FAF9] p-6 text-center text-sm text-slate-500">
-                      Attendance records will appear here.
+                      Your login visits will appear here.
                     </p>
                   )}
                 </div>
