@@ -109,7 +109,10 @@ const PrimaryLearnerDashboard = () => {
     return (
       <QuizTaking
         quizId={showQuiz}
-        onComplete={() => setShowQuiz(null)}
+        onComplete={() => {
+          setShowQuiz(null);
+          setActiveTab('results');
+        }}
         onExit={() => setShowQuiz(null)}
         questionsPerPage={1}
       />

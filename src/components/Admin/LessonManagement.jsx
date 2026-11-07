@@ -11,6 +11,7 @@ import {
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { loadPdfJs } from '../../utils/loadPdfJs';
+import StudyNotesEditor from './StudyNotesEditor';
 
 const inp = 'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#00B4D8] focus:border-[#00B4D8] transition';
 
@@ -313,6 +314,7 @@ const LessonManagement = () => {
     if (!file) return;
     if (!formData.subject_id) { toast.error('Select a subject first.'); return; }
     let extractedText = '';
+    let extractionMessage = '';
     if (type !== 'video') {
       if (file.size > 25 * 1024 * 1024) { toast.error('PDF must be smaller than 25 MB.'); return; }
       try {
@@ -320,25 +322,23 @@ const LessonManagement = () => {
         const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
         if (pdf.numPages > 100) {
           await pdf.destroy();
-          toast.error('PDF must have 100 pages or fewer.');
-          return;
+          extractionMessage = 'PDF has more than 100 pages. It will upload without text extraction; HTML notes are optional.';
+        } else {
+          const pages = [];
+          for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+            const page = await pdf.getPage(pageNumber);
+            const content = await page.getTextContent();
+            pages.push(content.items.map(item => item.str || '').join(' '));
+            if (pages.join('\n').length >= 50000) break;
+          }
+          await pdf.destroy();
+          extractedText = pages.join('\n').slice(0, 50000).trim();
+          if (extractedText.length < 100) {
+            extractionMessage = 'PDF has little selectable text. It will upload without text extraction; HTML notes are optional.';
+          }
         }
-        const pages = [];
-        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
-          const page = await pdf.getPage(pageNumber);
-          const content = await page.getTextContent();
-          pages.push(content.items.map(item => item.str || '').join(' '));
-          if (pages.join('\n').length >= 50000) break;
-        }
-        await pdf.destroy();
-        extractedText = pages.join('\n').slice(0, 50000).trim();
-        if (extractedText.length < 100) {
-          toast.error('This PDF has too little selectable text. Please use a text-based PDF.');
-          return;
-        }
-      } catch (err) {
-        toast.error(`Could not read PDF: ${err.message}`);
-        return;
+      } catch {
+        extractionMessage = 'Could not extract text from the PDF. It will upload without text extraction; HTML notes are optional.';
       }
     }
     const folder = `${formData.resource_type === 'video' ? 'videos' : 'pdfs'}/${getSubjectName(formData.subject_id)}`;
@@ -352,9 +352,10 @@ const LessonManagement = () => {
       if (!upload.ok) throw new Error('Upload failed');
       const fileUrl = data.fileUrl || data.publicUrl || data.url;
       const field   = formData.resource_type === 'video' ? 'video_url' : 'pdf_url';
-      setFormData(p => ({ ...p, [field]: fileUrl, ...(field === 'pdf_url' ? { notes_html: '' } : {}) }));
+      setFormData(p => ({ ...p, [field]: fileUrl }));
       if (field === 'pdf_url') setPdfText(extractedText);
-      toast.success(`Uploaded to ${folder}/`);
+      if (extractionMessage) toast(`${extractionMessage}`, { duration: 5000 });
+      else toast.success(`Uploaded to ${folder}/`);
     } catch (err) { toast.error(`Upload error: ${err.message}`); }
     finally { setUploadStatus(p => ({ ...p, [type]: false })); }
   };
@@ -376,7 +377,9 @@ const LessonManagement = () => {
         description:     formData.description || '',
         objectives:      formData.objectives  || '',
         instructions:    formData.instructions || '',
-        notes_html:      formData.notes_html || null,
+        notes_html:      formData.resource_type !== 'video' && formData.notes_html.trim()
+          ? formData.notes_html
+          : null,
         subject_id:      formData.subject_id || null,
         target_form:     formData.target_form,
         display_order:   parseInt(formData.display_order) || 0,
@@ -952,7 +955,7 @@ const LessonManagement = () => {
                         checked={formData.resource_type === val}
                           onChange={e => {
                             setPdfText('');
-                            setFormData(p => ({ ...p, resource_type: e.target.value, video_url: '', pdf_url: '', notes_html: '' }));
+                            setFormData(p => ({ ...p, resource_type: e.target.value, video_url: '', pdf_url: '' }));
                           }}
                         className="sr-only" />
                       <Icon className="w-4 h-4" /> {label}
@@ -985,7 +988,7 @@ const LessonManagement = () => {
                   value={formData.resource_type === 'video' ? formData.video_url : formData.pdf_url}
                   onChange={e => {
                     const f = formData.resource_type === 'video' ? 'video_url' : 'pdf_url';
-                    setFormData(p => ({ ...p, [f]: e.target.value, ...(f === 'pdf_url' ? { notes_html: '' } : {}) }));
+                    setFormData(p => ({ ...p, [f]: e.target.value }));
                     if (f === 'pdf_url') setPdfText('');
                   }}
                   placeholder="URL auto-filled after upload, or paste manually"
@@ -996,9 +999,11 @@ const LessonManagement = () => {
                 <div className="rounded-xl border border-[#006770]/20 bg-[#f3fbfa] p-4 space-y-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-[#003B46]">AI HTML Study Notes</p>
+                      <p className="text-sm font-semibold text-[#003B46]">Study Notes <span className="font-normal text-slate-500">(optional)</span></p>
                       <p className="text-[11px] text-slate-500">
-                        {pdfText ? 'PDF text extracted and ready for note generation.' : 'Upload a text-based PDF above to generate readable notes.'}
+                        {pdfText
+                          ? 'PDF text is ready if you want AI to draft notes. You can edit the draft before saving.'
+                          : 'Write your own notes, import a Word document, or leave this blank.'}
                       </p>
                     </div>
                     <button
@@ -1009,19 +1014,23 @@ const LessonManagement = () => {
                     >
                       {notesGenerating
                         ? <><div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Generating…</>
-                        : formData.notes_html ? 'Regenerate Notes' : 'Generate Notes'}
+                        : formData.notes_html ? 'Generate / Replace' : 'AI Generate'}
                     </button>
                   </div>
+                  <StudyNotesEditor
+                    value={formData.notes_html}
+                    onChange={notesHtml => setFormData(p => ({ ...p, notes_html: notesHtml }))}
+                  />
                   {formData.notes_html && (
                     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-                      <div className="px-3 py-2 border-b border-slate-100 text-[11px] font-semibold text-slate-600">
-                        Preview · saved with the lesson
+                      <div className="border-b border-slate-100 px-3 py-2 text-[11px] font-semibold text-slate-600">
+                        Learner preview · included when you save the lesson
                       </div>
                       <iframe
-                        title="Generated HTML study notes preview"
+                        title="Study notes preview"
                         srcDoc={formData.notes_html}
                         sandbox=""
-                        className="w-full h-72 border-0"
+                        className="h-72 w-full border-0"
                       />
                     </div>
                   )}
