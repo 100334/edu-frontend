@@ -85,7 +85,7 @@ setQuizzes([]);
     const name = typeof subject === 'string' ? subject : subject?.name || '';
     switch(name) {
       case 'Geography': return 'bg-cyan-50 text-cyan-700 border-cyan-100';
-      case 'English': return 'bg-indigo-50 text-indigo-700 border-indigo-100';
+      case 'English': return 'bg-teal-50 text-teal-700 border-teal-100';
       case 'Biology': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
       default: return 'bg-slate-50 text-slate-600 border-slate-100';
     }
@@ -94,7 +94,7 @@ setQuizzes([]);
   if (loading) {
     return (
       <div className="flex flex-col justify-center items-center py-24 gap-4">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-100 border-t-[#007FFF]"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-100 border-t-[#00777A]"></div>
         <p className="text-navy-900 font-medium animate-pulse">Syncing assessments...</p>
       </div>
     );
@@ -102,9 +102,9 @@ setQuizzes([]);
 
   if (!quizzes.length) {
     return (
-      <div className="bg-white rounded-[2rem] p-16 text-center border border-slate-100 shadow-sm">
-        <SparklesIcon className="w-16 h-16 mx-auto text-slate-200 mb-6" />
-        <h3 className="text-2xl font-black text-[#0F172A] mb-2">Hub Empty</h3>
+      <div className="bg-white rounded-[2rem] p-16 text-center border border-[#D3EEEE] shadow-sm">
+        <SparklesIcon className="w-16 h-16 mx-auto text-[#8DE5E1] mb-6" />
+        <h3 className="text-2xl font-black text-[#00565B] mb-2">No assessments yet</h3>
         <p className="text-slate-500 max-w-xs mx-auto">New assessments will appear here as they are published by your instructors.</p>
       </div>
     );
@@ -113,23 +113,31 @@ setQuizzes([]);
   return (
     <div className="animate-in fade-in duration-700">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6">
+      <div
+        className="mb-8 flex flex-col gap-5 rounded-2xl border-b-2 border-[#F3C34A] px-5 py-6 text-white shadow-sm sm:px-7 md:flex-row md:items-center md:justify-between"
+        style={{
+          backgroundColor: '#003B46',
+          backgroundImage: "linear-gradient(90deg, rgba(0, 59, 70, 0.96), rgba(0, 103, 112, 0.82)), url('/image2.png')",
+          backgroundPosition: 'center 38%',
+          backgroundSize: 'cover',
+        }}
+      >
         <div>
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-[#007FFF] rounded-xl shadow-lg shadow-blue-500/20">
-              <AcademicCapIcon className="w-6 h-6 text-white" />
+            <div className="p-2 rounded-xl border border-[#F3C34A]/70 bg-white/10">
+              <AcademicCapIcon className="w-6 h-6 text-[#F3C34A]" />
             </div>
-            <h2 className="text-3xl font-black text-[#0F172A] tracking-tight">Assessment Hub</h2>
+            <h2 className="text-3xl font-black tracking-tight">Assessment</h2>
           </div>
-          <p className="text-slate-500 font-medium">Test your mastery across active modules</p>
+          <p className="font-medium text-white/80">Test your mastery across active modules</p>
         </div>
 
         {learnerForm && (
-          <div className="px-5 py-2.5 bg-white rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3">
-            <ShieldCheckIcon className="w-5 h-5 text-[#007FFF]" />
+          <div className="flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-5 py-2.5 shadow-sm backdrop-blur-sm">
+            <ShieldCheckIcon className="w-5 h-5 text-[#F3C34A]" />
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Your Level</p>
-              <p className="text-sm font-black text-[#0F172A]">{learnerForm}</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest leading-none text-white/65">Your Level</p>
+              <p className="text-sm font-black text-white">{learnerForm}</p>
             </div>
           </div>
         )}
@@ -154,7 +162,7 @@ setQuizzes([]);
           const canStart = !isRestricted && !isUpcoming && !isClosed && !attemptsExhausted;
 
           return (
-            <div key={quizId} className="group relative bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 flex flex-col overflow-hidden">
+            <div key={quizId} className="group relative bg-white rounded-[2rem] border border-[#D3EEEE] shadow-sm hover:shadow-2xl hover:shadow-[#00777A]/10 transition-all duration-500 flex flex-col overflow-hidden">
               
               {/* Scheduling Tooltip */}
               {(isUpcoming || isClosed) && (
@@ -205,7 +213,7 @@ setQuizzes([]);
                 </div>
 
                 {/* Title & Info */}
-                <h3 className="text-xl font-black text-[#0F172A] mb-3 line-clamp-1 group-hover:text-[#007FFF] transition-colors">
+                <h3 className="text-xl font-black text-[#0F172A] mb-3 line-clamp-1 group-hover:text-[#00777A] transition-colors">
                   {quiz.title}
                 </h3>
                 <p className="text-sm text-slate-500 leading-relaxed line-clamp-2 mb-6 flex-grow">
@@ -243,12 +251,12 @@ setQuizzes([]);
                         <p className="text-2xl font-black text-[#0F172A]">{score}%</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs font-bold text-[#007FFF]">{attempted.marks_earned}/{attempted.total_marks} Pts</p>
+                        <p className="text-xs font-bold text-[#00777A]">{attempted.marks_earned}/{attempted.total_marks} Pts</p>
                       </div>
                     </div>
                     <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
                       <div 
-                        className="h-full bg-gradient-to-r from-[#007FFF] to-[#0F172A] rounded-full transition-all duration-1000"
+                        className="h-full bg-gradient-to-r from-[#00777A] to-[#F3C34A] rounded-full transition-all duration-1000"
                         style={{ width: `${score}%` }}
                       />
                     </div>
@@ -257,7 +265,7 @@ setQuizzes([]);
                   <button
                     onClick={() => onStartQuiz(getQuizId(quiz))}
                     disabled={!canStart}
-                    className={`w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all duration-300 ${canStart ? 'bg-[#0F172A] text-white hover:bg-[#007FFF] hover:shadow-blue-500/30 shadow-navy-900/20' : 'bg-slate-200 text-slate-500 cursor-not-allowed'}`}
+                    className={`w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all duration-300 ${canStart ? 'bg-[#005C62] text-white hover:bg-[#00777A] hover:shadow-[#00777A]/30' : 'bg-slate-200 text-slate-500 cursor-not-allowed'}`}
                   >
                     {attemptsExhausted ? '🔒 Attempts Used' : isUpcoming ? '⏰ Coming Soon' : isClosed ? '🔒 Closed' : 'Take Assessment'}
                     <ChevronRightIcon className="w-4 h-4" />
