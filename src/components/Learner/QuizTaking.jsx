@@ -118,10 +118,9 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1 }) => {
     }
     try {
       const token = localStorage.getItem('token');
-      const startRes = await api.post(`/api/quiz/${encodeURIComponent(idParam)}/start`, {}, {
+      const startRequest = api.post(`/api/quiz/${encodeURIComponent(idParam)}/start`, {}, {
         headers: { Authorization: `Bearer ${token}` }
-      });
-      if (startRes.data.success) setAttemptId(startRes.data.attempt_id);
+      }).then(startRes => ({ startRes }), startError => ({ startError }));
       
       const res = await api.get(`/api/quiz/${encodeURIComponent(idParam)}/questions`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -131,6 +130,13 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1 }) => {
         setTimeout(() => navigate('/learner/dashboard'), 1500);
         return;
       }
+      const startOutcome = await startRequest;
+      if (startOutcome.startError) throw startOutcome.startError;
+      if (!startOutcome.startRes.data.success) {
+        throw new Error(startOutcome.startRes.data.message || 'Failed to start quiz');
+      }
+      setAttemptId(startOutcome.startRes.data.attempt_id);
+
       setQuiz(res.data.quiz);
       const qs = (res.data.questions || []).map(q => ({
         ...q,

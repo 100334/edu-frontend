@@ -66,7 +66,7 @@ const QuizManagement = () => {
 
   const [quizForm, setQuizForm] = useState({
     subject_id: '', title: '', description: '', duration: 30,
-    total_marks: 100, section_a_marks: 75, section_b_marks: 25,
+    total_marks: 0, section_a_marks: 0, section_b_marks: 0,
     is_active: true, target_form: 'All',
     week_number: 1,
     exam_year: new Date().getFullYear(),
@@ -159,18 +159,21 @@ const QuizManagement = () => {
   };
 
   // ── quiz CRUD ────────────────────────────────────────────────────────────────
-  const parseQuizPayload = (form) => ({
-    ...form,
-    duration:        parseInt(form.duration),
-    total_marks:     parseInt(form.total_marks),
-    section_a_marks: parseInt(form.section_a_marks),
-    section_b_marks: parseInt(form.section_b_marks),
-    exam_year:       parseInt(form.exam_year),
-    week_number:     parseInt(form.week_number) || 1,
-    scheduled_start: form.scheduled_start ? new Date(form.scheduled_start).toISOString() : null,
-    scheduled_end:   form.scheduled_end   ? new Date(form.scheduled_end).toISOString()   : null,
-    allow_retake:    !!form.allow_retake,
-  });
+  const parseQuizPayload = (form) => {
+    const payload = { ...form };
+    delete payload.total_marks;
+    delete payload.section_a_marks;
+    delete payload.section_b_marks;
+    return {
+      ...payload,
+      duration:        parseInt(form.duration),
+      exam_year:       parseInt(form.exam_year),
+      week_number:     parseInt(form.week_number) || 1,
+      scheduled_start: form.scheduled_start ? new Date(form.scheduled_start).toISOString() : null,
+      scheduled_end:   form.scheduled_end   ? new Date(form.scheduled_end).toISOString()   : null,
+      allow_retake:    !!form.allow_retake,
+    };
+  };
 
   const handleCreateQuiz = async () => {
     if (!quizForm.subject_id || !quizForm.title.trim()) { toast.error('Subject and title are required'); return; }
@@ -627,7 +630,7 @@ const QuizManagement = () => {
   // ── helpers ──────────────────────────────────────────────────────────────────
   const resetQuizForm = () => setQuizForm({
     subject_id: '', title: '', description: '', duration: 30,
-    total_marks: 100, section_a_marks: 75, section_b_marks: 25,
+    total_marks: 0, section_a_marks: 0, section_b_marks: 0,
     is_active: true, target_form: 'All',
     week_number: 1,
     exam_year: new Date().getFullYear(),
@@ -651,9 +654,9 @@ const QuizManagement = () => {
       title:           quiz.title           || '',
       description:     quiz.description     || '',
       duration:        quiz.duration        || 30,
-      total_marks:     quiz.total_marks     || 100,
-      section_a_marks: quiz.section_a_marks || 75,
-      section_b_marks: quiz.section_b_marks || 25,
+      total_marks:     quiz.total_marks     ?? 0,
+      section_a_marks: quiz.section_a_marks ?? 0,
+      section_b_marks: quiz.section_b_marks ?? 0,
       is_active:       quiz.is_active !== false,
       target_form:     quiz.target_form     || 'All',
       exam_year:       quiz.exam_year       || new Date().getFullYear(),
@@ -1220,10 +1223,11 @@ const QuizManagement = () => {
                   {[['Total Marks', 'total_marks'], ['Section A', 'section_a_marks'], ['Section B', 'section_b_marks']].map(([label, key]) => (
                     <div key={key}>
                       <label className="block text-xs font-semibold text-gray-600 mb-1">{label}</label>
-                      <input type="number" value={quizForm[key]} onChange={e => setQuizForm(p => ({ ...p, [key]: parseInt(e.target.value) || 0 }))} min="0" className={inp} />
+                      <input type="number" value={quizForm[key]} readOnly className={`${inp} bg-gray-50`} />
                     </div>
                   ))}
                 </div>
+                <p className="mt-2 text-[10px] text-gray-400">Marks are calculated automatically from the marks assigned to questions.</p>
               </SectionBlock>
 
               {/* Status */}
