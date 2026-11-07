@@ -127,16 +127,15 @@ setQuizzes([]);
             <div className="p-2 rounded-xl border border-[#F3C34A]/70 bg-white/10">
               <AcademicCapIcon className="w-6 h-6 text-[#F3C34A]" />
             </div>
-            <h2 className="text-3xl font-black tracking-tight">Assessment</h2>
+            <h2 className="text-3xl font-black tracking-tight text-white">Assessment</h2>
           </div>
-          <p className="font-medium text-white/80">Test your mastery across active modules</p>
         </div>
 
         {learnerForm && (
           <div className="flex items-center gap-3 rounded-2xl border border-white/20 bg-white/10 px-5 py-2.5 shadow-sm backdrop-blur-sm">
             <ShieldCheckIcon className="w-5 h-5 text-[#F3C34A]" />
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest leading-none text-white/65">Your Level</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest leading-none text-white/65">Your class</p>
               <p className="text-sm font-black text-white">{learnerForm}</p>
             </div>
           </div>
