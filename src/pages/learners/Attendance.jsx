@@ -80,6 +80,7 @@ toast.error('Failed to load visit history');
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Time</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Device</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Visit</th>
                     </tr>
                     </thead>
@@ -90,6 +91,7 @@ toast.error('Failed to load visit history');
                         <tr key={record.id} className="hover:bg-gray-50 transition">
                           <td className="px-4 py-3 text-sm font-mono">{formatDate(record.logged_in_at || record.date)}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{new Date(record.logged_in_at || record.date).toLocaleTimeString()}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{record.device_info || 'Unknown device'}</td>
                           <td className="px-4 py-3">
                             <span className="badge badge-green">Login</span>
                           </td>

@@ -595,7 +595,10 @@ toast.error('Could not create PDF');
             </div>
             {attendance.records.length ? attendance.records.slice(0, 12).map(record => (
               <div key={record.id || record.logged_in_at} className="flex items-center justify-between rounded-xl border border-[#D5E9E7] bg-white p-4 shadow-sm">
-                <span className="text-sm text-slate-600">{record.logged_in_at ? new Date(record.logged_in_at).toLocaleString() : 'Date unavailable'}</span>
+                <div>
+                  <p className="text-sm text-slate-600">{record.logged_in_at ? new Date(record.logged_in_at).toLocaleString() : 'Date unavailable'}</p>
+                  <p className="mt-1 text-xs text-slate-500">{record.device_info || 'Unknown device'}</p>
+                </div>
                 <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-bold text-green-700">Login</span>
               </div>
                   )) : <p className="rounded-2xl bg-[#F3FAF9] p-6 text-center text-sm text-slate-500">No records yet.</p>}

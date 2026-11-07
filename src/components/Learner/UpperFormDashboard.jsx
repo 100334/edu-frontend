@@ -236,7 +236,8 @@ export default function UpperFormDashboard() {
       extractFilters(processedReports);
 
       setAttendanceRecords((attendanceData.records || []).map(r => ({
-        id: r.id, date: r.date, logged_in_at: r.logged_in_at || r.date, status: r.status,
+        id: r.id, date: r.date, logged_in_at: r.logged_in_at || r.date,
+        device_info: r.device_info || 'Unknown device', status: r.status,
       })));
 
       const attendanceVisits = attendanceData.stats?.visits ?? attendanceData.stats?.total ?? 0;
@@ -395,10 +396,11 @@ export default function UpperFormDashboard() {
       y += 45;
       autoTable(doc, {
         startY: y, margin: { left: 20, right: 20 },
-        head: [['Date', 'Time', 'Visit']],
+        head: [['Date', 'Time', 'Device', 'Visit']],
         body: attendanceRecords.map(r => [
           new Date(r.logged_in_at || r.date).toLocaleDateString('en', { year: 'numeric', month: 'short', day: 'numeric' }),
           new Date(r.logged_in_at || r.date).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' }),
+          r.device_info || 'Unknown device',
           'Login',
         ]),
         theme: 'grid',
@@ -700,12 +702,13 @@ export default function UpperFormDashboard() {
             <tr>
               <th className="px-4 py-2.5 text-left text-[10px] font-black text-[#00565B] uppercase tracking-wide">Date</th>
               <th className="px-4 py-2.5 text-left text-[10px] font-black text-[#00565B] uppercase tracking-wide hidden sm:table-cell">Time</th>
+              <th className="px-4 py-2.5 text-left text-[10px] font-black text-[#00565B] uppercase tracking-wide">Device</th>
               <th className="px-4 py-2.5 text-left text-[10px] font-black text-[#00565B] uppercase tracking-wide">Visit</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#E4FAFA]">
             {attendanceRecords.length === 0 ? (
-              <tr><td colSpan="3" className="px-4 py-6 text-center text-sm text-slate-400">No visit records yet</td></tr>
+              <tr><td colSpan="4" className="px-4 py-6 text-center text-sm text-slate-400">No visit records yet</td></tr>
             ) : [...attendanceRecords].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 20).map(record => (
               <tr key={record.id} className="hover:bg-[#F0FAF8]">
                 <td className="px-4 py-2.5 text-xs text-[#073F43]">
@@ -714,6 +717,7 @@ export default function UpperFormDashboard() {
                 <td className="px-4 py-2.5 text-xs text-slate-400 hidden sm:table-cell">
                   {new Date(record.logged_in_at || record.date).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}
                 </td>
+                <td className="px-4 py-2.5 text-xs text-slate-500">{record.device_info}</td>
                 <td className="px-4 py-2.5">
                   <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] font-bold">Login</span>
                 </td>

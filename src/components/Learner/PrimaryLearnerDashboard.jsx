@@ -418,11 +418,10 @@ const PrimaryLearnerDashboard = () => {
                             ? new Date(record.logged_in_at).toLocaleString()
                             : 'Date unavailable'}
                         </span>
-                        <span
-                          className="rounded-full bg-green-100 px-4 py-1.5 text-xs font-black text-green-700"
-                        >
-                          Login
-                        </span>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs text-slate-500">{record.device_info || 'Unknown device'}</span>
+                          <span className="rounded-full bg-green-100 px-4 py-1.5 text-xs font-black text-green-700">Login</span>
+                        </div>
                       </div>
                     ))
                   ) : (

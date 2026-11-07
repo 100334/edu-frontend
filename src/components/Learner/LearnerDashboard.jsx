@@ -429,6 +429,7 @@ setQuizAttempts([]);
         id: record.id,
         date: record.date,
         logged_in_at: record.logged_in_at || record.date,
+        device_info: record.device_info || 'Unknown device',
         status: record.status,
         term: record.term,
         year: record.year,
@@ -836,12 +837,13 @@ toast.error('Failed to generate PDF');
       const tableRows = attendanceRecords.map(record => [
         new Date(record.logged_in_at || record.date).toLocaleDateString('en', { year: 'numeric', month: 'short', day: 'numeric' }),
         new Date(record.logged_in_at || record.date).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' }),
+        record.device_info || 'Unknown device',
         'Login'
       ]);
       autoTable(doc, {
         startY: yPos,
         margin: { left: 20, right: 20 },
-        head: [['Date', 'Time', 'Visit']],
+        head: [['Date', 'Time', 'Device', 'Visit']],
         body: tableRows,
         theme: 'grid',
         headStyles: { fillColor: darkBlue, textColor: 255, fontStyle: 'bold', halign: 'center' },
@@ -1485,6 +1487,7 @@ toast.error('Failed to generate PDF');
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase hidden sm:table-cell">Time</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Device</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Visit</th>
                     </tr>
                   </thead>
@@ -1494,13 +1497,14 @@ toast.error('Failed to generate PDF');
                         <tr key={record.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 text-sm">{new Date(record.logged_in_at || record.date).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
                           <td className="px-4 py-3 text-sm hidden sm:table-cell">{new Date(record.logged_in_at || record.date).toLocaleTimeString('en', { hour: 'numeric', minute: '2-digit' })}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{record.device_info}</td>
                           <td className="px-4 py-3">
                             <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">Login</span>
                           </td>
                         </tr>
                       ))
                     ) : (
-                      <tr><td colSpan="3" className="px-4 py-6 text-center text-gray-500">No visit records yet</td></tr>
+                      <tr><td colSpan="4" className="px-4 py-6 text-center text-gray-500">No visit records yet</td></tr>
                     )}
                   </tbody>
                 </table>

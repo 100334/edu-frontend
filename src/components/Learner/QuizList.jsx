@@ -17,6 +17,7 @@ const QuizList = ({ onStartQuiz }) => {
   const [loading, setLoading] = useState(true);
   const [quizHistory, setQuizHistory] = useState({});
   const [learnerForm, setLearnerForm] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState(null);
 
   useEffect(() => {
     loadQuizzes();
@@ -91,6 +92,15 @@ setQuizzes([]);
     }
   };
 
+  const quizzesBySubject = quizzes.reduce((groups, quiz) => {
+    const subject = quiz.subject_name || quiz.subject?.name ||
+      (typeof quiz.subject === 'string' ? quiz.subject : 'General');
+    if (!groups[subject]) groups[subject] = [];
+    groups[subject].push(quiz);
+    return groups;
+  }, {});
+  const subjects = Object.keys(quizzesBySubject).sort((a, b) => a.localeCompare(b));
+
   if (loading) {
     return (
       <div className="flex flex-col justify-center items-center py-24 gap-4">
@@ -127,7 +137,9 @@ setQuizzes([]);
             <div className="p-2 rounded-xl border border-[#F3C34A]/70 bg-white/10">
               <AcademicCapIcon className="w-6 h-6 text-[#F3C34A]" />
             </div>
-            <h2 className="text-3xl font-black tracking-tight text-white">Assessment</h2>
+            <h2 className="text-3xl font-black tracking-tight text-white">
+              {selectedSubject ? `Assessment / ${selectedSubject}` : 'Assessment'}
+            </h2>
           </div>
         </div>
 
@@ -140,11 +152,44 @@ setQuizzes([]);
             </div>
           </div>
         )}
+        {selectedSubject && (
+          <button
+            type="button"
+            onClick={() => setSelectedSubject(null)}
+            className="rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/20"
+          >
+            ← Folders
+          </button>
+        )}
       </div>
 
-      {/* Quiz Grid */}
+      {!selectedSubject ? (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {subjects.map(subject => (
+            <button
+              key={subject}
+              type="button"
+              onClick={() => setSelectedSubject(subject)}
+              className="group flex flex-col items-center gap-2 rounded-xl border border-gray-200 bg-white p-4 transition-all duration-200 hover:border-[#00777A]/40 hover:shadow-sm active:scale-95"
+            >
+              <svg viewBox="0 0 56 44" fill="none" xmlns="http://www.w3.org/2000/svg"
+                className="h-11 w-14 flex-shrink-0 transition-transform group-hover:scale-105">
+                <rect x="0" y="0" width="20" height="7" rx="3" fill="#F5C842" />
+                <rect x="0" y="5" width="56" height="36" rx="4" fill="#F5C842" />
+                <rect x="0" y="5" width="56" height="8" rx="4" fill="#F9D85A" opacity="0.6" />
+              </svg>
+              <div className="w-full text-center">
+                <p className="truncate text-xs font-bold leading-tight text-slate-700">{subject}</p>
+                <p className="mt-0.5 text-[10px] text-slate-400">
+                  {quizzesBySubject[subject].length} {quizzesBySubject[subject].length === 1 ? 'quiz' : 'quizzes'}
+                </p>
+              </div>
+            </button>
+          ))}
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {quizzes.map((quiz) => {
+        {quizzesBySubject[selectedSubject].map((quiz) => {
           const quizId = getQuizId(quiz);
           const attempted = quizHistory[quizId];
           const isCompleted = attempted?.status === 'completed';
@@ -216,7 +261,7 @@ setQuizzes([]);
                   {quiz.title}
                 </h3>
                 <p className="text-sm text-slate-500 leading-relaxed line-clamp-2 mb-6 flex-grow">
-                  {quiz.description || "Test your understanding of the main ideas in this topic through these well-organised questions."}
+                  {quiz.description || "Revise the key ideas through these practice questions."}
                 </p>
 
                 {/* Stats Row */}
@@ -275,6 +320,7 @@ setQuizzes([]);
           );
         })}
       </div>
+      )}
     </div>
   );
 };
