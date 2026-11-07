@@ -1023,32 +1023,45 @@ const LearningSpace = ({ onStartQuiz }) => {
 
             {/* ── STEP: Read Notes ── */}
             {currentStep === 'notes' && (
-              <div className="space-y-0 rounded-xl overflow-hidden border border-slate-200 shadow-sm flex flex-col" style={{ height: '80vh' }}>
-                <div className="flex items-center justify-between px-4 py-2.5 bg-[#003B46] flex-shrink-0">
+              <div className="fixed inset-0 z-[70] flex h-[100dvh] w-full flex-col overflow-hidden bg-white">
+                <div className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-[#F3C34A] bg-[#003B46] px-4 py-3 text-white shadow-md">
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-white">{activeLesson.notes_html ? '📘 Study Notes' : '📄 Lesson Notes'}</p>
-                    <p className="text-[10px] text-white/50 truncate max-w-[180px]">{activeLesson.title}</p>
+                    <p className="max-w-[65vw] truncate text-[10px] text-white/60">{activeLesson.title}</p>
                   </div>
-                  {activeLesson.pdf_url && (
-                    <a href={activeLesson.pdf_url} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2.5 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-[11px] font-semibold transition">
-                      📄 Original PDF
-                    </a>
-                  )}
+                  <div className="flex flex-shrink-0 items-center gap-2">
+                    {activeLesson.pdf_url && (
+                      <a href={activeLesson.pdf_url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1 rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px] font-semibold text-white transition hover:bg-white/20">
+                        📄 Original PDF
+                      </a>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const stepIndex = availableSteps.findIndex(step => step.id === currentStep);
+                        setCurrentStep(availableSteps[stepIndex - 1]?.id || 'intro');
+                      }}
+                      aria-label="Close notes"
+                      className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white transition hover:bg-white/20"
+                    >
+                      <XMarkIcon className="h-5 w-5" />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex-1 bg-slate-900 relative">
+                <div className="relative min-h-0 flex-1 bg-[#eee]">
                   {activeLesson.notes_html ? (
                     <iframe
                       srcDoc={activeLesson.notes_html}
                       sandbox=""
-                      className="w-full h-full border-0 bg-[#f7fbfa]"
+                      className="h-full w-full border-0 bg-white"
                       title={`${activeLesson.title} study notes`}
                     />
                   ) : (
                     <iframe
                       src={`https://docs.google.com/viewer?url=${encodeURIComponent(activeLesson.pdf_url)}&embedded=true`}
-                      className="w-full h-full border-none"
+                      className="h-full w-full border-0"
                       title="Lesson PDF Notes"
                       allow="fullscreen"
                     />
@@ -1056,8 +1069,8 @@ const LearningSpace = ({ onStartQuiz }) => {
                 </div>
 
                 {!activeLesson.notes_html && activeLesson.pdf_url && (
-                  <div className="px-4 py-2 bg-[#003B46]/80 flex-shrink-0 flex items-center justify-between">
-                    <p className="text-[10px] text-white/40">If the PDF doesn't display, open the original PDF above.</p>
+                  <div className="flex flex-shrink-0 items-center justify-between bg-[#003B46] px-4 py-2">
+                    <p className="text-[10px] text-white/60">If the PDF doesn't display, open the original PDF above.</p>
                     <a href={activeLesson.pdf_url} target="_blank" rel="noopener noreferrer"
                       className="text-[10px] text-[#2A9D8F] font-semibold hover:text-white transition flex-shrink-0 ml-2">
                       Open PDF →
