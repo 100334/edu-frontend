@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import LearningSpace from './LearningSpace';
 import Library from '../Library';
+import QuizList from './QuizList';
 import QuizTaking from './QuizTaking';
 import {
   DocumentTextIcon,
@@ -13,6 +14,7 @@ import {
   BookOpenIcon,
   BellIcon,
   ChartBarIcon,
+  ClipboardDocumentCheckIcon,
   HomeIcon,
   UserCircleIcon,
   ArrowRightOnRectangleIcon,
@@ -107,7 +109,7 @@ export default function UpperFormDashboard() {
   const navigate = useNavigate();
 
   const [openPanel,      setOpenPanel]      = useState(null);
-  const [mainView,       setMainView]       = useState('learning'); // 'learning' | 'library'
+  const [mainView,       setMainView]       = useState('learning');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showQuiz,       setShowQuiz]       = useState(null);
 
@@ -883,6 +885,7 @@ export default function UpperFormDashboard() {
           <div className="flex overflow-x-auto scrollbar-none gap-0.5 py-1.5">
             {[
               { id: 'learning',    Icon: AcademicCapIcon,   label: 'Learning',     onClick: () => setMainView('learning'),   active: mainView === 'learning' && !openPanel },
+              { id: 'quizzes',     Icon: ClipboardDocumentCheckIcon, label: 'Quizzes', onClick: () => setMainView('quizzes'), active: mainView === 'quizzes' && !openPanel },
               { id: 'library',     Icon: RectangleStackIcon, label: 'Library',      onClick: () => setMainView('library'),    active: mainView === 'library' && !openPanel  },
               { id: 'overview',    Icon: HomeIcon,           label: 'Overview',     onClick: () => togglePanel('overview'),   active: openPanel === 'overview'    },
               { id: 'reports',     Icon: DocumentTextIcon,  label: 'Report Cards', onClick: () => togglePanel('reports'),    active: openPanel === 'reports'     },
@@ -909,6 +912,7 @@ export default function UpperFormDashboard() {
           <div className="flex gap-1 py-2 overflow-x-auto scrollbar-none">
             {[
               { id: 'learning',    Icon: AcademicCapIcon,   label: 'Learning',    onClick: () => setMainView('learning'),   active: mainView === 'learning' && !openPanel },
+              { id: 'quizzes',     Icon: ClipboardDocumentCheckIcon, label: 'Quizzes', onClick: () => setMainView('quizzes'), active: mainView === 'quizzes' && !openPanel },
               { id: 'library',     Icon: RectangleStackIcon, label: 'Library',     onClick: () => setMainView('library'),    active: mainView === 'library' && !openPanel  },
               { id: 'overview',    Icon: HomeIcon,           label: 'Overview',    onClick: () => togglePanel('overview'),   active: openPanel === 'overview'    },
               { id: 'reports',     Icon: DocumentTextIcon,  label: 'Reports',     onClick: () => togglePanel('reports'),    active: openPanel === 'reports'     },
@@ -959,6 +963,8 @@ export default function UpperFormDashboard() {
             <div className="p-3 sm:p-4 lg:p-6">
               {mainView === 'library' ? (
                 <Library />
+              ) : mainView === 'quizzes' ? (
+                <QuizList onStartQuiz={(quizId) => setShowQuiz(quizId)} />
               ) : (
                 <LearningSpace onStartQuiz={(quizId) => setShowQuiz(quizId)} />
               )}

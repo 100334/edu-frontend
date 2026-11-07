@@ -6,6 +6,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import LearningSpace from './LearningSpace';
 import Library from '../Library';
+import QuizList from './QuizList';
 import QuizTaking from './QuizTaking';
 import {
   ArrowRightOnRectangleIcon,
@@ -47,6 +48,7 @@ const getGrade = (score, form) => {
 
 const quickLinks = [
   { tab: 'learning', title: 'Learn', description: 'Open your lessons', Icon: BookOpenIcon, theme: 'teal' },
+  { tab: 'quizzes', title: 'Quizzes', description: 'Practice with assessments', Icon: ClipboardDocumentCheckIcon, theme: 'gold' },
   { tab: 'library', title: 'Library', description: 'Explore your books', Icon: AcademicCapIcon, theme: 'gold' },
   { tab: 'reports', title: 'Results', description: 'Review your progress', Icon: ChartBarIcon, theme: 'teal' },
   { tab: 'attendance', title: 'Attendance', description: 'Check your school days', Icon: ClipboardDocumentCheckIcon, theme: 'gold' },
@@ -488,6 +490,8 @@ toast.error('Could not create PDF');
                     : 'Results'
                   : activeTab === 'learning'
                     ? 'Learn'
+                    : activeTab === 'quizzes'
+                      ? 'Quizzes'
                     : activeTab === 'library'
                       ? 'Library'
                       : 'Attendance'}
@@ -578,6 +582,10 @@ toast.error('Could not create PDF');
                 <LearningSpace onStartQuiz={quizId => setShowQuiz(quizId)} />
               )}
 
+              {activeTab === 'quizzes' && (
+                <QuizList onStartQuiz={quizId => setShowQuiz(quizId)} />
+              )}
+
               {activeTab === 'library' && <Library />}
 
               {activeTab === 'attendance' && (
@@ -607,6 +615,7 @@ toast.error('Could not create PDF');
           {[
             { id: 'overview', label: 'Home', Icon: HomeIcon },
             { id: 'learning', label: 'Learn', Icon: BookOpenIcon },
+            { id: 'quizzes', label: 'Quizzes', Icon: ClipboardDocumentCheckIcon },
             { id: 'library', label: 'Library', Icon: AcademicCapIcon },
             { id: 'reports', label: 'Results', Icon: ChartBarIcon },
             { id: 'attendance', label: 'Attendance', Icon: ClipboardDocumentCheckIcon },

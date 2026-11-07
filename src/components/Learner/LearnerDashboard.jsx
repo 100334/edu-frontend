@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import LearningSpace from './LearningSpace';
 import Library from '../Library';
+import QuizList from './QuizList';
 import QuizTaking from './QuizTaking';
 import UpperFormDashboard from './UpperFormDashboard';
 import {
@@ -1114,6 +1115,7 @@ toast.error('Failed to generate PDF');
             <div className="flex gap-1 py-2">
               <NavItem icon={<HomeIcon className="w-5 h-5" />} label="Overview" isActive={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
               <NavItem icon={<AcademicCapIcon className="w-5 h-5" />} label="Learning" isActive={activeTab === 'learning'} onClick={() => setActiveTab('learning')} />
+              <NavItem icon={<ClipboardDocumentCheckIcon className="w-5 h-5" />} label="Quizzes" isActive={activeTab === 'quizzes'} onClick={() => setActiveTab('quizzes')} />
               <NavItem icon={<BookmarkIcon className="w-5 h-5" />} label="Library" isActive={activeTab === 'library'} onClick={() => setActiveTab('library')} />
               <NavItem icon={<DocumentTextIcon className="w-5 h-5" />} label="Reports" isActive={activeTab === 'reports'} onClick={() => setActiveTab('reports')} />
               <NavItem icon={<CalendarIcon className="w-5 h-5" />} label="Attendance" isActive={activeTab === 'attendance'} onClick={() => setActiveTab('attendance')} />
@@ -1147,6 +1149,9 @@ toast.error('Failed to generate PDF');
               </button>
               <button onClick={() => { setActiveTab('learning'); setMobileMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${activeTab === 'learning' ? 'bg-[#2A9D8F] text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
                 <AcademicCapIcon className="w-4 h-4 inline mr-2" /> Learning
+              </button>
+              <button onClick={() => { setActiveTab('quizzes'); setMobileMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${activeTab === 'quizzes' ? 'bg-[#2A9D8F] text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
+                <ClipboardDocumentCheckIcon className="w-4 h-4 inline mr-2" /> Quizzes
               </button>
               <button onClick={() => { setActiveTab('library'); setMobileMenuOpen(false); }} className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition ${activeTab === 'library' ? 'bg-[#2A9D8F] text-white' : 'text-gray-700 hover:bg-gray-100'}`}>
                 <BookmarkIcon className="w-4 h-4 inline mr-2" /> Library
@@ -1272,6 +1277,14 @@ toast.error('Failed to generate PDF');
                         <span className="text-sm font-medium text-purple-700">Learning Space</span>
                       </div>
                     </button>
+                    <button onClick={() => setActiveTab('quizzes')} className="w-full text-left p-3 bg-amber-50 rounded-xl hover:bg-amber-100 transition border border-amber-200">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
+                          <ClipboardDocumentCheckIcon className="w-4 h-4 text-amber-700" />
+                        </div>
+                        <span className="text-sm font-medium text-amber-800">Quiz Space</span>
+                      </div>
+                    </button>
                     <button onClick={() => setActiveTab('reports')} className="w-full text-left p-3 bg-[#F8FAFC] rounded-xl hover:bg-[#e2e8f0] transition border border-[#e2e8f0]">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-[#2A9D8F]/10 rounded-lg flex items-center justify-center">
@@ -1340,6 +1353,10 @@ toast.error('Failed to generate PDF');
         {/* Learning Space Tab */}
         {activeTab === 'learning' && (
           <LearningSpace onStartQuiz={(quizId) => setShowQuiz(quizId)} />
+        )}
+
+        {activeTab === 'quizzes' && (
+          <QuizList onStartQuiz={(quizId) => setShowQuiz(quizId)} />
         )}
 
         {/* Library Tab */}

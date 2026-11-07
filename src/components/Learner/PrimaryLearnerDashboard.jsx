@@ -4,6 +4,7 @@ import api from '../../services/api';
 import toast from 'react-hot-toast';
 import LearningSpace from './LearningSpace';
 import Library from '../Library';
+import QuizList from './QuizList';
 import QuizTaking from './QuizTaking';
 import QuizResults from './QuizResults';
 import {
@@ -21,6 +22,7 @@ import {
 const primaryTabs = [
   { id: 'home', label: 'Home', Icon: HomeIcon },
   { id: 'learn', label: 'Learn', Icon: BookOpenIcon },
+  { id: 'quizzes', label: 'Quizzes', Icon: ClipboardDocumentCheckIcon },
   { id: 'library', label: 'Library', Icon: AcademicCapIcon },
   { id: 'results', label: 'Results', Icon: ChartBarIcon },
   { id: 'attendance', label: 'Attendance', Icon: ClipboardDocumentCheckIcon },
@@ -33,6 +35,13 @@ const quickLinks = [
     description: 'Open your lessons',
     Icon: BookOpenIcon,
     theme: 'teal',
+  },
+  {
+    tab: 'quizzes',
+    title: 'Quizzes',
+    description: 'Practice with assessments',
+    Icon: ClipboardDocumentCheckIcon,
+    theme: 'gold',
   },
   {
     tab: 'library',
@@ -320,6 +329,10 @@ const PrimaryLearnerDashboard = () => {
                 <div className="p-3 sm:p-6">
               {activeTab === 'learn' && (
                 <LearningSpace onStartQuiz={quizId => setShowQuiz(quizId)} />
+              )}
+
+              {activeTab === 'quizzes' && (
+                <QuizList onStartQuiz={quizId => setShowQuiz(quizId)} />
               )}
 
               {activeTab === 'library' && <Library />}
