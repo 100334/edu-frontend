@@ -228,7 +228,7 @@ const AdminSubjectManagement = ({ user, onBack }) => {
   };
 
   const handleAddPrimarySubjects = async () => {
-    if (!window.confirm('Add Social Studies, Primary Science, and Arts/Life Skills to every existing Standard 1–8 class? Subjects already present will be skipped.')) return;
+    if (!window.confirm('Add Social Studies, Primary Science, Science and Technology, and Arts/Life Skills to every existing Standard 1–8 class? Subjects already present will be skipped.')) return;
     setAddingPrimarySubjects(true);
     try {
       const token = localStorage.getItem('token');
