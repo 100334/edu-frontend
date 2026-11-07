@@ -216,7 +216,7 @@ setQuizzes([]);
                   {quiz.title}
                 </h3>
                 <p className="text-sm text-slate-500 leading-relaxed line-clamp-2 mb-6 flex-grow">
-                  {quiz.description || "Master the core concepts of this module through this structured assessment."}
+                  {quiz.description || "Test your understanding of the main ideas in this topic through these well-organised questions."}
                 </p>
 
                 {/* Stats Row */}
