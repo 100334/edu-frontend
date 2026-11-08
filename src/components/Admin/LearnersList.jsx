@@ -12,6 +12,7 @@ import {
   UserCircleIcon,
   CheckCircleIcon,
   NoSymbolIcon,
+  PlusCircleIcon,
 } from '@heroicons/react/24/outline';
 
 const TEAL = '#006770';
@@ -81,6 +82,38 @@ export default function LearnersList() {
     finally { setActionLoading(null); }
   };
 
+  const handleCreditWallet = async (learner) => {
+    const amountInput = window.prompt(`How many Mk should be added to ${learner.name}'s quiz wallet?`, '100');
+    if (amountInput === null) return;
+    const amount = Number(amountInput);
+    if (!Number.isSafeInteger(amount) || amount <= 0) {
+      toast.error('Enter a positive whole number of Mk.');
+      return;
+    }
+
+    const reason = window.prompt('Reason for this wallet credit (required, max 200 characters):', 'School-issued quiz credit');
+    if (reason === null) return;
+    if (!reason.trim() || reason.trim().length > 200) {
+      toast.error('Enter a reason of 1 to 200 characters.');
+      return;
+    }
+
+    setActionLoading(learner.id);
+    try {
+      const response = await api.post(`/api/admin/learners/${learner.id}/quiz-wallet/credit`, {
+        amount_mwk: amount,
+        reason: reason.trim(),
+      });
+      if (!response.data.success) throw new Error(response.data.message || 'Credit failed.');
+      toast.success(`Mk${amount} added. New balance: Mk${response.data.balance_mwk}.`);
+      await fetchLearners();
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || 'Failed to credit wallet.');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleDownload = () => {
     if (!filteredLearners.length) return;
     const csv = [
@@ -137,6 +170,10 @@ export default function LearnersList() {
           </div>
         ))}
       </div>
+
+      <p className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+        Quiz credits are internal, admin-issued wallet balance. Each new attempt costs Mk100; no real payment is processed. Unsubmitted attempts are refunded after 24 hours when wallets are next checked.
+      </p>
 
       {/* Password reset banner */}
       {showCredentials && (
@@ -210,6 +247,9 @@ export default function LearnersList() {
                       </div>
                       <span className="text-sm font-semibold text-[#003B46]">{l.name}</span>
                     </div>
+                    <p className="ml-10 mt-1 text-[10px] text-gray-400">
+                      Quiz wallet: Mk{Number(l.wallet_balance_mwk) || 0}
+                    </p>
                   </td>
                   <td className="px-4 py-3">
                     <code className="text-xs font-mono bg-gray-50 px-2 py-0.5 rounded border border-gray-200 text-gray-600">{l.reg_number}</code>
@@ -246,6 +286,11 @@ export default function LearnersList() {
                           l.status === 'Active' ? 'text-red-400 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'
                         }`} title={l.status === 'Active' ? 'Deactivate' : 'Activate'}>
                         {l.status === 'Active' ? <NoSymbolIcon className="w-4 h-4" /> : <CheckCircleIcon className="w-4 h-4" />}
+                      </button>
+                      <button onClick={() => handleCreditWallet(l)} disabled={actionLoading === l.id}
+                        className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition disabled:opacity-40"
+                        title="Add quiz wallet credit" aria-label={`Add quiz wallet credit for ${l.name}`}>
+                        <PlusCircleIcon className="w-4 h-4" />
                       </button>
                       <button onClick={() => handleDelete(l.id, l.name)} disabled={actionLoading === l.id}
                         className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition disabled:opacity-40" title="Delete">

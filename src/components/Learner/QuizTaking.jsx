@@ -121,6 +121,12 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1, showPrim
       const startRequest = api.post(`/api/quiz/${encodeURIComponent(idParam)}/start`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       }).then(startRes => ({ startRes }), startError => ({ startError }));
+      const startOutcome = await startRequest;
+      if (startOutcome.startError) throw startOutcome.startError;
+      if (!startOutcome.startRes.data.success) {
+        throw new Error(startOutcome.startRes.data.message || 'Failed to start quiz');
+      }
+      setAttemptId(startOutcome.startRes.data.attempt_id);
       
       const res = await api.get(`/api/quiz/${encodeURIComponent(idParam)}/questions`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -130,13 +136,6 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1, showPrim
         setTimeout(() => navigate('/learner/dashboard'), 1500);
         return;
       }
-      const startOutcome = await startRequest;
-      if (startOutcome.startError) throw startOutcome.startError;
-      if (!startOutcome.startRes.data.success) {
-        throw new Error(startOutcome.startRes.data.message || 'Failed to start quiz');
-      }
-      setAttemptId(startOutcome.startRes.data.attempt_id);
-
       setQuiz(res.data.quiz);
       const qs = (res.data.questions || []).map(q => ({
         ...q,
@@ -147,7 +146,7 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1, showPrim
       setTimeLeft(res.data.quiz.duration * 60);
       if (res.data.saved_answers) setAnswers(res.data.saved_answers);
     } catch (error) {
-toast.error('Failed to load quiz.');
+      toast.error(error.response?.data?.message || error.message || 'Failed to load quiz.');
       navigate('/learner/dashboard');
     }
   };

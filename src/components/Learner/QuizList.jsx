@@ -18,12 +18,24 @@ const QuizList = ({ onStartQuiz }) => {
   const [quizHistory, setQuizHistory] = useState({});
   const [learnerForm, setLearnerForm] = useState('');
   const [selectedSubject, setSelectedSubject] = useState(null);
+  const [walletBalance, setWalletBalance] = useState(null);
 
   useEffect(() => {
     loadQuizzes();
     loadHistory();
+    loadWallet();
     getLearnerForm();
   }, []);
+
+  const loadWallet = async () => {
+    try {
+      const response = await api.get('/api/quiz/wallet');
+      if (!response.data.success) throw new Error(response.data.message || 'Could not load wallet balance.');
+      setWalletBalance(Number(response.data.balance_mwk) || 0);
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || 'Could not load quiz wallet.');
+    }
+  };
 
   const getLearnerForm = async () => {
     try {
@@ -161,6 +173,15 @@ setQuizzes([]);
             ← Folders
           </button>
         )}
+      </div>
+
+      <div className="mb-6 flex flex-col gap-1 rounded-xl border border-[#D3EEEE] bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm font-bold text-[#003B46]">
+          Quiz wallet: {walletBalance === null ? 'Loading…' : `Mk${walletBalance}`}
+        </p>
+        <p className="text-xs text-slate-500">
+          Mk100 per new attempt. Admins add credits; no real payment is processed. Unsubmitted attempts are refunded after 24 hours when the wallet is checked again.
+        </p>
       </div>
 
       {!selectedSubject ? (
