@@ -178,10 +178,10 @@ setQuizzes([]);
 
       <div className="mb-6 flex flex-col gap-1 rounded-xl border border-[#D3EEEE] bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm font-bold text-[#003B46]">
-          Quiz wallet: {walletBalance === null ? 'Loading…' : `Mk${walletBalance}`}
+          Quiz wallet: {walletBalance === null ? 'Loading…' : `MK${walletBalance}`}
         </p>
         <p className="text-xs text-slate-500">
-          Mk100 per new attempt. Admins add credits; no real payment is processed. Unsubmitted attempts are refunded after 24 hours when the wallet is checked again.
+          MK100 per new attempt. Admins add credits; no real payment is processed. Unsubmitted attempts are refunded after 24 hours when the wallet is checked again.
         </p>
       </div>
 
@@ -376,27 +376,27 @@ setQuizzes([]);
               <p className="text-sm leading-relaxed text-slate-600">
                 {isResuming
                   ? `You have an unfinished attempt for “${quizToStart.title}”. Continuing it will not charge you again.`
-                  : `Starting “${quizToStart.title}” costs Mk100. The amount is deducted from your quiz wallet when you continue.`}
+                  : `Starting “${quizToStart.title}” costs MK100. The amount is deducted from your quiz wallet when you continue.`}
               </p>
 
               <div className="rounded-xl border border-[#D3EEEE] bg-[#F2FBFC] p-4">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-500">Current balance</span>
-                  <span className="font-bold text-[#003B46]">{walletBalance === null ? 'Loading…' : `Mk${balance}`}</span>
+                  <span className="font-bold text-[#003B46]">{walletBalance === null ? 'Loading…' : `MK${balance}`}</span>
                 </div>
                 <div className="mt-2 flex items-center justify-between text-sm">
                   <span className="text-slate-500">{isResuming ? 'Charge to continue' : 'New attempt fee'}</span>
-                  <span className="font-bold text-[#003B46]">{isResuming ? 'Mk0' : 'Mk100'}</span>
+                  <span className="font-bold text-[#003B46]">{isResuming ? 'MK0' : 'MK100'}</span>
                 </div>
                 {canAffordAttempt && !isResuming && (
                   <div className="mt-3 flex items-center justify-between border-t border-[#D3EEEE] pt-3 text-sm">
                     <span className="font-semibold text-slate-600">Balance after starting</span>
-                    <span className="font-black text-[#006770]">Mk{balance - 100}</span>
+                    <span className="font-black text-[#006770]">MK{balance - 100}</span>
                   </div>
                 )}
                 {!canAffordAttempt && walletBalance !== null && (
                   <p className="mt-3 border-t border-[#D3EEEE] pt-3 text-sm font-semibold text-amber-800">
-                    You need Mk{100 - balance} more to start this attempt.
+                    You need MK{100 - balance} more to start this attempt.
                   </p>
                 )}
               </div>

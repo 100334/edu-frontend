@@ -292,3 +292,25 @@ body,
     box-shadow: none;
   }
 }
+
+@media (min-width: 768px), (orientation: landscape) {
+  .learner-dashboard-shell.primary-learner-dashboard {
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  main.primary-learner-dashboard__content {
+    max-width: none;
+    padding-left: clamp(1rem, 3vw, 3rem);
+    padding-right: clamp(1rem, 3vw, 3rem);
+  }
+
+  nav.primary-learner-dashboard__nav {
+    left: 0;
+    max-width: none;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    transform: none;
+  }
+}

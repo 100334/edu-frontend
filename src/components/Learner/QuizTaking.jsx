@@ -197,15 +197,15 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1, showPrim
               <div className="rounded-xl border border-[#D3EEEE] bg-[#F2FBFC] p-4 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-slate-500">Your wallet balance</span>
-                  <strong className="text-[#003B46]">Mk{balance}</strong>
+                  <strong className="text-[#003B46]">MK{balance}</strong>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
                   <span className="text-slate-500">Needed for this attempt</span>
-                  <strong className="text-[#003B46]">Mk{required}</strong>
+                  <strong className="text-[#003B46]">MK{required}</strong>
                 </div>
                 {shortfall > 0 && (
                   <p className="mt-3 border-t border-[#D3EEEE] pt-3 font-semibold text-amber-800">
-                    Please ask a school administrator to add at least Mk{shortfall} to your wallet.
+                    Please ask a school administrator to add at least MK{shortfall} to your wallet.
                   </p>
                 )}
               </div>

@@ -142,7 +142,7 @@ const PrimaryLearnerDashboard = () => {
       : '—';
 
   return (
-    <div className="learner-dashboard-shell mx-auto min-h-screen w-full max-w-[520px] overflow-x-hidden bg-[#F2FBFC] pb-24 text-[#073F43] shadow-[0_0_35px_rgba(0,91,96,0.10)]">
+    <div className="primary-learner-dashboard learner-dashboard-shell mx-auto min-h-screen w-full max-w-[520px] overflow-x-hidden bg-[#F2FBFC] pb-24 text-[#073F43] shadow-[0_0_35px_rgba(0,91,96,0.10)]">
       <header className="relative z-30 w-full overflow-hidden bg-[#00676B] shadow-lg">
         <div className="relative w-full">
           <img
@@ -155,7 +155,7 @@ const PrimaryLearnerDashboard = () => {
             <button
               type="button"
               onClick={() => setActiveTab('home')}
-              className="min-w-0 text-left text-[9px] font-black leading-tight drop-shadow sm:text-xs"
+              className="min-w-0 text-left text-[10px] font-black leading-tight drop-shadow sm:text-sm"
               aria-label="My Learning Space home"
             >
               My Learning
@@ -165,7 +165,7 @@ const PrimaryLearnerDashboard = () => {
 
             <div className="mx-1 h-7 w-px shrink-0 bg-white/80 sm:h-10" />
 
-            <h1 className="min-w-0 flex-1 text-center text-[10px] font-black leading-tight drop-shadow sm:text-base">
+            <h1 className="min-w-0 flex-1 text-center text-[11px] font-black leading-tight drop-shadow sm:text-lg">
               Learner Dashboard
             </h1>
 
@@ -230,7 +230,7 @@ const PrimaryLearnerDashboard = () => {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-[520px] space-y-3.5 px-3 py-3">
+      <main className="primary-learner-dashboard__content mx-auto w-full max-w-[520px] space-y-3.5 px-3 py-3">
         {activeTab === 'home' && (
           <>
             <section className="grid grid-cols-3 gap-1.5 sm:gap-2">
@@ -438,7 +438,7 @@ const PrimaryLearnerDashboard = () => {
       </main>
 
       {/* Fixed bottom navigation */}
-      <nav className="fixed bottom-0 left-1/2 z-30 w-full max-w-[520px] -translate-x-1/2 px-2 pb-2">
+      <nav className="primary-learner-dashboard__nav fixed bottom-0 left-1/2 z-30 w-full max-w-[520px] -translate-x-1/2 px-2 pb-2">
         <div className="mx-auto flex w-full items-center justify-around gap-0.5 rounded-full border border-[#8DE5E1] bg-gradient-to-r from-[#005C62] via-[#00777A] to-[#005C62] px-1 py-1.5 shadow-[0_-4px_20px_rgba(0,91,96,0.12),0_8px_25px_rgba(0,0,0,0.18)]">
           {primaryTabs.map(({ id, label, Icon }) => {
             const isActive = activeTab === id;

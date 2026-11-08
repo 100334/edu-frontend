@@ -83,11 +83,11 @@ export default function LearnersList() {
   };
 
   const handleCreditWallet = async (learner) => {
-    const amountInput = window.prompt(`How many Mk should be added to ${learner.name}'s quiz wallet?`, '100');
+    const amountInput = window.prompt(`How many MK should be added to ${learner.name}'s quiz wallet?`, '100');
     if (amountInput === null) return;
     const amount = Number(amountInput);
     if (!Number.isSafeInteger(amount) || amount <= 0) {
-      toast.error('Enter a positive whole number of Mk.');
+      toast.error('Enter a positive whole number of MK.');
       return;
     }
 
@@ -105,7 +105,7 @@ export default function LearnersList() {
         reason: reason.trim(),
       });
       if (!response.data.success) throw new Error(response.data.message || 'Credit failed.');
-      toast.success(`Mk${amount} added. New balance: Mk${response.data.balance_mwk}.`);
+      toast.success(`MK${amount} added. New balance: MK${response.data.balance_mwk}.`);
       await fetchLearners();
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || 'Failed to credit wallet.');
@@ -172,7 +172,7 @@ export default function LearnersList() {
       </div>
 
       <p className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
-        Quiz credits are internal, admin-issued wallet balance. Each new attempt costs Mk100; no real payment is processed. Unsubmitted attempts are refunded after 24 hours when wallets are next checked.
+        Quiz credits are internal, admin-issued wallet balance. Each new attempt costs MK100; no real payment is processed. Unsubmitted attempts are refunded after 24 hours when wallets are next checked.
       </p>
 
       {/* Password reset banner */}
@@ -248,7 +248,7 @@ export default function LearnersList() {
                       <span className="text-sm font-semibold text-[#003B46]">{l.name}</span>
                     </div>
                     <p className="ml-10 mt-1 text-[10px] text-gray-400">
-                      Quiz wallet: Mk{Number(l.wallet_balance_mwk) || 0}
+                      Quiz wallet: MK{Number(l.wallet_balance_mwk) || 0}
                     </p>
                   </td>
                   <td className="px-4 py-3">
