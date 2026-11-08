@@ -144,11 +144,11 @@ const PrimaryLearnerDashboard = () => {
   return (
     <div className="primary-learner-dashboard learner-dashboard-shell mx-auto min-h-screen w-full max-w-[520px] overflow-x-hidden bg-[#F2FBFC] pb-24 text-[#073F43] shadow-[0_0_35px_rgba(0,91,96,0.10)]">
       <header className="relative z-30 w-full overflow-hidden bg-[#00676B] shadow-lg">
-        <div className="relative w-full">
+        <div className="primary-learner-dashboard__hero relative w-full">
           <img
             src="/image.png"
             alt="Two learners reading together"
-            className="block h-auto w-full"
+            className="primary-learner-dashboard__hero-image block h-auto w-full"
           />
 
           <div className="absolute inset-x-0 top-[3%] flex items-center justify-between gap-1 px-[4%] text-white">

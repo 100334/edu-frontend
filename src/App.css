@@ -300,6 +300,17 @@ body,
     margin-right: 0;
   }
 
+  .primary-learner-dashboard__hero {
+    height: clamp(190px, 32vh, 340px);
+    overflow: hidden;
+  }
+
+  .primary-learner-dashboard__hero-image {
+    height: 100%;
+    object-fit: cover;
+    object-position: center 48%;
+  }
+
   main.primary-learner-dashboard__content {
     max-width: none;
     padding-left: clamp(1rem, 3vw, 3rem);
