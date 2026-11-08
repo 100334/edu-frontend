@@ -30,6 +30,7 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1, showPrim
   const [timeLeft, setTimeLeft] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [attemptId, setAttemptId] = useState(null);
+  const [walletDialog, setWalletDialog] = useState(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [lightboxImage, setLightboxImage] = useState(null);
@@ -146,6 +147,14 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1, showPrim
       setTimeLeft(res.data.quiz.duration * 60);
       if (res.data.saved_answers) setAnswers(res.data.saved_answers);
     } catch (error) {
+      if (error.response?.status === 402) {
+        setWalletDialog({
+          message: error.response.data?.message || 'There is not enough credit in your quiz wallet to start this attempt.',
+          balance: error.response.data?.balance_mwk,
+          required: error.response.data?.required_mwk ?? 100,
+        });
+        return;
+      }
       toast.error(error.response?.data?.message || error.message || 'Failed to load quiz.');
       navigate('/learner/dashboard');
     }
@@ -160,6 +169,77 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1, showPrim
   };
 
   const handleConfirmSubmit = () => setShowConfirmDialog(true);
+
+  if (walletDialog) {
+    const balance = Number(walletDialog.balance);
+    const required = Number(walletDialog.required);
+    const shortfall = Number.isFinite(balance) && Number.isFinite(required)
+      ? Math.max(0, required - balance)
+      : null;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#003F43]/45 p-4 backdrop-blur-sm">
+        <section
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="wallet-required-title"
+          className="w-full max-w-md overflow-hidden rounded-2xl border-2 border-[#12BFC0] bg-white shadow-2xl"
+        >
+          <div className="bg-gradient-to-r from-[#00565D] to-[#008487] px-6 py-5 text-white">
+            <p className="text-xs font-bold uppercase tracking-widest text-teal-100">Quiz wallet</p>
+            <h2 id="wallet-required-title" className="mt-1 text-xl font-black">
+              You need quiz credit to start
+            </h2>
+          </div>
+          <div className="space-y-4 p-6">
+            <p className="text-sm leading-relaxed text-slate-600">{walletDialog.message}</p>
+            {Number.isFinite(balance) && (
+              <div className="rounded-xl border border-[#D3EEEE] bg-[#F2FBFC] p-4 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500">Your wallet balance</span>
+                  <strong className="text-[#003B46]">Mk{balance}</strong>
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-slate-500">Needed for this attempt</span>
+                  <strong className="text-[#003B46]">Mk{required}</strong>
+                </div>
+                {shortfall > 0 && (
+                  <p className="mt-3 border-t border-[#D3EEEE] pt-3 font-semibold text-amber-800">
+                    Please ask a school administrator to add at least Mk{shortfall} to your wallet.
+                  </p>
+                )}
+              </div>
+            )}
+            <p className="text-xs leading-relaxed text-slate-500">
+              Quiz credits are added by a school administrator. No real payment is processed here.
+            </p>
+            <div className="flex gap-3 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  if (onExit) onExit();
+                  else navigate('/learner/dashboard');
+                }}
+                className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
+              >
+                Back to quizzes
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setWalletDialog(null);
+                  loadQuiz();
+                }}
+                className="flex-1 rounded-xl bg-[#006770] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#00565D]"
+              >
+                Try again
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   const submitQuiz = async () => {
     setSubmitting(true);
