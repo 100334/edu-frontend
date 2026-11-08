@@ -21,7 +21,7 @@ function normalizeQuizId(value) {
 // Keep old name as alias for internal use
 const normalizeQuizIdProp = normalizeQuizId;
 
-const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1 }) => {
+const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1, showPrimaryGrade = false }) => {
   const [quiz, setQuiz] = useState(null);
   const [result, setResult] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -222,6 +222,15 @@ toast.dismiss(loadingToast);
 
   if (result) {
     const percentage = Number(result.percentage) || 0;
+    const primaryGrade = percentage >= 80
+      ? { letter: 'A', description: 'Excellent' }
+      : percentage >= 70
+        ? { letter: 'B', description: 'Very Good' }
+        : percentage >= 55
+          ? { letter: 'C', description: 'Good' }
+          : percentage >= 40
+            ? { letter: 'D', description: 'Average' }
+            : { letter: 'F', description: 'Fail' };
     const returnToDashboard = () => {
       if (onComplete) onComplete(result);
       else navigate('/learner/dashboard');
@@ -241,6 +250,11 @@ toast.dismiss(loadingToast);
             <p className="text-sm font-bold text-[#668082]">Your score</p>
             <p className="my-2 text-5xl font-black text-[#00676B]">{percentage}%</p>
             <p className="text-sm font-bold text-[#24494B]">{result.earned_points ?? 0} / {result.total_points ?? 0} marks</p>
+            {showPrimaryGrade && (
+              <p className="mt-2 text-lg font-black text-[#07575A]" aria-label={`Grade ${primaryGrade.letter}: ${primaryGrade.description}`}>
+                Grade: {primaryGrade.letter} — {primaryGrade.description}
+              </p>
+            )}
             <p className={`mt-4 inline-flex rounded-full px-4 py-2 text-xs font-extrabold ${result.passed ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
               {result.passed ? 'Passed' : 'Keep practising'}
             </p>

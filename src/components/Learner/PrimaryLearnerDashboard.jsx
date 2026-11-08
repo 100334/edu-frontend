@@ -111,6 +111,7 @@ const PrimaryLearnerDashboard = () => {
     return (
       <QuizTaking
         quizId={showQuiz}
+        showPrimaryGrade
         onComplete={() => {
           setShowQuiz(null);
           setActiveTab('results');
