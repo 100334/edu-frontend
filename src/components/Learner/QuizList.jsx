@@ -19,6 +19,7 @@ const QuizList = ({ onStartQuiz }) => {
   const [learnerForm, setLearnerForm] = useState('');
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [walletBalance, setWalletBalance] = useState(null);
+  const [quizToStart, setQuizToStart] = useState(null);
 
   useEffect(() => {
     loadQuizzes();
@@ -328,11 +329,11 @@ setQuizzes([]);
                   </div>
                 ) : (
                   <button
-                    onClick={() => onStartQuiz(getQuizId(quiz))}
+                    onClick={() => setQuizToStart(quiz)}
                     disabled={!canStart}
                     className={`w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all duration-300 ${canStart ? 'bg-[#005C62] text-white hover:bg-[#00777A] hover:shadow-[#00777A]/30' : 'bg-slate-200 text-slate-500 cursor-not-allowed'}`}
                   >
-                    {attemptsExhausted ? '🔒 Attempts Used' : isUpcoming ? '⏰ Coming Soon' : isClosed ? '🔒 Closed' : 'Take Assessment'}
+                    {attemptsExhausted ? '🔒 Attempts Used' : isUpcoming ? '⏰ Coming Soon' : isClosed ? '🔒 Closed' : quiz.attempt_status === 'in-progress' ? 'Continue Assessment' : 'Take Assessment'}
                     <ChevronRightIcon className="w-4 h-4" />
                   </button>
                 )}
@@ -342,6 +343,96 @@ setQuizzes([]);
         })}
       </div>
       )}
+
+      {quizToStart && (() => {
+      const balance = walletBalance ?? 0;
+      const isResuming = quizToStart.attempt_status === 'in-progress';
+      const canAffordAttempt = isResuming || balance >= 100;
+
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#003F43]/45 p-4 backdrop-blur-sm">
+          <button
+            type="button"
+            aria-label="Close quiz payment confirmation"
+            className="absolute inset-0 cursor-default"
+            onClick={() => setQuizToStart(null)}
+          />
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="quiz-wallet-dialog-title"
+            className="relative w-full max-w-md overflow-hidden rounded-2xl border-2 border-[#12BFC0] bg-white shadow-2xl"
+          >
+            <div className="bg-gradient-to-r from-[#00565D] to-[#008487] px-6 py-5 text-white">
+              <p className="text-xs font-bold uppercase tracking-widest text-teal-100">
+                Quiz wallet
+              </p>
+              <h3 id="quiz-wallet-dialog-title" className="mt-1 text-xl font-black">
+                {canAffordAttempt ? 'Ready to start?' : 'More quiz credit needed'}
+              </h3>
+            </div>
+
+            <div className="space-y-4 p-6">
+              <p className="text-sm leading-relaxed text-slate-600">
+                {isResuming
+                  ? `You have an unfinished attempt for “${quizToStart.title}”. Continuing it will not charge you again.`
+                  : `Starting “${quizToStart.title}” costs Mk100. The amount is deducted from your quiz wallet when you continue.`}
+              </p>
+
+              <div className="rounded-xl border border-[#D3EEEE] bg-[#F2FBFC] p-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-slate-500">Current balance</span>
+                  <span className="font-bold text-[#003B46]">{walletBalance === null ? 'Loading…' : `Mk${balance}`}</span>
+                </div>
+                <div className="mt-2 flex items-center justify-between text-sm">
+                  <span className="text-slate-500">{isResuming ? 'Charge to continue' : 'New attempt fee'}</span>
+                  <span className="font-bold text-[#003B46]">{isResuming ? 'Mk0' : 'Mk100'}</span>
+                </div>
+                {canAffordAttempt && !isResuming && (
+                  <div className="mt-3 flex items-center justify-between border-t border-[#D3EEEE] pt-3 text-sm">
+                    <span className="font-semibold text-slate-600">Balance after starting</span>
+                    <span className="font-black text-[#006770]">Mk{balance - 100}</span>
+                  </div>
+                )}
+                {!canAffordAttempt && walletBalance !== null && (
+                  <p className="mt-3 border-t border-[#D3EEEE] pt-3 text-sm font-semibold text-amber-800">
+                    You need Mk{100 - balance} more to start this attempt.
+                  </p>
+                )}
+              </div>
+
+              <p className="text-xs leading-relaxed text-slate-500">
+                Quiz credits are added by a school administrator. This is an internal wallet; no real payment is processed.
+              </p>
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setQuizToStart(null)}
+                  className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
+                >
+                  {canAffordAttempt ? 'Cancel' : 'Close'}
+                </button>
+                {canAffordAttempt && (
+                  <button
+                    type="button"
+                    disabled={walletBalance === null}
+                    onClick={() => {
+                      const selectedQuiz = quizToStart;
+                      setQuizToStart(null);
+                      onStartQuiz(getQuizId(selectedQuiz));
+                    }}
+                    className="flex-1 rounded-xl bg-[#006770] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#00565D] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isResuming ? 'Continue quiz' : 'Confirm and start'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+        </div>
+      );
+      })()}
     </div>
   );
 };
