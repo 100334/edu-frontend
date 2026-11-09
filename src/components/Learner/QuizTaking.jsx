@@ -174,6 +174,48 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1, showPrim
     }
   };
 
+  const pronounceWord = (text) => {
+    if (!voiceoverEnabled) return;
+    if (typeof window === 'undefined' || !window.speechSynthesis || !window.SpeechSynthesisUtterance) {
+      toast.error('Pronunciation is not supported by this browser.');
+      return;
+    }
+
+    const utterance = new window.SpeechSynthesisUtterance(text);
+    utterance.rate = 0.8;
+    stopSpeech();
+    speechUtteranceRef.current = utterance;
+    utterance.onend = () => {
+      if (speechUtteranceRef.current === utterance) speechUtteranceRef.current = null;
+    };
+    utterance.onerror = (event) => {
+      if (speechUtteranceRef.current === utterance) {
+        speechUtteranceRef.current = null;
+        if (event.error !== 'canceled' && event.error !== 'interrupted') {
+          toast.error('Unable to pronounce this word.');
+        }
+      }
+    };
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const renderPronounceableText = (text) => String(text ?? '').split(/(\s+)/).map((part, index) => {
+    if (!part || /^\s+$/.test(part)) return part;
+    const word = part.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
+    if (!word) return part;
+    return (
+      <span
+        key={`${index}-${part}`}
+        onMouseEnter={() => pronounceWord(word)}
+        onTouchStart={() => pronounceWord(word)}
+        title={voiceoverEnabled ? `Hear the pronunciation of "${word}"` : undefined}
+        className={voiceoverEnabled ? 'cursor-help rounded-sm hover:bg-[#E9F8F6]' : undefined}
+      >
+        {part}
+      </span>
+    );
+  });
+
   const readPageAloud = (page) => {
     if (typeof window === 'undefined' || !window.speechSynthesis || !window.SpeechSynthesisUtterance) {
       toast.error('Read aloud is not supported by this browser.');
@@ -194,6 +236,7 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1, showPrim
 
     stopSpeech();
     const utterance = new window.SpeechSynthesisUtterance(text);
+    utterance.rate = 0.8;
     speechUtteranceRef.current = utterance;
     utterance.onend = () => {
       if (speechUtteranceRef.current === utterance) {
@@ -598,6 +641,7 @@ toast.dismiss(loadingToast);
                     role="switch"
                     aria-checked={voiceoverEnabled}
                     onClick={handleVoiceoverToggle}
+                    title="Turn on voice-over, then hover over a word to hear its pronunciation"
                     className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
                       voiceoverEnabled
                         ? 'border-[#00777A] bg-[#00777A] text-white'
@@ -642,7 +686,7 @@ toast.dismiss(loadingToast);
                     <article id={`q-${questionIndex}`} className="border-b border-[#E7EEEE] pb-5 last:border-b-0">
                       <div className="mb-3 flex items-start justify-between gap-2">
                         <h3 className="text-sm font-bold leading-relaxed text-[#123F42] sm:text-base">
-                          <span className="mr-1.5 font-black">{displayIdx + 1}.</span>{q.question_text}
+                          <span className="mr-1.5 font-black">{displayIdx + 1}.</span>{renderPronounceableText(q.question_text)}
                         </h3>
                         <div className="flex shrink-0 items-center gap-2">
                           <span className="rounded-full bg-[#FFF4C9] px-2.5 py-0.5 text-[11px] font-extrabold text-[#795C08]">
@@ -673,7 +717,7 @@ toast.dismiss(loadingToast);
                                 <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs ${selected ? 'border-[#00777A] bg-[#00777A] text-white' : 'border-[#AEBEC4] bg-white'}`}>
                                   {selected ? <CheckCircleSolid className="h-4 w-4" /> : <span className="font-bold">{String.fromCharCode(65 + optIdx)}</span>}
                                 </span>
-                                <span className={`text-sm ${selected ? 'font-extrabold text-[#063F43]' : 'font-medium text-[#172F34]'}`}>{opt}</span>
+                                <span className={`text-sm ${selected ? 'font-extrabold text-[#063F43]' : 'font-medium text-[#172F34]'}`}>{renderPronounceableText(opt)}</span>
                               </button>
                             );
                           })}
