@@ -35,8 +35,10 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1, showPrim
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [lightboxImage, setLightboxImage] = useState(null);
   const [showDetails, setShowDetails] = useState(true); // true = details page, false = questions page
+  const [voiceoverEnabled, setVoiceoverEnabled] = useState(false);
   const pageRef = useRef(null);
   const pdfContentRef = useRef(null);
+  const speechUtteranceRef = useRef(null);
   const navigate = useNavigate();
   const resolvedQuizId = useMemo(() => normalizeQuizIdProp(quizId), [quizId]);
 
@@ -105,8 +107,10 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1, showPrim
   };
 
   const handlePageChange = (newPage) => {
+    stopSpeech();
     autoSavePage(currentPage);
     setCurrentPage(newPage);
+    if (voiceoverEnabled) readPageAloud(newPage);
     if (pageRef.current) pageRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -163,7 +167,66 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1, showPrim
   const handleAnswer = (idx, val) => setAnswers(prev => ({ ...prev, [idx]: val }));
   const handleShortAnswer = (idx, text) => setAnswers(prev => ({ ...prev, [idx]: text }));
 
+  const stopSpeech = () => {
+    speechUtteranceRef.current = null;
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  };
+
+  const readPageAloud = (page) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis || !window.SpeechSynthesisUtterance) {
+      toast.error('Read aloud is not supported by this browser.');
+      setVoiceoverEnabled(false);
+      return;
+    }
+
+    const questionsToRead = displayQuestions.slice(
+      page * QUESTIONS_PER_PAGE,
+      (page + 1) * QUESTIONS_PER_PAGE
+    );
+    const text = questionsToRead.map(({ question, questionIndex }) => {
+      const optionText = Array.isArray(question.options)
+        ? ` Choices: ${question.options.map((option, index) => `${String.fromCharCode(65 + index)}: ${option}`).join('. ')}.`
+        : '';
+      return `Question ${questionIndex + 1}. ${question.question_text}.${optionText}`;
+    }).join(' ');
+
+    stopSpeech();
+    const utterance = new window.SpeechSynthesisUtterance(text);
+    speechUtteranceRef.current = utterance;
+    utterance.onend = () => {
+      if (speechUtteranceRef.current === utterance) {
+        speechUtteranceRef.current = null;
+      }
+    };
+    utterance.onerror = () => {
+      if (speechUtteranceRef.current === utterance) {
+        speechUtteranceRef.current = null;
+        toast.error('Unable to read this question aloud.');
+      }
+    };
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const handleVoiceoverToggle = () => {
+    if (voiceoverEnabled) {
+      stopSpeech();
+      setVoiceoverEnabled(false);
+      return;
+    }
+    setVoiceoverEnabled(true);
+    readPageAloud(currentPage);
+  };
+
+  useEffect(() => () => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+  }, []);
+
   const handleOpenReview = () => {
+    stopSpeech();
     autoSavePage(currentPage);
     setShowReviewModal(true);
   };
@@ -242,6 +305,7 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1, showPrim
   }
 
   const submitQuiz = async () => {
+    stopSpeech();
     setSubmitting(true);
     setShowConfirmDialog(false);
     setShowReviewModal(false);
@@ -485,7 +549,10 @@ toast.dismiss(loadingToast);
             )}
             {/* Back to details */}
             <button
-              onClick={() => setShowDetails(true)}
+              onClick={() => {
+                stopSpeech();
+                setShowDetails(true);
+              }}
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition"
               title="Quiz details"
             >
@@ -525,10 +592,31 @@ toast.dismiss(loadingToast);
                 <h2 className="text-base font-black text-[#123F42] sm:text-xl">
                   Question {startIdx + 1} <span className="text-sm font-semibold text-[#688183]">of {questions.length}</span>
                 </h2>
-                {/* Page counter — only on sm+ */}
-                <span className="hidden rounded-full bg-[#E4F4F4] px-3 py-1 text-xs font-bold text-[#00777A] sm:inline-flex">
-                  Page {currentPage + 1}/{totalPages}
-                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={voiceoverEnabled}
+                    onClick={handleVoiceoverToggle}
+                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
+                      voiceoverEnabled
+                        ? 'border-[#00777A] bg-[#00777A] text-white'
+                        : 'border-[#9BAFB2] bg-white text-[#36585B] hover:bg-[#F2FBFC]'
+                    }`}
+                  >
+                    <span>Voice-over</span>
+                    <span>{voiceoverEnabled ? 'On' : 'Off'}</span>
+                    <span
+                      aria-hidden="true"
+                      className={`relative h-4 w-7 rounded-full transition ${voiceoverEnabled ? 'bg-[#7DD6CF]' : 'bg-[#C7D3D5]'}`}
+                    >
+                      <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition ${voiceoverEnabled ? 'left-3.5' : 'left-0.5'}`} />
+                    </span>
+                  </button>
+                  <span className="hidden rounded-full bg-[#E4F4F4] px-3 py-1 text-xs font-bold text-[#00777A] sm:inline-flex">
+                    Page {currentPage + 1}/{totalPages}
+                  </span>
+                </div>
               </div>
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#E8EFF1]">
                 <div
@@ -556,9 +644,11 @@ toast.dismiss(loadingToast);
                         <h3 className="text-sm font-bold leading-relaxed text-[#123F42] sm:text-base">
                           <span className="mr-1.5 font-black">{displayIdx + 1}.</span>{q.question_text}
                         </h3>
-                        <span className="shrink-0 rounded-full bg-[#FFF4C9] px-2.5 py-0.5 text-[11px] font-extrabold text-[#795C08]">
-                          {q.marks} {q.marks === 1 ? 'mk' : 'mks'}
-                        </span>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <span className="rounded-full bg-[#FFF4C9] px-2.5 py-0.5 text-[11px] font-extrabold text-[#795C08]">
+                            {q.marks} {q.marks === 1 ? 'mk' : 'mks'}
+                          </span>
+                        </div>
                       </div>
                       {q.question_image && (
                         <div className="mb-3">
