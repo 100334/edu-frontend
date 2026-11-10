@@ -577,9 +577,9 @@ toast.dismiss(loadingToast);
 
   // ── QUIZ QUESTIONS PAGE ─────────────────────────────────────────────────────
   return (
-    <div className="quiz-taking-page min-h-screen w-full bg-[#F0F6F8] flex flex-col">
-      <header className="sticky top-0 z-30 bg-gradient-to-r from-[#00504F] to-[#006C68] text-white shadow-md">
-        <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-7">
+    <div className="quiz-taking-page flex h-screen h-[100dvh] w-full flex-col overflow-hidden bg-[#F0F6F8]">
+      <header className="quiz-taking-header relative z-30 shrink-0 bg-gradient-to-r from-[#00504F] to-[#006C68] text-white shadow-md">
+        <div className="quiz-taking-header-content flex items-center justify-between gap-3 px-4 py-3 sm:px-7">
           <div className="flex min-w-0 items-center gap-3">
             {onExit && (
               <button type="button" onClick={onExit} className="rounded-xl border-2 border-white/50 p-2 hover:bg-white/10" aria-label="Exit quiz">
@@ -616,7 +616,7 @@ toast.dismiss(loadingToast);
         </div>
       </header>
 
-      <div className="border-b border-[#D8E8EA] bg-white px-4 py-3 sm:px-7">
+      <div className="quiz-taking-progress shrink-0 border-b border-[#D8E8EA] bg-white px-4 py-2 sm:px-7 sm:py-3">
         <div className="flex items-center gap-3 sm:gap-4">
           <p className="whitespace-nowrap text-xs font-extrabold text-[#075B5B] sm:text-base">
             Q{startIdx + 1} of {questions.length}
@@ -642,16 +642,16 @@ toast.dismiss(loadingToast);
         </div>
       </div>
 
-      <main className="mx-auto w-full max-w-[1600px] flex-1 p-3 sm:p-6">
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-          <section ref={pageRef} className="chalkboard relative min-w-0 overflow-hidden rounded-[24px] sm:rounded-[28px]">
-            <div className="space-y-8 p-5 sm:p-8 lg:p-10">
+      <main className="quiz-taking-main mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-3 overflow-hidden p-2 sm:gap-4 sm:p-4">
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
+          <section ref={pageRef} className="quiz-taking-panel chalkboard relative min-h-0 min-w-0 overflow-hidden rounded-[24px] sm:rounded-[28px]">
+            <div className="quiz-taking-panel-content flex h-full flex-col gap-4 overflow-hidden p-3 sm:gap-6 sm:p-6 lg:p-8">
               {pageQuestions.map(({ question: q, questionIndex }, idxInPage) => {
                 const displayIdx = startIdx + idxInPage;
                 const section = q.section === 'B' ? 'B' : 'A';
                 return (
-                  <article id={`q-${questionIndex}`} key={questionIndex} className="border-b border-white/20 pb-8 last:border-b-0 last:pb-0">
-                    <div className="mb-6 flex items-center justify-between gap-3">
+                  <article id={`q-${questionIndex}`} key={questionIndex} className="quiz-taking-article flex min-h-0 flex-1 flex-col border-b border-white/20 pb-4 last:border-b-0 last:pb-0 sm:pb-6">
+                    <div className="mb-3 flex items-center justify-between gap-3 sm:mb-4">
                       <span className="rounded-full bg-[#FFD43B] px-4 py-1.5 text-xs font-black text-[#174333] sm:px-5 sm:py-2 sm:text-sm">
                         SECTION {section}
                       </span>
@@ -660,27 +660,27 @@ toast.dismiss(loadingToast);
                       </span>
                     </div>
 
-                    <h2 className="chalk-text chalk-font mb-8 text-2xl leading-tight sm:mb-10 sm:text-4xl lg:text-5xl">
+                    <h2 className="quiz-taking-question chalk-text chalk-font mb-4 text-[clamp(1.25rem,3.5vh,3rem)] leading-tight sm:mb-6">
                       {displayIdx + 1}. {renderPronounceableText(q.question_text)}
                     </h2>
 
                     {q.question_image && (
-                      <div className="mb-8 flex justify-center">
+                      <div className="mb-4 flex min-h-0 justify-center sm:mb-6">
                         <img
                           src={q.question_image}
                           alt="Question illustration"
                           onClick={() => setLightboxImage(q.question_image)}
-                          className="max-h-64 max-w-full cursor-zoom-in rounded-xl bg-white p-2 object-contain"
+                          className="quiz-taking-image max-h-[18vh] max-w-full cursor-zoom-in rounded-xl bg-white p-2 object-contain sm:max-h-[22vh]"
                         />
                       </div>
                     )}
 
                     {q.options ? (
                       <>
-                        <p className="mb-4 text-xs font-extrabold tracking-widest text-[#F8DB70] sm:text-sm">
+                        <p className="mb-2 text-[10px] font-extrabold tracking-widest text-[#F8DB70] sm:mb-3 sm:text-sm">
                           CHOOSE THE CORRECT ANSWER
                         </p>
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                        <div className="quiz-taking-options grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
                           {q.options.map((option, optionIndex) => {
                             const selected = answers[questionIndex] === optionIndex;
                             return (
@@ -689,22 +689,22 @@ toast.dismiss(loadingToast);
                                 type="button"
                                 onClick={() => handleAnswer(questionIndex, optionIndex)}
                                 aria-pressed={selected}
-                                className={`chalk-option flex min-h-[76px] items-center gap-3 rounded-2xl p-3 text-left sm:min-h-[85px] sm:gap-4 sm:p-4 ${
+                                className={`quiz-taking-option chalk-option flex min-h-[52px] items-center gap-2 rounded-xl p-2 text-left sm:min-h-[64px] sm:gap-3 sm:rounded-2xl sm:p-3 ${
                                   selected ? 'selected' : ''
                                 }`}
                               >
-                                <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[3px] text-lg font-bold sm:h-14 sm:w-14 sm:border-4 sm:text-2xl ${
+                                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold sm:h-10 sm:w-10 sm:border-[3px] sm:text-lg ${
                                   selected ? 'border-[#FFD500] bg-[#FFD500] text-[#164331]' : 'border-white text-white'
                                 }`}>
                                   {selected
-                                    ? <CheckCircleSolid className="h-7 w-7 sm:h-8 sm:w-8" />
+                                    ? <CheckCircleSolid className="h-5 w-5 sm:h-6 sm:w-6" />
                                     : String.fromCharCode(65 + optionIndex)}
                                 </span>
-                                <span className="chalk-font text-lg leading-tight sm:text-2xl lg:text-3xl">
+                                <span className="chalk-font text-base leading-tight sm:text-xl lg:text-2xl">
                                   {renderPronounceableText(option)}
                                 </span>
                                 {selected && <span className="flex-1" />}
-                                {selected && <CheckCircleSolid className="h-7 w-7 shrink-0 text-[#FFD500]" />}
+                                {selected && <CheckCircleSolid className="h-6 w-6 shrink-0 text-[#FFD500]" />}
                               </button>
                             );
                           })}
@@ -715,21 +715,17 @@ toast.dismiss(loadingToast);
                         value={answers[questionIndex] || ''}
                         onChange={event => handleShortAnswer(questionIndex, event.target.value)}
                         placeholder="Write your answer here..."
-                        className="chalk-font min-h-[170px] w-full rounded-xl border-2 border-white/70 bg-[#003E2C]/50 p-5 text-xl text-white outline-none placeholder:text-white/50 focus:border-[#FFD500] sm:text-2xl"
+                        className="chalk-font min-h-0 w-full flex-1 resize-none rounded-xl border-2 border-white/70 bg-[#003E2C]/50 p-3 text-base text-white outline-none placeholder:text-white/50 focus:border-[#FFD500] sm:p-4 sm:text-xl"
                       />
                     )}
                   </article>
                 );
               })}
 
-              <div className="flex items-center justify-between gap-3 border-t border-white/20 pt-5">
-                <p className="chalk-font text-base text-white/80 sm:text-lg">Keep learning. Keep improving.</p>
-                <p className="text-right text-[10px] font-black tracking-widest text-[#FFD500] sm:text-xs">PROGRESS SCHOOLS</p>
-              </div>
             </div>
           </section>
 
-          <aside className="hidden space-y-4 lg:block">
+          <aside className="hidden min-h-0 space-y-3 overflow-hidden lg:block">
             <section className="overflow-hidden rounded-3xl border border-[#D3E7EA] bg-white shadow-sm">
               <div className="bg-gradient-to-r from-[#005451] to-[#087B73] px-5 py-4 text-white">
                 <h2 className="text-lg font-black">Question Navigator</h2>
@@ -786,26 +782,26 @@ toast.dismiss(loadingToast);
           </aside>
         </div>
 
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="quiz-taking-navigation grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
           <button
             type="button"
             onClick={() => handlePageChange(Math.max(0, currentPage - 1))}
             disabled={currentPage === 0}
-            className="rounded-full border-2 border-[#006A68] bg-white py-3 font-bold text-[#006A68] disabled:opacity-40"
+            className="rounded-full border-2 border-[#006A68] bg-white py-2 text-sm font-bold text-[#006A68] disabled:opacity-40 sm:py-3 sm:text-base"
           >
             <ChevronLeftIcon className="inline h-5 w-5" /> Previous
           </button>
           <button
             type="button"
             onClick={handleOpenReview}
-            className="rounded-full border-2 border-[#006A68] bg-white py-3 font-bold text-[#006A68]"
+            className="rounded-full border-2 border-[#006A68] bg-white py-2 text-sm font-bold text-[#006A68] sm:py-3 sm:text-base"
           >
             <EyeIcon className="mr-1 inline h-5 w-5" /> Review
           </button>
           <button
             type="button"
             onClick={handleConfirmSubmit}
-            className="rounded-full bg-[#FFD43B] py-3 font-black text-[#172F2C]"
+            className="rounded-full bg-[#FFD43B] py-2 text-sm font-black text-[#172F2C] sm:py-3 sm:text-base"
           >
             <PaperAirplaneIcon className="mr-1 inline h-5 w-5" /> Submit Quiz
           </button>
@@ -813,7 +809,7 @@ toast.dismiss(loadingToast);
             type="button"
             onClick={() => handlePageChange(Math.min(totalPages - 1, currentPage + 1))}
             disabled={currentPage + 1 >= totalPages}
-            className="rounded-full bg-[#006A68] py-3 font-bold text-white disabled:opacity-40"
+            className="rounded-full bg-[#006A68] py-2 text-sm font-bold text-white disabled:opacity-40 sm:py-3 sm:text-base"
           >
             Next <ChevronRightIcon className="inline h-5 w-5" />
           </button>
