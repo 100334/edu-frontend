@@ -21,6 +21,7 @@ const DARK_TEAL = '#003B46';
 export default function LearnersList() {
   const [learners,         setLearners]         = useState([]);
   const [loading,          setLoading]          = useState(true);
+  const [loadError,        setLoadError]        = useState(null);
   const [actionLoading,    setActionLoading]    = useState(null);
   const [showCredentials,  setShowCredentials]  = useState(null);
   const [selectedForm,     setSelectedForm]     = useState('all');
@@ -35,13 +36,17 @@ export default function LearnersList() {
   useEffect(() => { fetchLearners(); }, []);
 
   const fetchLearners = async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const token = localStorage.getItem('token');
       const res = await api.get('/api/admin/learners', { headers: { Authorization: `Bearer ${token}` } });
       if (res.data.success) setLearners(res.data.learners || []);
       else if (Array.isArray(res.data)) setLearners(res.data);
-      else setLearners([]);
-    } catch { toast.error('Failed to load learners'); setLearners([]); }
+      else throw new Error(res.data.message || 'Unexpected response while loading learners.');
+    } catch (error) {
+      setLoadError(error.response?.data?.message || error.message || 'Failed to load learners.');
+    }
     finally { setLoading(false); }
   };
 
@@ -150,6 +155,19 @@ export default function LearnersList() {
   if (loading) return (
     <div className="flex justify-center py-12">
       <div className="w-7 h-7 border-4 border-[#006770] border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  if (loadError) return (
+    <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-5 text-center">
+      <p className="text-sm font-semibold text-red-800">Could not load learners: {loadError}</p>
+      <button
+        type="button"
+        onClick={fetchLearners}
+        className="mt-3 rounded-lg bg-[#006770] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#00545C]"
+      >
+        Try again
+      </button>
     </div>
   );
 

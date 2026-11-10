@@ -174,10 +174,10 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1, showPrim
     }
   };
 
-  const pronounceWord = (text) => {
+  const readSentenceAloud = (text) => {
     if (!voiceoverEnabled) return;
     if (typeof window === 'undefined' || !window.speechSynthesis || !window.SpeechSynthesisUtterance) {
-      toast.error('Pronunciation is not supported by this browser.');
+      toast.error('Sentence playback is not supported by this browser.');
       return;
     }
 
@@ -192,29 +192,31 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1, showPrim
       if (speechUtteranceRef.current === utterance) {
         speechUtteranceRef.current = null;
         if (event.error !== 'canceled' && event.error !== 'interrupted') {
-          toast.error('Unable to pronounce this word.');
+          toast.error('Unable to replay this sentence.');
         }
       }
     };
     window.speechSynthesis.speak(utterance);
   };
 
-  const renderPronounceableText = (text) => String(text ?? '').split(/(\s+)/).map((part, index) => {
-    if (!part || /^\s+$/.test(part)) return part;
-    const word = part.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
-    if (!word) return part;
+  const renderPronounceableText = (text) => {
+    const sentences = String(text ?? '').match(/[^.!?]+(?:[.!?]+|$)/g) || [];
     return (
-      <span
-        key={`${index}-${part}`}
-        onMouseEnter={() => pronounceWord(word)}
-        onTouchStart={() => pronounceWord(word)}
-        title={voiceoverEnabled ? `Hear the pronunciation of "${word}"` : undefined}
-        className={voiceoverEnabled ? 'cursor-help rounded-sm hover:bg-[#E9F8F6]' : undefined}
-      >
-        {part}
-      </span>
+      <>
+        {sentences.map((sentence, index) => (
+          <span
+            key={`${index}-${sentence}`}
+            onMouseEnter={() => readSentenceAloud(sentence.trim())}
+            onTouchStart={() => readSentenceAloud(sentence.trim())}
+            title={voiceoverEnabled ? 'Hover over or tap to replay this whole sentence' : undefined}
+            className={voiceoverEnabled ? 'cursor-help rounded-sm hover:bg-[#E9F8F6]' : undefined}
+          >
+            {sentence}
+          </span>
+        ))}
+      </>
     );
-  });
+  };
 
   const readPageAloud = (page) => {
     if (typeof window === 'undefined' || !window.speechSynthesis || !window.SpeechSynthesisUtterance) {
