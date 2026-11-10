@@ -22,6 +22,7 @@ export default function LearnersList() {
   const [learners,         setLearners]         = useState([]);
   const [loading,          setLoading]          = useState(true);
   const [loadError,        setLoadError]        = useState(null);
+  const [walletAvailable,  setWalletAvailable]  = useState(true);
   const [actionLoading,    setActionLoading]    = useState(null);
   const [showCredentials,  setShowCredentials]  = useState(null);
   const [selectedForm,     setSelectedForm]     = useState('all');
@@ -41,8 +42,13 @@ export default function LearnersList() {
     try {
       const token = localStorage.getItem('token');
       const res = await api.get('/api/admin/learners', { headers: { Authorization: `Bearer ${token}` } });
-      if (res.data.success) setLearners(res.data.learners || []);
-      else if (Array.isArray(res.data)) setLearners(res.data);
+      if (res.data.success) {
+        setLearners(res.data.learners || []);
+        setWalletAvailable(res.data.wallet_available !== false);
+      } else if (Array.isArray(res.data)) {
+        setLearners(res.data);
+        setWalletAvailable(true);
+      }
       else throw new Error(res.data.message || 'Unexpected response while loading learners.');
     } catch (error) {
       setLoadError(error.response?.data?.message || error.message || 'Failed to load learners.');
@@ -88,6 +94,11 @@ export default function LearnersList() {
   };
 
   const handleCreditWallet = async (learner) => {
+    if (!walletAvailable) {
+      toast.error('Quiz wallet service is unavailable. Check the wallet migration and try again.');
+      return;
+    }
+
     const amountInput = window.prompt(`How many MK should be added to ${learner.name}'s quiz wallet?`, '100');
     if (amountInput === null) return;
     const amount = Number(amountInput);
@@ -189,6 +200,21 @@ export default function LearnersList() {
         ))}
       </div>
 
+      {!walletAvailable && (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+          <span>
+            Learners loaded, but quiz wallet balances are unavailable. Check that the quiz wallet migration has been applied, then reload.
+          </span>
+          <button
+            type="button"
+            onClick={fetchLearners}
+            className="rounded-md border border-amber-300 bg-white px-3 py-1.5 font-semibold hover:bg-amber-100"
+          >
+            Reload
+          </button>
+        </div>
+      )}
+
       <p className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
         Quiz credits are internal, admin-issued wallet balance. Each new attempt costs MK100; no real payment is processed. Unsubmitted attempts are refunded after 24 hours when wallets are next checked.
       </p>
@@ -266,7 +292,7 @@ export default function LearnersList() {
                       <span className="text-sm font-semibold text-[#003B46]">{l.name}</span>
                     </div>
                     <p className="ml-10 mt-1 text-[10px] text-gray-400">
-                      Quiz wallet: MK{Number(l.wallet_balance_mwk) || 0}
+                      Quiz wallet: {walletAvailable ? `MK${Number(l.wallet_balance_mwk) || 0}` : 'Unavailable'}
                     </p>
                   </td>
                   <td className="px-4 py-3">
@@ -305,7 +331,7 @@ export default function LearnersList() {
                         }`} title={l.status === 'Active' ? 'Deactivate' : 'Activate'}>
                         {l.status === 'Active' ? <NoSymbolIcon className="w-4 h-4" /> : <CheckCircleIcon className="w-4 h-4" />}
                       </button>
-                      <button onClick={() => handleCreditWallet(l)} disabled={actionLoading === l.id}
+                      <button onClick={() => handleCreditWallet(l)} disabled={actionLoading === l.id || !walletAvailable}
                         className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition disabled:opacity-40"
                         title="Add quiz wallet credit" aria-label={`Add quiz wallet credit for ${l.name}`}>
                         <PlusCircleIcon className="w-4 h-4" />
