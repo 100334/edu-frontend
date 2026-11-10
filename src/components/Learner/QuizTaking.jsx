@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ClockIcon, FlagIcon, PaperAirplaneIcon, ExclamationCircleIcon,
+  ClockIcon, FlagIcon, PaperAirplaneIcon,
   DocumentCheckIcon, XMarkIcon, ChevronLeftIcon,
   ChevronRightIcon, EyeIcon, DocumentArrowDownIcon
 } from '@heroicons/react/24/outline';
@@ -286,7 +286,7 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1, showPrim
       : null;
 
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#003F43]/45 p-4 backdrop-blur-sm">
+      <div className="quiz-taking-page fixed inset-0 z-50 flex items-center justify-center bg-[#003F43]/45 p-4 backdrop-blur-sm">
         <section
           role="dialog"
           aria-modal="true"
@@ -399,7 +399,7 @@ toast.dismiss(loadingToast);
 
   if (!quiz || questions.length === 0) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F2FBFC] px-4">
+      <div className="quiz-taking-page flex min-h-screen items-center justify-center bg-[#F2FBFC] px-4">
         <div className="rounded-2xl border-2 border-[#12BFC0] bg-white px-10 py-8 text-center shadow-lg">
           <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-[#D8EEEE] border-t-[#00777A]" />
           <p className="text-sm font-bold text-[#07575A]">Loading assessment...</p>
@@ -425,7 +425,7 @@ toast.dismiss(loadingToast);
     };
 
     return (
-      <div className="min-h-screen bg-[#F2FBFC] px-3 py-5 sm:px-6">
+      <div className="quiz-taking-page min-h-screen bg-[#F2FBFC] px-3 py-5 sm:px-6">
         <header className="mx-auto mb-6 flex max-w-3xl items-center gap-4 rounded-2xl bg-gradient-to-r from-[#004F55] to-[#008789] px-5 py-4 text-white shadow-lg">
           <div className="rounded-xl bg-white/10 p-2"><DocumentCheckIcon className="h-8 w-8 text-[#FFD84D]" /></div>
           <div>
@@ -480,7 +480,7 @@ toast.dismiss(loadingToast);
   if (showDetails) {
     const totalMarks = quiz.total_marks || questions.reduce((s, q) => s + Number(q.marks || 0), 0);
     return (
-      <div className="min-h-screen w-full bg-[#F2FBFC] flex flex-col">
+      <div className="quiz-taking-page chalkboard min-h-screen w-full flex flex-col">
         {/* Header */}
         <header className="w-full border-b-[3px] border-[#F3C33D] bg-gradient-to-r from-[#004F55] via-[#00777A] to-[#008E8D] text-white shadow-lg">
           <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-6">
@@ -577,267 +577,246 @@ toast.dismiss(loadingToast);
 
   // ── QUIZ QUESTIONS PAGE ─────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen w-full bg-[#F2FBFC] flex flex-col">
-      {/* Sticky header */}
-      <header className="sticky top-0 z-30 border-b-[3px] border-[#F3C33D] bg-gradient-to-r from-[#004F55] via-[#00777A] to-[#008E8D] text-white shadow-lg">
-        <div className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-6">
-          <div className="flex min-w-0 items-center gap-2">
+    <div className="quiz-taking-page min-h-screen w-full bg-[#F0F6F8] flex flex-col">
+      <header className="sticky top-0 z-30 bg-gradient-to-r from-[#00504F] to-[#006C68] text-white shadow-md">
+        <div className="flex items-center justify-between gap-3 px-4 py-3 sm:px-7">
+          <div className="flex min-w-0 items-center gap-3">
             {onExit && (
-              <button
-                type="button"
-                onClick={onExit}
-                aria-label="Exit quiz"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 transition hover:bg-white/20"
-              >
+              <button type="button" onClick={onExit} className="rounded-xl border-2 border-white/50 p-2 hover:bg-white/10" aria-label="Exit quiz">
                 <XMarkIcon className="h-5 w-5" />
               </button>
             )}
-            {/* Back to details */}
             <button
+              type="button"
               onClick={() => {
                 stopSpeech();
                 setShowDetails(true);
               }}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition"
-              title="Quiz details"
+              className="rounded-xl border-2 border-white/50 p-2 hover:bg-white/10"
+              aria-label="Back to quiz details"
             >
               <ChevronLeftIcon className="h-5 w-5" />
             </button>
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFD43B] sm:h-12 sm:w-12">
+              <DocumentCheckIcon className="h-6 w-6 text-[#07504D] sm:h-7 sm:w-7" />
+            </div>
             <div className="min-w-0">
-              <p className="truncate text-xs font-bold leading-tight text-[#BDECE7]">{quiz.title || 'Assessment'}</p>
-              <p className="text-[10px] text-teal-200">{stats.answered}/{stats.total} answered</p>
+              <h1 className="text-sm font-black tracking-tight sm:text-lg">PROGRESS SCHOOLS</h1>
+              <p className="text-[10px] text-teal-100 sm:text-xs">ONLINE ASSESSMENT</p>
+            </div>
+            <div className="ml-3 hidden min-w-0 border-l border-white/50 pl-4 md:block">
+              <p className="truncate text-lg font-bold">{quiz.subject_name || quiz.subject?.name || 'Assessment'}</p>
+              <p className="truncate text-xs text-teal-100">{quiz.title}</p>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2 rounded-full border-2 border-[#F4C43E] bg-[#004F55] px-3 py-1.5 shadow-md">
-            <ClockIcon className={`h-4 w-4 ${timeLeft < 60 ? 'text-amber-300' : 'text-white'}`} />
-            <p className={`font-mono text-sm font-black tabular-nums ${timeLeft < 60 ? 'text-amber-300' : 'text-white'}`}>{formatTime(timeLeft)}</p>
+          <div className="flex shrink-0 items-center gap-2 rounded-full border-2 border-[#FFD43B] bg-[#004541] px-3 py-2 sm:px-4">
+            <ClockIcon className="h-5 w-5 text-[#FFD43B]" />
+            <span className="font-mono text-base font-black text-[#FFD43B] sm:text-xl">{formatTime(timeLeft)}</span>
           </div>
-        </div>
-        {/* Progress bar */}
-        <div className="h-1.5 bg-white/20">
-          <div className="h-full bg-gradient-to-r from-[#FFE477] to-[#F4B900] transition-all duration-500" style={{ width: `${stats.progress}%` }} />
         </div>
       </header>
 
-      <main className="w-full flex-1 px-0 py-0 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
-        {/*
-          Portrait  → single column, navigator hidden, questions full-width
-          Landscape / sm+ → two columns: questions | navigator (compact)
-        */}
-        <div className="flex min-h-0 w-full flex-col sm:flex-row sm:items-start sm:gap-4">
-
-          {/* ── Questions ── */}
-          <section
-            ref={pageRef}
-            className="min-w-0 flex-1 overflow-hidden bg-white sm:rounded-[22px] sm:border-2 sm:border-[#12BFC0] sm:shadow-sm"
+      <div className="border-b border-[#D8E8EA] bg-white px-4 py-3 sm:px-7">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <p className="whitespace-nowrap text-xs font-extrabold text-[#075B5B] sm:text-base">
+            Q{startIdx + 1} of {questions.length}
+          </p>
+          <div className="h-3 flex-1 overflow-hidden rounded-full bg-[#D7EAF0]">
+            <div className="h-full rounded-full bg-gradient-to-r from-[#FFD500] to-[#F4B900] transition-all duration-500" style={{ width: `${stats.progress}%` }} />
+          </div>
+          <p className="hidden whitespace-nowrap text-sm font-extrabold text-[#075B5B] sm:block">
+            {Math.round(stats.progress)}% completed
+          </p>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={voiceoverEnabled}
+            onClick={handleVoiceoverToggle}
+            title="Turn on voice-over, then hover over or tap a sentence to hear it"
+            className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
+              voiceoverEnabled ? 'border-[#006A68] bg-[#006A68] text-white' : 'border-[#006A68] bg-white text-[#006A68]'
+            }`}
           >
-            {/* Question header */}
-            <div className="border-b border-[#E6EEEE] px-4 py-3 sm:px-6 sm:py-4">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="text-base font-black text-[#123F42] sm:text-xl">
-                  Question {startIdx + 1} <span className="text-sm font-semibold text-[#688183]">of {questions.length}</span>
-                </h2>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={voiceoverEnabled}
-                    onClick={handleVoiceoverToggle}
-                    title="Turn on voice-over, then hover over a word to hear its pronunciation"
-                    className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition ${
-                      voiceoverEnabled
-                        ? 'border-[#00777A] bg-[#00777A] text-white'
-                        : 'border-[#9BAFB2] bg-white text-[#36585B] hover:bg-[#F2FBFC]'
-                    }`}
-                  >
-                    <span>Voice-over</span>
-                    <span>{voiceoverEnabled ? 'On' : 'Off'}</span>
-                    <span
-                      aria-hidden="true"
-                      className={`relative h-4 w-7 rounded-full transition ${voiceoverEnabled ? 'bg-[#7DD6CF]' : 'bg-[#C7D3D5]'}`}
-                    >
-                      <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition ${voiceoverEnabled ? 'left-3.5' : 'left-0.5'}`} />
-                    </span>
-                  </button>
-                  <span className="hidden rounded-full bg-[#E4F4F4] px-3 py-1 text-xs font-bold text-[#00777A] sm:inline-flex">
-                    Page {currentPage + 1}/{totalPages}
-                  </span>
-                </div>
-              </div>
-              <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#E8EFF1]">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#00676B] to-[#00A3A0] transition-all duration-500"
-                  style={{ width: `${((startIdx + pageQuestions.length) / questions.length) * 100}%` }}
-                />
-              </div>
-            </div>
+            Voice-over {voiceoverEnabled ? 'On' : 'Off'}
+          </button>
+        </div>
+      </div>
 
-            {/* Question body */}
-            <div className="space-y-5 px-4 py-5 sm:px-6 sm:py-6">
+      <main className="mx-auto w-full max-w-[1600px] flex-1 p-3 sm:p-6">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+          <section ref={pageRef} className="chalkboard relative min-w-0 overflow-hidden rounded-[24px] sm:rounded-[28px]">
+            <div className="space-y-8 p-5 sm:p-8 lg:p-10">
               {pageQuestions.map(({ question: q, questionIndex }, idxInPage) => {
                 const displayIdx = startIdx + idxInPage;
                 const section = q.section === 'B' ? 'B' : 'A';
-                const previousSection = idxInPage > 0 ? (pageQuestions[idxInPage - 1].question.section === 'B' ? 'B' : 'A') : null;
                 return (
-                  <React.Fragment key={questionIndex}>
-                    {(idxInPage === 0 || section !== previousSection) && (
-                      <div className="inline-flex rounded-lg border border-[#E8C75B] bg-[#FFF8DF] px-3 py-1">
-                        <span className="text-xs font-black tracking-wider text-[#765A08]">SECTION {section}</span>
+                  <article id={`q-${questionIndex}`} key={questionIndex} className="border-b border-white/20 pb-8 last:border-b-0 last:pb-0">
+                    <div className="mb-6 flex items-center justify-between gap-3">
+                      <span className="rounded-full bg-[#FFD43B] px-4 py-1.5 text-xs font-black text-[#174333] sm:px-5 sm:py-2 sm:text-sm">
+                        SECTION {section}
+                      </span>
+                      <span className="rounded-xl border-2 border-[#FFD500] px-3 py-1.5 text-xs font-black text-[#FFD500] sm:px-4 sm:py-2 sm:text-lg">
+                        {q.marks} {q.marks === 1 ? 'MARK' : 'MARKS'}
+                      </span>
+                    </div>
+
+                    <h2 className="chalk-text chalk-font mb-8 text-2xl leading-tight sm:mb-10 sm:text-4xl lg:text-5xl">
+                      {displayIdx + 1}. {renderPronounceableText(q.question_text)}
+                    </h2>
+
+                    {q.question_image && (
+                      <div className="mb-8 flex justify-center">
+                        <img
+                          src={q.question_image}
+                          alt="Question illustration"
+                          onClick={() => setLightboxImage(q.question_image)}
+                          className="max-h-64 max-w-full cursor-zoom-in rounded-xl bg-white p-2 object-contain"
+                        />
                       </div>
                     )}
-                    <article id={`q-${questionIndex}`} className="border-b border-[#E7EEEE] pb-5 last:border-b-0">
-                      <div className="mb-3 flex items-start justify-between gap-2">
-                        <h3 className="text-sm font-bold leading-relaxed text-[#123F42] sm:text-base">
-                          <span className="mr-1.5 font-black">{displayIdx + 1}.</span>{renderPronounceableText(q.question_text)}
-                        </h3>
-                        <div className="flex shrink-0 items-center gap-2">
-                          <span className="rounded-full bg-[#FFF4C9] px-2.5 py-0.5 text-[11px] font-extrabold text-[#795C08]">
-                            {q.marks} {q.marks === 1 ? 'mk' : 'mks'}
-                          </span>
-                        </div>
-                      </div>
-                      {q.question_image && (
-                        <div className="mb-3">
-                          <img
-                            src={q.question_image} alt="Question diagram"
-                            className="mx-auto max-h-52 max-w-full cursor-zoom-in rounded-xl border border-[#DCE8E8] object-contain"
-                            onClick={() => setLightboxImage(q.question_image)}
-                          />
-                        </div>
-                      )}
-                      {q.options ? (
-                        <div className="space-y-2.5">
-                          {q.options.map((opt, optIdx) => {
-                            const selected = answers[questionIndex] === optIdx;
+
+                    {q.options ? (
+                      <>
+                        <p className="mb-4 text-xs font-extrabold tracking-widest text-[#F8DB70] sm:text-sm">
+                          CHOOSE THE CORRECT ANSWER
+                        </p>
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                          {q.options.map((option, optionIndex) => {
+                            const selected = answers[questionIndex] === optionIndex;
                             return (
-                              <button key={optIdx} type="button" onClick={() => handleAnswer(questionIndex, optIdx)}
-                                className={`flex w-full items-center gap-3 rounded-2xl border-2 px-4 py-3 text-left transition-all ${
-                                  selected
-                                    ? 'border-[#00898A] bg-[#C9F0EE]'
-                                    : 'border-[#D5E0E4] bg-white hover:border-[#55B7B5] hover:bg-[#F5FCFB]'
+                              <button
+                                key={optionIndex}
+                                type="button"
+                                onClick={() => handleAnswer(questionIndex, optionIndex)}
+                                aria-pressed={selected}
+                                className={`chalk-option flex min-h-[76px] items-center gap-3 rounded-2xl p-3 text-left sm:min-h-[85px] sm:gap-4 sm:p-4 ${
+                                  selected ? 'selected' : ''
+                                }`}
+                              >
+                                <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[3px] text-lg font-bold sm:h-14 sm:w-14 sm:border-4 sm:text-2xl ${
+                                  selected ? 'border-[#FFD500] bg-[#FFD500] text-[#164331]' : 'border-white text-white'
                                 }`}>
-                                <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 text-xs ${selected ? 'border-[#00777A] bg-[#00777A] text-white' : 'border-[#AEBEC4] bg-white'}`}>
-                                  {selected ? <CheckCircleSolid className="h-4 w-4" /> : <span className="font-bold">{String.fromCharCode(65 + optIdx)}</span>}
+                                  {selected
+                                    ? <CheckCircleSolid className="h-7 w-7 sm:h-8 sm:w-8" />
+                                    : String.fromCharCode(65 + optionIndex)}
                                 </span>
-                                <span className={`text-sm ${selected ? 'font-extrabold text-[#063F43]' : 'font-medium text-[#172F34]'}`}>{renderPronounceableText(opt)}</span>
+                                <span className="chalk-font text-lg leading-tight sm:text-2xl lg:text-3xl">
+                                  {renderPronounceableText(option)}
+                                </span>
+                                {selected && <span className="flex-1" />}
+                                {selected && <CheckCircleSolid className="h-7 w-7 shrink-0 text-[#FFD500]" />}
                               </button>
                             );
                           })}
                         </div>
-                      ) : (
-                        <textarea
-                          value={answers[questionIndex] || ''}
-                          onChange={e => handleShortAnswer(questionIndex, e.target.value)}
-                          placeholder="Type your answer here..."
-                          className="min-h-[120px] w-full rounded-2xl border-2 border-[#D5E0E4] bg-white p-4 text-sm text-[#123F42] outline-none transition focus:border-[#00898A] focus:ring-4 focus:ring-[#00898A]/10"
-                        />
-                      )}
-                    </article>
-                  </React.Fragment>
+                      </>
+                    ) : (
+                      <textarea
+                        value={answers[questionIndex] || ''}
+                        onChange={event => handleShortAnswer(questionIndex, event.target.value)}
+                        placeholder="Write your answer here..."
+                        className="chalk-font min-h-[170px] w-full rounded-xl border-2 border-white/70 bg-[#003E2C]/50 p-5 text-xl text-white outline-none placeholder:text-white/50 focus:border-[#FFD500] sm:text-2xl"
+                      />
+                    )}
+                  </article>
                 );
               })}
 
-              {/* Nav buttons */}
-              <div className="flex items-center justify-between gap-2 pt-1">
-                <button
-                  onClick={() => handlePageChange(Math.max(0, currentPage - 1))}
-                  disabled={currentPage === 0}
-                  className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#00777A] bg-white px-4 py-2.5 text-sm font-extrabold text-[#064F54] transition hover:bg-[#E9F8F6] disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <ChevronLeftIcon className="h-4 w-4" /> Prev
-                </button>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={handleOpenReview}
-                    className="inline-flex items-center gap-1.5 rounded-full border-2 border-[#00777A] bg-white px-4 py-2.5 text-sm font-extrabold text-[#064F54] transition hover:bg-[#E9F8F6]"
-                  >
-                    <EyeIcon className="h-4 w-4" />
-                    <span className="hidden sm:inline">Review</span>
-                  </button>
-                  <button
-                    onClick={handleConfirmSubmit}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-b from-[#FFE16A] to-[#F0A900] px-4 py-2.5 text-sm font-black text-[#173A3D] shadow-md transition hover:brightness-105 sm:hidden"
-                  >
-                    <PaperAirplaneIcon className="h-4 w-4" /> Submit
-                  </button>
-                </div>
-                <button
-                  onClick={() => handlePageChange(Math.min(totalPages - 1, currentPage + 1))}
-                  disabled={currentPage + 1 >= totalPages}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-b from-[#FFE16A] to-[#F3B500] px-4 py-2.5 text-sm font-black text-[#173A3D] shadow-md transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Next <ChevronRightIcon className="h-4 w-4" />
-                </button>
+              <div className="flex items-center justify-between gap-3 border-t border-white/20 pt-5">
+                <p className="chalk-font text-base text-white/80 sm:text-lg">Keep learning. Keep improving.</p>
+                <p className="text-right text-[10px] font-black tracking-widest text-[#FFD500] sm:text-xs">PROGRESS SCHOOLS</p>
               </div>
-              <p className="text-center text-[11px] font-semibold text-[#779091]">
-                {stats.answered} of {stats.total} answered
-              </p>
             </div>
           </section>
 
-          {/* ── Navigator — hidden on portrait, compact on landscape/desktop ── */}
-          <aside className="hidden w-[200px] shrink-0 space-y-3 sm:block lg:w-[220px]">
-            <div className="overflow-hidden rounded-[18px] border-2 border-[#12BFC0] bg-white shadow-sm">
-              <div className="flex items-center gap-2 bg-gradient-to-r from-[#00565D] to-[#008487] px-3 py-2.5 text-white">
-                <DocumentCheckIcon className="h-4 w-4 text-[#FFE16A]" />
-                <h2 className="text-xs font-extrabold">Navigator</h2>
+          <aside className="hidden space-y-4 lg:block">
+            <section className="overflow-hidden rounded-3xl border border-[#D3E7EA] bg-white shadow-sm">
+              <div className="bg-gradient-to-r from-[#005451] to-[#087B73] px-5 py-4 text-white">
+                <h2 className="text-lg font-black">Question Navigator</h2>
               </div>
-              <div className="p-3">
-                <div className="grid grid-cols-5 gap-1">
-                  {displayQuestions.map(({ questionIndex }, idx) => {
-                    const targetPage = Math.floor(idx / QUESTIONS_PER_PAGE);
+              <div className="p-5">
+                <div className="grid grid-cols-5 gap-3">
+                  {displayQuestions.map(({ questionIndex }, index) => {
+                    const targetPage = Math.floor(index / QUESTIONS_PER_PAGE);
                     const isCurrent = targetPage === currentPage;
                     const isAnswered = answers[questionIndex] !== undefined && answers[questionIndex] !== null && answers[questionIndex] !== '';
                     return (
-                      <button key={questionIndex} type="button"
+                      <button
+                        key={questionIndex}
+                        type="button"
+                        aria-label={`Go to question ${index + 1}${isAnswered ? ', answered' : ', unanswered'}`}
+                        aria-current={isCurrent ? 'step' : undefined}
                         onClick={() => {
                           if (targetPage !== currentPage) handlePageChange(targetPage);
                           setTimeout(() => {
-                            const el = document.getElementById(`q-${questionIndex}`);
-                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            const element = document.getElementById(`q-${questionIndex}`);
+                            if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
                           }, 80);
                         }}
-                        className={`aspect-square rounded-lg border text-[10px] font-black transition ${
+                        className={`aspect-square rounded-xl border-2 text-base font-black transition ${
                           isCurrent
-                            ? 'border-[#F0B900] bg-gradient-to-b from-[#FFD84D] to-[#F2A900] text-[#173A3D] shadow-sm'
+                            ? 'border-[#006A68] bg-[#006A68] text-white'
                             : isAnswered
-                              ? 'border-[#00777A] bg-[#00777A] text-white'
-                              : 'border-[#BFCFD4] bg-white text-[#18383C] hover:border-[#00777A]'
-                        }`}>
-                        {idx + 1}
+                              ? 'border-[#A7E6A4] bg-[#A7E6A4] text-[#174333]'
+                              : 'border-[#C8D4D8] bg-white text-[#24383D] hover:border-[#007A75]'
+                        }`}
+                      >
+                        {index + 1}
                       </button>
                     );
                   })}
                 </div>
-                <div className="mt-3 space-y-1 border-t border-[#DCE7E8] pt-2.5 text-[10px] font-semibold text-[#29494C]">
-                  <div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded bg-[#00777A]" /> Answered</div>
-                  <div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded bg-[#F3B500]" /> Current</div>
-                  <div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded border border-[#BFCFD4] bg-white" /> Unanswered</div>
+                <div className="mt-6 flex flex-wrap gap-3 text-xs font-semibold text-slate-700">
+                  <span className="flex items-center gap-2"><span className="h-4 w-4 rounded bg-[#A7E6A4]" />Answered</span>
+                  <span className="flex items-center gap-2"><span className="h-4 w-4 rounded border border-slate-400" />Unanswered</span>
+                  <span className="flex items-center gap-2"><span className="h-4 w-4 rounded bg-[#006A68]" />Current</span>
                 </div>
-                <button
-                  onClick={handleConfirmSubmit}
-                  className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-full bg-gradient-to-b from-[#FFE16A] to-[#F0A900] px-3 py-2.5 text-xs font-black text-[#173A3D] shadow-sm transition hover:brightness-105"
-                >
-                  <PaperAirplaneIcon className="h-4 w-4" /> Submit Quiz
-                </button>
-                <button
-                  onClick={handleOpenReview}
-                  className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-full border border-[#00777A] bg-white px-3 py-2 text-xs font-extrabold text-[#064F54] transition hover:bg-[#E9F8F6]"
-                >
-                  <EyeIcon className="h-4 w-4" /> Review
-                </button>
               </div>
-            </div>
-            <div className="rounded-[14px] border border-[#D3EEEE] bg-white p-3 shadow-sm">
-              <div className="flex items-center gap-1.5 text-[#00676B]">
-                <ExclamationCircleIcon className="h-4 w-4" />
-                <h3 className="text-xs font-extrabold">Tips</h3>
+            </section>
+
+            <section className="rounded-3xl border border-[#D3E7EA] bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <p className="font-extrabold text-[#183C3F]">Answered: {stats.answered} of {stats.total}</p>
+                <p className="font-black text-[#075B5B]">{Math.round(stats.progress)}%</p>
               </div>
-              <p className="mt-1.5 text-[10px] leading-relaxed text-[#617B7D]">
-                Answers are saved as you move between questions.
-              </p>
-            </div>
+              <div className="h-3 overflow-hidden rounded-full bg-[#D7EAF0]">
+                <div className="h-full rounded-full bg-[#FFD500] transition-all" style={{ width: `${stats.progress}%` }} />
+              </div>
+            </section>
           </aside>
+        </div>
+
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <button
+            type="button"
+            onClick={() => handlePageChange(Math.max(0, currentPage - 1))}
+            disabled={currentPage === 0}
+            className="rounded-full border-2 border-[#006A68] bg-white py-3 font-bold text-[#006A68] disabled:opacity-40"
+          >
+            <ChevronLeftIcon className="inline h-5 w-5" /> Previous
+          </button>
+          <button
+            type="button"
+            onClick={handleOpenReview}
+            className="rounded-full border-2 border-[#006A68] bg-white py-3 font-bold text-[#006A68]"
+          >
+            <EyeIcon className="mr-1 inline h-5 w-5" /> Review
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirmSubmit}
+            className="rounded-full bg-[#FFD43B] py-3 font-black text-[#172F2C]"
+          >
+            <PaperAirplaneIcon className="mr-1 inline h-5 w-5" /> Submit Quiz
+          </button>
+          <button
+            type="button"
+            onClick={() => handlePageChange(Math.min(totalPages - 1, currentPage + 1))}
+            disabled={currentPage + 1 >= totalPages}
+            className="rounded-full bg-[#006A68] py-3 font-bold text-white disabled:opacity-40"
+          >
+            Next <ChevronRightIcon className="inline h-5 w-5" />
+          </button>
         </div>
       </main>
       {/* Review modal uses the same teal header as the quiz screen */}
