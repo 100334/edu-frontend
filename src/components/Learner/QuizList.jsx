@@ -19,6 +19,7 @@ const QuizList = ({ onStartQuiz }) => {
   const [learnerForm, setLearnerForm] = useState('');
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [walletBalance, setWalletBalance] = useState(null);
+  const [walletError, setWalletError] = useState(false);
   const [quizToStart, setQuizToStart] = useState(null);
 
   useEffect(() => {
@@ -29,11 +30,14 @@ const QuizList = ({ onStartQuiz }) => {
   }, []);
 
   const loadWallet = async () => {
+    setWalletError(false);
     try {
       const response = await api.get('/api/quiz/wallet');
       if (!response.data.success) throw new Error(response.data.message || 'Could not load wallet balance.');
       setWalletBalance(Number(response.data.balance_mwk) || 0);
     } catch (error) {
+      setWalletBalance(null);
+      setWalletError(true);
       toast.error(error.response?.data?.message || error.message || 'Could not load quiz wallet.');
     }
   };
@@ -178,7 +182,9 @@ setQuizzes([]);
 
       <div className="mb-6 flex flex-col gap-1 rounded-xl border border-[#D3EEEE] bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm font-bold text-[#003B46]">
-          Quiz wallet: {walletBalance === null ? 'Loading…' : `MK${walletBalance}`}
+          Quiz wallet: {walletError
+            ? <><span className="text-red-700">Unavailable</span>{' '}<button type="button" onClick={loadWallet} className="text-[#006770] underline">Retry</button></>
+            : walletBalance === null ? 'Loading…' : `MK${walletBalance}`}
         </p>
         <p className="text-xs text-slate-500">
           MK100 per new attempt. Admins add credits; no real payment is processed. Unsubmitted attempts are refunded after 24 hours when the wallet is checked again.
@@ -382,7 +388,7 @@ setQuizzes([]);
               <div className="rounded-xl border border-[#D3EEEE] bg-[#F2FBFC] p-4">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-slate-500">Current balance</span>
-                  <span className="font-bold text-[#003B46]">{walletBalance === null ? 'Loading…' : `MK${balance}`}</span>
+                  <span className="font-bold text-[#003B46]">{walletError ? 'Unavailable' : walletBalance === null ? 'Loading…' : `MK${balance}`}</span>
                 </div>
                 <div className="mt-2 flex items-center justify-between text-sm">
                   <span className="text-slate-500">{isResuming ? 'Charge to continue' : 'New attempt fee'}</span>
@@ -397,6 +403,12 @@ setQuizzes([]);
                 {!canAffordAttempt && walletBalance !== null && (
                   <p className="mt-3 border-t border-[#D3EEEE] pt-3 text-sm font-semibold text-amber-800">
                     You need MK{100 - balance} more to start this attempt.
+                  </p>
+                )}
+                {walletError && (
+                  <p role="alert" className="mt-3 border-t border-[#D3EEEE] pt-3 text-sm font-semibold text-red-700">
+                    Wallet balance could not be loaded. Please retry before starting a quiz.
+                    <button type="button" onClick={loadWallet} className="ml-1 underline">Retry</button>
                   </p>
                 )}
               </div>
@@ -416,7 +428,7 @@ setQuizzes([]);
                 {canAffordAttempt && (
                   <button
                     type="button"
-                    disabled={walletBalance === null}
+                    disabled={walletBalance === null || walletError}
                     onClick={() => {
                       const selectedQuiz = quizToStart;
                       setQuizToStart(null);
