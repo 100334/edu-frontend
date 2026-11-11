@@ -195,7 +195,9 @@ const DesktopTabletDashboard = ({
                   }`} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h3 className="text-xl font-black xl:text-3xl">{title}</h3>
+                  <h3 className={`text-xl font-black xl:text-3xl ${teal ? 'text-white' : 'text-[#103E40]'}`}>
+                    {title}
+                  </h3>
                   <p className={`mt-1 text-xs font-semibold xl:text-base ${
                     teal ? 'text-white/90' : 'text-[#574300]'
                   }`}>
