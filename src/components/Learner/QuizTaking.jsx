@@ -692,7 +692,7 @@ toast.dismiss(loadingToast);
                           src={q.question_image}
                           alt="Question illustration"
                           onClick={() => setLightboxImage(q.question_image)}
-                          className="quiz-taking-image max-h-[18vh] max-w-full cursor-zoom-in rounded-xl bg-white p-2 object-contain sm:max-h-[22vh]"
+                          className="quiz-taking-image max-h-[28vh] max-w-full cursor-zoom-in rounded-xl bg-white p-2 object-contain sm:max-h-[34vh] lg:max-h-[38vh]"
                         />
                       </div>
                     )}
