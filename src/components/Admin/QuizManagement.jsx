@@ -38,7 +38,8 @@ const QuizManagement = () => {
   const [editingQuiz,    setEditingQuiz]    = useState(null);
   const [editingQ,       setEditingQ]       = useState(null);
   const [submitting,     setSubmitting]     = useState(false);
-  const [confirmDelete,  setConfirmDelete]  = useState(null); // { type:'quiz'|'submission'|'question', item }
+  const [confirmDelete,  setConfirmDelete]  = useState(null); // { type:'quiz'|'submission'|'question'|'allQuestions', item }
+  const [deletingAllQuestions, setDeletingAllQuestions] = useState(false);
   const [resetAttempt,   setResetAttempt]   = useState(null);
   const [resettingAttempt, setResettingAttempt] = useState(false);
 
@@ -269,6 +270,35 @@ const QuizManagement = () => {
       } else toast.error(res.data.message);
     } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
     finally { setConfirmDelete(null); }
+  };
+
+  const handleDeleteAllQuestions = async () => {
+    if (!selectedQuiz) return;
+    setDeletingAllQuestions(true);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await api.delete(`/api/admin/quizzes/${selectedQuiz.id}/questions`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.data.success) {
+        toast.success(`${res.data.deleted_count ?? selectedQuiz.questions.length} questions deleted`);
+        setSelectedQuiz({
+          ...selectedQuiz,
+          questions: [],
+          total_marks: 0,
+          section_a_marks: 0,
+          section_b_marks: 0,
+        });
+        loadQuizzes();
+      } else {
+        toast.error(res.data.message || 'Failed to delete questions');
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to delete questions');
+    } finally {
+      setConfirmDelete(null);
+      setDeletingAllQuestions(false);
+    }
   };
 
   // ── grading ──────────────────────────────────────────────────────────────────
@@ -720,6 +750,7 @@ const QuizManagement = () => {
     if (confirmDelete.type === 'quiz')       handleDeleteQuiz(confirmDelete.item);
     if (confirmDelete.type === 'submission') handleDeleteSubmission(confirmDelete.item);
     if (confirmDelete.type === 'question')   handleDeleteQuestion(confirmDelete.item);
+    if (confirmDelete.type === 'allQuestions') handleDeleteAllQuestions();
   };
 
   if (loading) return (
@@ -1067,6 +1098,21 @@ const QuizManagement = () => {
               <p className="text-xs text-white/60">{selectedQuiz.subject_name} · {selectedQuiz.exam_year}</p>
             </div>
             <div className="flex items-center gap-2">
+              {!!selectedQuiz.questions?.length && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDelete({
+                    type: 'allQuestions',
+                    item: selectedQuiz,
+                    label: `All ${selectedQuiz.questions.length} questions in ${selectedQuiz.title}`,
+                  })}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-red-500/90 hover:bg-red-600 text-white rounded-lg text-xs font-semibold transition"
+                  title="Delete all questions in this quiz"
+                >
+                  <TrashIcon className="w-3.5 h-3.5" />
+                  Delete All
+                </button>
+              )}
               <button
                 onClick={() => { clearBulkImport(); setShowBulkModal(true); }}
                 className="flex items-center gap-1 px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-semibold transition"
@@ -1651,7 +1697,13 @@ const QuizManagement = () => {
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white">
-                  Delete {confirmDelete.type === 'quiz' ? 'Quiz' : confirmDelete.type === 'question' ? 'Question' : 'Submission'}
+                  Delete {confirmDelete.type === 'quiz'
+                    ? 'Quiz'
+                    : confirmDelete.type === 'question'
+                      ? 'Question'
+                      : confirmDelete.type === 'allQuestions'
+                        ? 'All Questions'
+                        : 'Submission'}
                 </h3>
                 <p className="text-[10px] text-[#D9F1F4] mt-0.5 capitalize">{confirmDelete.type}</p>
               </div>
@@ -1677,9 +1729,10 @@ const QuizManagement = () => {
               </button>
               <button
                 onClick={executeConfirmedDelete}
+                disabled={deletingAllQuestions}
                 className="flex-1 py-2.5 bg-[#007F9E] hover:bg-[#006B86] text-white rounded-xl text-sm font-semibold transition shadow-sm"
               >
-                Delete
+                {deletingAllQuestions ? 'Deleting…' : 'Delete'}
               </button>
             </div>
           </div>
