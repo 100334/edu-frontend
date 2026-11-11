@@ -682,7 +682,7 @@ toast.dismiss(loadingToast);
                       </span>
                     </div>
 
-                    <h2 className="quiz-taking-question chalk-text chalk-font mb-4 text-xl leading-tight sm:mb-6 sm:text-2xl lg:text-3xl">
+                    <h2 className="quiz-taking-question chalk-text chalk-font mb-4 text-[22px] leading-tight sm:mb-6">
                       {displayIdx + 1}. {renderPronounceableText(q.question_text)}
                     </h2>
 
@@ -711,7 +711,7 @@ toast.dismiss(loadingToast);
                                 type="button"
                                 onClick={() => handleAnswer(questionIndex, optionIndex)}
                                 aria-pressed={selected}
-                                className={`quiz-taking-option chalk-option flex min-h-[52px] items-center gap-2 rounded-xl p-2 text-left text-lg sm:min-h-[64px] sm:gap-3 sm:rounded-2xl sm:p-3 sm:text-xl lg:text-2xl ${
+                                className={`quiz-taking-option chalk-option flex min-h-[52px] items-center gap-2 rounded-xl p-2 text-left text-lg sm:min-h-[64px] sm:gap-3 sm:rounded-2xl sm:p-3 ${
                                   selected ? 'selected' : ''
                                 }`}
                               >
