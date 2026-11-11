@@ -68,7 +68,7 @@ const DesktopTabletDashboard = ({
         <div className="flex shrink-0 items-center gap-2 border-r-2 border-white/40 pr-4 sm:gap-3 sm:pr-5 xl:pr-8">
           <AcademicCapIcon className="h-10 w-10 shrink-0 text-[#FFD52E] sm:h-12 sm:w-12 xl:h-14 xl:w-14" />
           <div>
-            <h1 className="whitespace-nowrap text-sm font-black leading-tight sm:text-lg xl:text-2xl">
+            <h1 className="whitespace-nowrap text-sm font-black leading-tight text-white sm:text-lg xl:text-2xl">
               PROGRESS SCHOOLS
             </h1>
             <p className="whitespace-nowrap text-[10px] font-black tracking-wider text-[#FFD52E] sm:text-xs xl:text-sm">
@@ -145,7 +145,7 @@ const DesktopTabletDashboard = ({
               <span className="inline-block rounded-full bg-[#07575A]/90 px-5 py-2 text-xs font-black tracking-wider text-white xl:text-sm">
                 MY LEARNING SPACE
               </span>
-              <h2 className="mt-4 text-4xl font-black leading-tight sm:text-5xl xl:text-7xl">
+              <h2 className="mt-4 text-4xl font-black leading-tight text-white sm:text-5xl xl:text-7xl">
                 Hello, {firstName}!
               </h2>
               <p className="mt-3 text-lg font-extrabold sm:text-xl xl:text-2xl">
