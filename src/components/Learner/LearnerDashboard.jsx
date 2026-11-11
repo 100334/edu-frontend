@@ -296,6 +296,7 @@ function LowerFormDashboard() {
   const [quizAttempts, setQuizAttempts] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [currentUserRank, setCurrentUserRank] = useState(null);
+  const [leaderboardTotalParticipants, setLeaderboardTotalParticipants] = useState(0);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [stats, setStats] = useState({
     reportsCount: 0,
@@ -524,6 +525,7 @@ setQuizAttempts([]);
       if (res.data.success) {
         setLeaderboard(res.data.leaderboard || []);
         setCurrentUserRank(res.data.current_user_rank);
+        setLeaderboardTotalParticipants(res.data.total_participants || 0);
       }
     } catch (error) {
 toast.error('Failed to load leaderboard');
@@ -637,10 +639,9 @@ toast.error('Failed to load leaderboard');
       const avgScore      = calculateAverage(validSubjects);
       const avgGrade      = getGradeFromScore(avgScore, report.form);
       const passedSubjects = !isUpperForm ? validSubjects.filter(s => s.score >= 40).length : 0;
-      // Prefer stored values from the report; fall back to live session data
       const classPosition = report.class_rank
         ? `${report.class_rank}${getOrdinalSuffix(parseInt(report.class_rank))}`
-        : (currentUserRank ? `${currentUserRank}${getOrdinalSuffix(currentUserRank)}` : 'N/A');
+        : 'N/A';
       const regNumber = report.learner_reg_number
         || user?.reg_number
         || user?.registration_number
@@ -888,10 +889,9 @@ toast.error('Failed to generate PDF');
 
     const avg     = calculateAverage(validSubjects);
     const avgGrade = getGradeFromScore(avg, report.form);
-    // Prefer the per-report rank stored in DB; fall back to live leaderboard rank
     const classPosition = report.class_rank
       ? `${report.class_rank}`
-      : (currentUserRank ? `${currentUserRank}` : 'N/A');
+      : 'N/A';
     // Prefer reg number stored on the report; fall back to auth context
     const regNumber = report.learner_reg_number
       || user?.reg_number
@@ -1539,7 +1539,7 @@ toast.error('Failed to generate PDF');
                         <h3 className="font-semibold text-lg mb-1">Your Rank</h3>
                         <div className="flex items-center gap-2">
                           <span className="text-3xl font-bold">#{currentUserRank}</span>
-                          <span className="text-sm opacity-90">of {leaderboard.length} students</span>
+                          <span className="text-sm opacity-90">of {leaderboardTotalParticipants} quiz takers</span>
                         </div>
                       </div>
                       <TrophyIcon className="w-10 h-10 opacity-80" />
@@ -1559,10 +1559,8 @@ toast.error('Failed to generate PDF');
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Rank</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Student</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Quiz</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Report</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Attendance</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Overall</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Average Quiz Score</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Quizzes Taken</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -1576,18 +1574,7 @@ toast.error('Failed to generate PDF');
                               <div className="text-xs text-gray-500">{student.reg_number}</div>
                             </td>
                             <td className="px-4 py-3 text-sm font-semibold">{student.quiz_score}%</td>
-                            <td className="px-4 py-3 text-sm font-semibold">{student.report_score}%</td>
-                            <td className="px-4 py-3 text-sm font-semibold">{student.attendance_rate}%</td>
-                            <td className="px-4 py-3">
-                              <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                student.overall_score >= 80 ? 'bg-green-100 text-green-700' :
-                                student.overall_score >= 60 ? 'bg-blue-100 text-blue-700' :
-                                student.overall_score >= 40 ? 'bg-yellow-100 text-yellow-700' :
-                                'bg-red-100 text-red-700'
-                              }`}>
-                                {student.overall_score}%
-                              </span>
-                            </td>
+                            <td className="px-4 py-3 text-sm font-semibold">{student.quiz_count}</td>
                           </tr>
                         ))}
                       </tbody>

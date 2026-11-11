@@ -120,6 +120,7 @@ export default function UpperFormDashboard() {
   const [attendanceRecords, setAttendanceRecords] = useState([]);
   const [leaderboard,      setLeaderboard]      = useState([]);
   const [currentUserRank,  setCurrentUserRank]  = useState(null);
+  const [leaderboardTotalParticipants, setLeaderboardTotalParticipants] = useState(0);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [stats, setStats] = useState({
     reportsCount: 0, attendanceRate: '—', averageScore: '—',
@@ -269,6 +270,7 @@ export default function UpperFormDashboard() {
       if (res.data.success) {
         setLeaderboard(res.data.leaderboard || []);
         setCurrentUserRank(res.data.current_user_rank);
+        setLeaderboardTotalParticipants(res.data.total_participants || 0);
       }
     } catch { toast.error('Failed to load leaderboard'); }
     finally { setLeaderboardLoading(false); }
@@ -749,7 +751,7 @@ export default function UpperFormDashboard() {
                 <p className="text-xs opacity-80 mb-0.5">Your Rank</p>
                 <div className="flex items-end gap-1.5">
                   <span className="text-3xl font-black">#{currentUserRank}</span>
-                  <span className="text-xs opacity-70 mb-1">of {leaderboard.length}</span>
+                  <span className="text-xs opacity-70 mb-1">of {leaderboardTotalParticipants} quiz takers</span>
                 </div>
               </div>
               <TrophyIcon className="w-8 h-8 text-[#FFE77B]" />
@@ -760,7 +762,7 @@ export default function UpperFormDashboard() {
               <table className="w-full min-w-[380px]">
                 <thead className="bg-gradient-to-r from-[#E7F8F7] to-[#F7FCFA]">
                   <tr>
-                    {['#', 'Student', 'Quiz', 'Report', 'Overall'].map(h => (
+                    {['#', 'Student', 'Average Quiz Score', 'Quizzes Taken'].map(h => (
                       <th key={h} className="px-3 py-2.5 text-left text-[10px] font-black text-[#00565B] uppercase tracking-wide">{h}</th>
                     ))}
                   </tr>
@@ -774,15 +776,7 @@ export default function UpperFormDashboard() {
                         <p className="text-[10px] text-slate-400 mt-0.5">{s.reg_number}</p>
                       </td>
                       <td className="px-3 py-2.5 text-xs font-bold text-[#073F43]">{s.quiz_score}%</td>
-                      <td className="px-3 py-2.5 text-xs font-bold text-[#073F43]">{s.report_score}%</td>
-                      <td className="px-3 py-2.5">
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                          s.overall_score >= 80 ? 'bg-green-100 text-green-700' :
-                          s.overall_score >= 60 ? 'bg-[#DDF6F2] text-[#00666B]'  :
-                          s.overall_score >= 40 ? 'bg-amber-100 text-amber-700' :
-                                                  'bg-red-100 text-red-700'
-                        }`}>{s.overall_score}%</span>
-                      </td>
+                      <td className="px-3 py-2.5 text-xs font-bold text-[#073F43]">{s.quiz_count}</td>
                     </tr>
                   ))}
                 </tbody>
