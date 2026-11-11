@@ -546,9 +546,9 @@ toast.dismiss(loadingToast);
             </div>
 
             {/* Instructions */}
-            <div className="mx-5 mb-4 rounded-xl bg-[#FFF8DF] border border-[#E8C75B] px-4 py-3">
-              <p className="text-xs font-black text-[#765A08] uppercase tracking-wide mb-1">Instructions</p>
-              <ul className="text-xs text-[#5C4A00] space-y-1">
+            <div className="mx-5 mb-4 rounded-xl border border-[#BDECE7] bg-[#E4F4F4] px-4 py-3">
+              <p className="mb-1 text-xs font-black uppercase tracking-wide text-[#00676B]">Instructions</p>
+              <ul className="space-y-1 text-xs text-[#24585A]">
                 <li>• Answer all questions before the time runs out.</li>
                 <li>• Your answers are auto-saved as you move between questions.</li>
                 <li>• You can review your answers before submitting.</li>
