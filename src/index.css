@@ -76,6 +76,7 @@
   .chalk-text,
   .chalk-option {
     font-family: 'Kalam', cursive;
+    font-style: normal;
   }
 
   .chalk-font {
