@@ -281,6 +281,11 @@ body,
   border-bottom: 4px solid #f3c34a;
 }
 
+.primary-learner-dashboard__desktop-header,
+.primary-learner-dashboard__desktop-home {
+  display: none;
+}
+
 @media (orientation: landscape) {
   .learner-dashboard-shell {
     width: 100%;
@@ -298,6 +303,18 @@ body,
     max-width: none;
     margin-left: 0;
     margin-right: 0;
+    padding-bottom: 0;
+  }
+
+  .primary-learner-dashboard__mobile-header,
+  .primary-learner-dashboard__mobile-home,
+  nav.primary-learner-dashboard__nav {
+    display: none;
+  }
+
+  .primary-learner-dashboard__desktop-header,
+  .primary-learner-dashboard__desktop-home {
+    display: block;
   }
 
   .primary-learner-dashboard__hero {
@@ -312,16 +329,12 @@ body,
   }
 
   main.primary-learner-dashboard__content {
-    max-width: none;
+    max-width: 1600px;
     padding-left: clamp(1rem, 3vw, 3rem);
     padding-right: clamp(1rem, 3vw, 3rem);
   }
 
-  nav.primary-learner-dashboard__nav {
-    left: 0;
-    max-width: none;
-    padding-left: 1rem;
-    padding-right: 1rem;
-    transform: none;
+  .primary-learner-dashboard__content {
+    padding-top: clamp(1.25rem, 3vh, 2rem);
   }
 }
