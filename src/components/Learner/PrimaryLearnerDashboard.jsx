@@ -63,6 +63,7 @@ const PrimaryLearnerDashboard = () => {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('home');
   const [reports, setReports] = useState([]);
+  const [quizAttempts, setQuizAttempts] = useState([]);
   const [attendance, setAttendance] = useState({ stats: {}, records: [] });
   const [showQuiz, setShowQuiz] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -70,9 +71,10 @@ const PrimaryLearnerDashboard = () => {
   const loadDashboardData = useCallback(async () => {
     setLoading(true);
 
-    const [reportsResult, attendanceResult] = await Promise.allSettled([
+    const [reportsResult, attendanceResult, quizResultsResult] = await Promise.allSettled([
       api.get('/api/learner/reports'),
       api.get('/api/learner/attendance'),
+      api.get('/api/quiz/history'),
     ]);
 
     if (reportsResult.status === 'fulfilled') {
@@ -100,6 +102,17 @@ const PrimaryLearnerDashboard = () => {
       toast.error('Could not load your visit history');
     }
 
+    if (quizResultsResult.status === 'fulfilled') {
+      const payload = quizResultsResult.value.data;
+      setQuizAttempts(
+        payload?.success && Array.isArray(payload.attempts)
+          ? payload.attempts
+          : []
+      );
+    } else {
+      toast.error('Could not load your quiz scores');
+    }
+
     setLoading(false);
   }, []);
 
@@ -122,12 +135,24 @@ const PrimaryLearnerDashboard = () => {
     );
   }
 
+  const quizPercentages = quizAttempts
+    .map(attempt => {
+      const savedPercentage = Number(attempt.percentage);
+      if (attempt.percentage != null && Number.isFinite(savedPercentage)) {
+        return savedPercentage;
+      }
+
+      const earned = Number(attempt.marks_earned ?? attempt.earned_points);
+      const possible = Number(attempt.total_marks ?? attempt.total_points);
+      return Number.isFinite(earned) && Number.isFinite(possible) && possible > 0
+        ? (earned / possible) * 100
+        : null;
+    })
+    .filter(score => score !== null && Number.isFinite(score));
   const average =
-    reports[0]?.average_score ??
-    reports[0]?.subjects?.reduce(
-      (total, subject) => total + (Number(subject.score) || 0),
-      0
-    ) / (reports[0]?.subjects?.length || 1);
+    quizPercentages.length > 0
+      ? quizPercentages.reduce((total, score) => total + score, 0) / quizPercentages.length
+      : null;
 
   const attendanceRate =
     attendance.stats?.visits ?? attendance.stats?.total ?? 0;
@@ -137,7 +162,7 @@ const PrimaryLearnerDashboard = () => {
   const learnerClass = user?.form || 'Primary learner';
 
   const formattedAverage =
-    Number.isFinite(Number(average)) && reports.length
+    average !== null && Number.isFinite(average)
       ? `${Math.round(Number(average))}%`
       : '—';
 
