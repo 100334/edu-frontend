@@ -9,6 +9,11 @@ import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import html2pdf from 'html2pdf.js/dist/html2pdf.bundle.min.js';
+import {
+  getDisplayOptionIndex,
+  getOriginalOptionIndex,
+  shuffleQuizQuestionOptions,
+} from '../../utils/shuffleQuizQuestionOptions';
 
 function normalizeQuizId(value) {
   if (value == null || value === '') return null;
@@ -94,11 +99,12 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1, showPrim
     for (const { questionIndex } of pageQuestions) {
       const ans = answers[questionIndex];
       if (ans !== undefined) {
+        const canonicalAnswer = getOriginalOptionIndex(questions[questionIndex], ans);
         try {
           const token = localStorage.getItem('token');
           await api.post(`/api/quiz/${encodeURIComponent(resolvedQuizId)}/save-answer`, {
             question_index: questionIndex,
-            answer: ans,
+            answer: canonicalAnswer,
             attempt_id: attemptId
           }, { headers: { Authorization: `Bearer ${token}` } });
         } catch (error) {  }
@@ -142,14 +148,26 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1, showPrim
         return;
       }
       setQuiz(res.data.quiz);
-      const qs = (res.data.questions || []).map(q => ({
+      const qs = (res.data.questions || []).map(q => shuffleQuizQuestionOptions({
         ...q,
         section: String(q.section || 'A').toUpperCase() === 'B' ? 'B' : 'A',
         marks: q.marks ?? q.points ?? 1
       }));
       setQuestions(qs);
       setTimeLeft(res.data.quiz.duration * 60);
-      if (res.data.saved_answers) setAnswers(res.data.saved_answers);
+      if (res.data.saved_answers) {
+        const restoredAnswers = Object.fromEntries(
+          Object.entries(res.data.saved_answers).map(([questionIndex, savedAnswer]) => {
+            const question = qs[Number(questionIndex)];
+            if (savedAnswer === null || savedAnswer === undefined || savedAnswer === '') {
+              return [questionIndex, savedAnswer];
+            }
+
+            return [questionIndex, getDisplayOptionIndex(question, savedAnswer)];
+          })
+        );
+        setAnswers(restoredAnswers);
+      }
     } catch (error) {
       if (error.response?.status === 402) {
         setWalletDialog({
@@ -357,7 +375,11 @@ const QuizTaking = ({ quizId, onComplete, onExit, questionsPerPage = 1, showPrim
     await autoSavePage(currentPage);
     try {
       const token = localStorage.getItem('token');
-      const answersPayload = questions.map((_, idx) => answers[idx] !== undefined ? answers[idx] : null);
+      const answersPayload = questions.map((question, idx) => {
+        const answer = answers[idx];
+        if (answer === undefined) return null;
+        return getOriginalOptionIndex(question, answer);
+      });
       const payload = {
         attempt_id: attemptId,
         answers: answersPayload,
