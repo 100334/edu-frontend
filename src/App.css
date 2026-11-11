@@ -317,6 +317,10 @@ body,
     display: block;
   }
 
+  .primary-learner-dashboard__desktop-header {
+    min-height: clamp(260px, 38vh, 380px);
+  }
+
   .primary-learner-dashboard__hero {
     height: clamp(190px, 32vh, 340px);
     overflow: hidden;

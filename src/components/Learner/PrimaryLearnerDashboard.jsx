@@ -230,8 +230,15 @@ const PrimaryLearnerDashboard = () => {
         </div>
       </header>
 
-      <header className="primary-learner-dashboard__desktop-header sticky top-0 z-40 border-b-4 border-[#FBD34B] bg-gradient-to-r from-[#004F55] to-[#007D7C] shadow-lg">
-        <div className="mx-auto flex max-w-[1700px] flex-wrap items-center justify-between gap-3 px-4 py-3 lg:px-7">
+      <header className="primary-learner-dashboard__desktop-header relative z-40 w-full overflow-hidden border-b-4 border-[#FBD34B] bg-[#00676B] shadow-lg">
+        <img
+          src="/image6.png"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#003F43]/55 via-transparent to-transparent" />
+        <div className="relative z-10 mx-auto flex max-w-[1700px] flex-wrap items-center justify-between gap-3 px-4 py-3 lg:px-7">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#FFD52D]">
               <AcademicCapIcon className="h-9 w-9 text-[#00565B]" />
@@ -286,6 +293,31 @@ const PrimaryLearnerDashboard = () => {
             </button>
           </div>
         </div>
+        {activeTab === 'home' && (
+          <div className="relative z-10 mx-auto flex min-h-[150px] max-w-[1700px] items-center px-5 pb-8 sm:px-10 lg:min-h-[205px] lg:px-14">
+            <div className="max-w-[52%] text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.35)]">
+              <span className="inline-flex rounded-full bg-[#FFD52D] px-4 py-2 text-[10px] font-black tracking-widest text-[#174344] sm:text-xs">
+                MY LEARNING SPACE
+              </span>
+              <h2 className="mt-3 text-3xl font-black leading-tight sm:text-4xl lg:text-5xl">
+                Hello, {firstName}!
+              </h2>
+              <p className="mt-2 text-sm font-bold sm:text-base lg:text-lg">
+                Welcome to your learning space.
+              </p>
+              <p className="mt-1 text-xs sm:text-sm lg:text-base">
+                Learn, practise and grow your knowledge.
+              </p>
+              <button
+                type="button"
+                onClick={() => setActiveTab('learn')}
+                className="mt-4 rounded-full bg-gradient-to-r from-[#FFD943] to-[#F5B900] px-6 py-3 text-sm font-black text-[#174344] shadow-md transition hover:-translate-y-1 hover:brightness-105"
+              >
+                Start Learning
+              </button>
+            </div>
+          </div>
+        )}
       </header>
 
       <main className="primary-learner-dashboard__content mx-auto w-full max-w-[520px] space-y-3.5 px-3 py-3">
@@ -364,39 +396,6 @@ const PrimaryLearnerDashboard = () => {
 
         {activeTab === 'home' && (
           <section className="primary-learner-dashboard__desktop-home space-y-7">
-            <section className="relative min-h-[260px] overflow-hidden rounded-[26px] border-2 border-white shadow-lg sm:min-h-[310px] lg:min-h-[350px]">
-              <img
-                src="/image.png"
-                alt="Two learners reading together at school"
-                className="absolute inset-0 h-full w-full object-cover object-center"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-white via-white/95 to-white/10" />
-              <div className="relative flex min-h-[260px] items-center sm:min-h-[310px] lg:min-h-[350px]">
-                <div className="max-w-[65%] px-5 py-8 sm:max-w-[55%] sm:px-10 lg:max-w-[52%] lg:px-14">
-                  <span className="inline-flex rounded-full bg-[#FFF0B8] px-4 py-2 text-[10px] font-black tracking-widest text-[#806000] sm:text-xs">
-                    MY LEARNING SPACE
-                  </span>
-                  <h2 className="mt-4 text-3xl font-black leading-tight text-[#00565B] sm:text-4xl lg:text-5xl">
-                    Hello, {firstName}!
-                  </h2>
-                  <p className="mt-3 text-sm font-bold text-[#173C42] sm:text-base lg:text-lg">
-                    Welcome to your learning space.
-                  </p>
-                  <p className="mt-1 text-xs leading-relaxed text-[#36575A] sm:text-sm lg:text-base">
-                    Learn, practise and grow your knowledge.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('learn')}
-                    className="mt-5 inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-[#FFD943] to-[#F5B900] px-6 py-3 text-sm font-black text-[#174344] shadow-md transition hover:-translate-y-1 hover:brightness-105"
-                  >
-                    Start Learning
-                    <span aria-hidden="true" className="text-xl leading-none">›</span>
-                  </button>
-                </div>
-              </div>
-            </section>
-
             <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
               {quickLinks.map(({ tab, title, description, Icon, theme }) => {
                 const teal = theme === 'teal';
