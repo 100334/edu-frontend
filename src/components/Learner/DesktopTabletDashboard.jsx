@@ -133,14 +133,14 @@ const DesktopTabletDashboard = ({
 
     {activeTab === 'home' && (
       <section className="primary-learner-dashboard__desktop-home w-full pb-6 lg:pb-7">
-        <section className="relative isolate min-h-[280px] overflow-hidden rounded-b-[30px] bg-[#00676B] shadow-lg sm:min-h-[300px] xl:min-h-[340px]">
+        <section className="relative isolate min-h-[240px] overflow-hidden rounded-b-[30px] bg-[#00676B] shadow-lg sm:min-h-[260px] xl:min-h-[300px]">
           <img
             src="/image6.png"
             alt="Two school learners reading a book"
             className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
           />
           <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#00676B]/95 via-[#00676B]/80 via-45% to-transparent" />
-          <div className="flex min-h-[280px] items-center px-6 py-8 sm:min-h-[300px] sm:px-10 xl:min-h-[340px] xl:px-16">
+          <div className="flex min-h-[240px] items-center px-6 py-6 sm:min-h-[260px] sm:px-10 xl:min-h-[300px] xl:px-16">
             <div className="max-w-[620px] text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.35)]">
               <span className="inline-block rounded-full bg-[#FFF0A8] px-5 py-2 text-xs font-black tracking-wider text-[#07575A] xl:text-sm">
                 MY LEARNING SPACE
