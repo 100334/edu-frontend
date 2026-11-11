@@ -318,7 +318,7 @@ body,
   }
 
   .primary-learner-dashboard__desktop-header {
-    min-height: clamp(260px, 38vh, 380px);
+    min-height: 0;
   }
 
   .primary-learner-dashboard__hero {

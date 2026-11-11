@@ -7,6 +7,7 @@ import Library from '../Library';
 import QuizList from './QuizList';
 import QuizTaking from './QuizTaking';
 import QuizResults from './QuizResults';
+import DesktopTabletDashboard from './DesktopTabletDashboard';
 import {
   AcademicCapIcon,
   BellIcon,
@@ -255,95 +256,17 @@ const PrimaryLearnerDashboard = () => {
         </div>
       </header>
 
-      <header className="primary-learner-dashboard__desktop-header relative z-40 w-full overflow-hidden border-b-4 border-[#FBD34B] bg-[#00676B] shadow-lg">
-        <img
-          src="/image6.png"
-          alt=""
-          aria-hidden="true"
-          className="absolute inset-0 h-full w-full object-cover object-center"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#003F43]/55 via-transparent to-transparent" />
-        <div className="relative z-10 mx-auto flex max-w-[1700px] flex-wrap items-center justify-between gap-3 px-4 py-3 lg:px-7">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#FFD52D]">
-              <AcademicCapIcon className="h-9 w-9 text-[#00565B]" />
-            </div>
-            <div>
-              <h1 className="text-base font-black tracking-tight text-white sm:text-xl">
-                PROGRESS SCHOOLS
-              </h1>
-              <p className="text-[10px] font-black tracking-widest text-[#FFD84D] sm:text-xs">
-                MY LEARNING SPACE
-              </p>
-            </div>
-          </div>
-
-          <nav aria-label="Learner dashboard" className="order-3 flex w-full items-center justify-center gap-1 overflow-x-auto border-t border-white/15 pt-2 lg:order-2 lg:w-auto lg:border-0 lg:pt-0">
-            {primaryTabs.map(({ id, label, Icon }) => {
-              const selected = activeTab === id;
-
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => setActiveTab(id)}
-                  aria-current={selected ? 'page' : undefined}
-                  className={`flex shrink-0 items-center gap-2 rounded-full px-3 py-2.5 text-xs font-black transition sm:px-4 sm:text-sm ${
-                    selected
-                      ? 'bg-[#FFD52D] text-[#06474A] shadow-md'
-                      : 'text-white hover:bg-white/15'
-                  }`}
-                >
-                  <Icon className="h-5 w-5" />
-                  {label}
-                </button>
-              );
-            })}
-          </nav>
-
-          <div className="order-2 flex items-center gap-3 lg:order-3">
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-bold text-white">{learnerName}</p>
-              <p className="text-xs text-[#C5EFEB]">{learnerClass}</p>
-            </div>
-            <div className="flex h-11 w-11 items-center justify-center rounded-full border-[3px] border-[#FFD52D] bg-[#E9F8F5]">
-              <UserCircleIcon className="h-8 w-8 text-[#00676B]" />
-            </div>
-            <button
-              type="button"
-              onClick={logout}
-              className="rounded-full px-3 py-2 text-sm font-bold text-white transition hover:bg-white/15"
-            >
-              Log out
-            </button>
-          </div>
-        </div>
-        {activeTab === 'home' && (
-          <div className="relative z-10 mx-auto flex min-h-[150px] max-w-[1700px] items-center px-5 pb-8 sm:px-10 lg:min-h-[205px] lg:px-14">
-            <div className="max-w-[52%] text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.35)]">
-              <span className="inline-flex rounded-full bg-[#FFD52D] px-4 py-2 text-[10px] font-black tracking-widest text-[#174344] sm:text-xs">
-                MY LEARNING SPACE
-              </span>
-              <h2 className="mt-3 text-3xl font-black leading-tight sm:text-4xl lg:text-5xl">
-                Hello, {firstName}!
-              </h2>
-              <p className="mt-2 text-sm font-bold sm:text-base lg:text-lg">
-                Welcome to your learning space.
-              </p>
-              <p className="mt-1 text-xs sm:text-sm lg:text-base">
-                Learn, practise and grow your knowledge.
-              </p>
-              <button
-                type="button"
-                onClick={() => setActiveTab('learn')}
-                className="mt-4 rounded-full bg-gradient-to-r from-[#FFD943] to-[#F5B900] px-6 py-3 text-sm font-black text-[#174344] shadow-md transition hover:-translate-y-1 hover:brightness-105"
-              >
-                Start Learning
-              </button>
-            </div>
-          </div>
-        )}
-      </header>
+      <DesktopTabletDashboard
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        learnerName={learnerName}
+        firstName={firstName}
+        learnerClass={learnerClass}
+        loading={loading}
+        formattedAverage={formattedAverage}
+        attendanceRate={attendanceRate}
+        onLogout={logout}
+      />
 
       <main className="primary-learner-dashboard__content mx-auto w-full max-w-[520px] space-y-3.5 px-3 py-3">
         {activeTab === 'home' && (
@@ -417,82 +340,6 @@ const PrimaryLearnerDashboard = () => {
               ))}
             </section>
           </div>
-        )}
-
-        {activeTab === 'home' && (
-          <section className="primary-learner-dashboard__desktop-home space-y-7">
-            <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-              {quickLinks.map(({ tab, title, description, Icon, theme }) => {
-                const teal = theme === 'teal';
-
-                return (
-                  <button
-                    key={tab}
-                    type="button"
-                    onClick={() => setActiveTab(tab)}
-                    className={`group flex min-h-[145px] items-center gap-4 rounded-[22px] border-b-[5px] p-5 text-left shadow-md transition duration-200 hover:-translate-y-1 hover:shadow-xl sm:min-h-[160px] ${
-                      teal
-                        ? 'border-[#005A59] bg-gradient-to-br from-[#08A5A1] to-[#006D6D] text-white'
-                        : 'border-[#D99A00] bg-gradient-to-br from-[#FFE76B] to-[#FFC400] text-[#153F40]'
-                    }`}
-                  >
-                    <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl sm:h-16 sm:w-16 ${
-                      teal ? 'bg-white/15' : 'bg-white/45'
-                    }`}>
-                      <Icon className="h-9 w-9 sm:h-11 sm:w-11" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-xl font-black sm:text-2xl">{title}</h3>
-                      <p className={`mt-1 text-xs font-semibold sm:text-sm ${
-                        teal ? 'text-white/90' : 'text-[#574300]'
-                      }`}>
-                        {description}
-                      </p>
-                    </div>
-                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                      teal ? 'bg-white text-[#00676B]' : 'bg-white text-[#07575A]'
-                    }`}>
-                      <span aria-hidden="true" className="text-xl transition group-hover:translate-x-1">›</span>
-                    </span>
-                  </button>
-                );
-              })}
-            </section>
-
-            <section className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-              <div className="relative flex min-h-[155px] items-center gap-5 overflow-hidden rounded-[25px] border-2 border-white bg-gradient-to-r from-[#E2F8F4] to-[#CFF1EA] px-6 py-5 shadow-md sm:px-9">
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#FFD83D] to-[#F4A900] text-4xl text-white shadow-md" aria-hidden="true">
-                  ★
-                </div>
-                <div className="relative z-10">
-                  <p className="text-base font-black text-[#16474A] sm:text-xl">Average Score</p>
-                  <p className="mt-1 text-4xl font-black text-[#00676B] sm:text-5xl">
-                    {loading ? '…' : formattedAverage}
-                  </p>
-                </div>
-                <div className="absolute -bottom-12 -right-5 h-32 w-32 rounded-full bg-[#66D6A2]/30" />
-              </div>
-
-              <div className="relative flex min-h-[155px] items-center gap-5 overflow-hidden rounded-[25px] border-2 border-white bg-gradient-to-r from-[#FFF6D8] to-[#FFF0B5] px-6 py-5 shadow-md sm:px-9">
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-[#006B70] text-white shadow-md">
-                  <ClipboardDocumentCheckIcon className="h-12 w-12" />
-                </div>
-                <div className="relative z-10">
-                  <p className="text-base font-black text-[#16474A] sm:text-xl">Total Visits</p>
-                  <p className="mt-1 text-4xl font-black text-[#00676B] sm:text-5xl">
-                    {loading ? '…' : attendanceRate}
-                  </p>
-                </div>
-                <div className="absolute -bottom-12 -right-5 h-32 w-32 rounded-full bg-[#FFD84D]/35" />
-              </div>
-            </section>
-
-            <footer className="border-t border-[#D6E9E7] py-5 text-center">
-              <p className="text-xs font-semibold text-[#668082]">
-                © {new Date().getFullYear()} Progress Schools. Keep learning and growing!
-              </p>
-            </footer>
-          </section>
         )}
 
         {/* Inner pages */}
