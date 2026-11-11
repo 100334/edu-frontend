@@ -142,7 +142,7 @@ const DesktopTabletDashboard = ({
           <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#00676B]/95 via-[#00676B]/80 via-45% to-transparent" />
           <div className="flex min-h-[240px] items-center px-6 py-6 sm:min-h-[260px] sm:px-10 xl:min-h-[300px] xl:px-16">
             <div className="max-w-[620px] text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.35)]">
-              <span className="inline-block rounded-full bg-[#FFF0A8] px-5 py-2 text-xs font-black tracking-wider text-[#07575A] xl:text-sm">
+              <span className="inline-block rounded-full bg-[#07575A]/90 px-5 py-2 text-xs font-black tracking-wider text-white xl:text-sm">
                 MY LEARNING SPACE
               </span>
               <h2 className="mt-4 text-4xl font-black leading-tight sm:text-5xl xl:text-7xl">
@@ -157,7 +157,7 @@ const DesktopTabletDashboard = ({
               <button
                 type="button"
                 onClick={() => onTabChange('learn')}
-                className="mt-5 inline-flex items-center gap-4 rounded-full bg-gradient-to-r from-[#FFD52E] to-[#FFC400] px-8 py-3.5 text-base font-black text-[#06484C] shadow-lg transition hover:-translate-y-1 hover:brightness-105 xl:text-lg"
+                className="mt-5 inline-flex items-center gap-4 rounded-full bg-gradient-to-r from-[#007C7C] to-[#00565D] px-8 py-3.5 text-base font-black text-white shadow-lg transition hover:-translate-y-1 hover:brightness-105 xl:text-lg"
               >
                 Start Learning
                 <ArrowRightIcon className="h-6 w-6" />
