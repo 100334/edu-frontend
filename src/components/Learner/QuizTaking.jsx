@@ -451,7 +451,7 @@ toast.dismiss(loadingToast);
         <header className="mx-auto mb-6 flex max-w-3xl items-center gap-4 rounded-2xl bg-gradient-to-r from-[#004F55] to-[#008789] px-5 py-4 text-white shadow-lg">
           <div className="rounded-xl bg-white/10 p-2"><DocumentCheckIcon className="h-8 w-8 text-[#FFD84D]" /></div>
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-100">Progress Schools</p>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-white">Progress Schools</p>
             <h1 className="text-xl font-black sm:text-2xl">Assessment Complete</h1>
           </div>
         </header>
@@ -521,7 +521,7 @@ toast.dismiss(loadingToast);
                 <DocumentCheckIcon className="h-5 w-5 text-[#FFD84D]" />
               </div>
               <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-[#BDECE7]">Progress Schools</p>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white">Progress Schools</p>
                 <h1 className="text-base font-black leading-tight">Assessment</h1>
               </div>
             </div>
@@ -682,7 +682,7 @@ toast.dismiss(loadingToast);
                       </span>
                     </div>
 
-                    <h2 className="quiz-taking-question chalk-text chalk-font mb-4 text-[clamp(1.25rem,3.5vh,3rem)] leading-tight sm:mb-6">
+                    <h2 className="quiz-taking-question chalk-text chalk-font mb-4 text-xl leading-tight sm:mb-6 sm:text-2xl lg:text-3xl">
                       {displayIdx + 1}. {renderPronounceableText(q.question_text)}
                     </h2>
 
@@ -711,7 +711,7 @@ toast.dismiss(loadingToast);
                                 type="button"
                                 onClick={() => handleAnswer(questionIndex, optionIndex)}
                                 aria-pressed={selected}
-                                className={`quiz-taking-option chalk-option flex min-h-[52px] items-center gap-2 rounded-xl p-2 text-left sm:min-h-[64px] sm:gap-3 sm:rounded-2xl sm:p-3 ${
+                                className={`quiz-taking-option chalk-option flex min-h-[52px] items-center gap-2 rounded-xl p-2 text-left text-lg sm:min-h-[64px] sm:gap-3 sm:rounded-2xl sm:p-3 sm:text-xl lg:text-2xl ${
                                   selected ? 'selected' : ''
                                 }`}
                               >
@@ -722,7 +722,7 @@ toast.dismiss(loadingToast);
                                     ? <CheckCircleSolid className="h-5 w-5 sm:h-6 sm:w-6" />
                                     : String.fromCharCode(65 + optionIndex)}
                                 </span>
-                                <span className="chalk-font text-base leading-tight sm:text-xl lg:text-2xl">
+                                <span className="chalk-font leading-tight">
                                   {renderPronounceableText(option)}
                                 </span>
                                 {selected && <span className="flex-1" />}

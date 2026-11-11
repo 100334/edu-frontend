@@ -138,7 +138,7 @@
 
     .quiz-taking-page .quiz-taking-question {
       margin-bottom: 0.5rem;
-      font-size: clamp(0.9rem, 3vh, 1.8rem);
+      font-size: clamp(1.05rem, 3vh, 1.8rem);
     }
 
     .quiz-taking-page .quiz-taking-image {
@@ -191,7 +191,7 @@
     }
 
     .quiz-taking-page .quiz-taking-question {
-      font-size: clamp(0.8rem, 2.5vh, 1.25rem);
+      font-size: clamp(0.95rem, 2.5vh, 1.25rem);
     }
 
     .quiz-taking-page .quiz-taking-image {
