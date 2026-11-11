@@ -132,8 +132,8 @@ const DesktopTabletDashboard = ({
     </header>
 
     {activeTab === 'home' && (
-      <section className="primary-learner-dashboard__desktop-home mx-auto w-full max-w-[1600px] space-y-7 px-4 py-6 lg:px-8 lg:py-7">
-        <section className="relative isolate min-h-[280px] overflow-hidden rounded-[30px] bg-[#00676B] shadow-lg sm:min-h-[300px] xl:min-h-[340px]">
+      <section className="primary-learner-dashboard__desktop-home w-full pb-6 lg:pb-7">
+        <section className="relative isolate min-h-[280px] overflow-hidden rounded-b-[30px] bg-[#00676B] shadow-lg sm:min-h-[300px] xl:min-h-[340px]">
           <img
             src="/image6.png"
             alt="Two school learners reading a book"
@@ -167,7 +167,8 @@ const DesktopTabletDashboard = ({
           <div className="pointer-events-none absolute bottom-0 left-0 h-[7px] w-full bg-gradient-to-r from-[#FFD52E] via-white to-[#FFD52E]" />
         </section>
 
-        <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        <div className="mx-auto w-full max-w-[1600px] space-y-7 px-4 pt-6 lg:px-8 lg:pt-7">
+          <section className="grid grid-cols-2 gap-4 xl:grid-cols-4">
           <div className="col-span-full mb-0 flex items-center gap-3">
             <div className="h-9 w-2 rounded-full bg-[#FFD52E]" />
             <h2 className="text-2xl font-black text-[#07575A] xl:text-3xl">
@@ -207,16 +208,16 @@ const DesktopTabletDashboard = ({
               </button>
             );
           })}
-        </section>
+          </section>
 
-        <section>
-          <div className="mb-3 flex items-center gap-3">
+          <section>
+            <div className="mb-3 flex items-center gap-3">
             <div className="h-9 w-2 rounded-full bg-[#FFD52E]" />
             <h2 className="text-2xl font-black text-[#07575A] xl:text-3xl">
               My Progress
             </h2>
-          </div>
-          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            </div>
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <div className="relative flex min-h-[155px] items-center gap-6 overflow-hidden rounded-[28px] border-[7px] border-white bg-gradient-to-r from-[#DDF6F3] to-[#EAFBF8] px-5 py-5 shadow-md xl:px-12">
               <div className="z-10 flex h-20 w-20 shrink-0 items-center justify-center rounded-[20px] border-[3px] border-white bg-[#FFDB31] shadow-sm xl:h-24 xl:w-24">
                 <span className="text-5xl xl:text-6xl">🏆</span>
@@ -252,14 +253,15 @@ const DesktopTabletDashboard = ({
               </div>
               <div className="absolute -bottom-20 -right-8 h-36 w-64 rotate-[-15deg] rounded-[50%] bg-[#FFDB4D]/70" />
             </div>
-          </div>
-        </section>
+            </div>
+          </section>
 
-        <footer className="border-t border-[#D6E9E7] py-5 text-center">
-          <p className="text-xs font-semibold text-[#668082]">
-            © {new Date().getFullYear()} Progress Schools. Keep learning and growing!
-          </p>
-        </footer>
+          <footer className="border-t border-[#D6E9E7] py-5 text-center">
+            <p className="text-xs font-semibold text-[#668082]">
+              © {new Date().getFullYear()} Progress Schools. Keep learning and growing!
+            </p>
+          </footer>
+        </div>
       </section>
     )}
   </>
