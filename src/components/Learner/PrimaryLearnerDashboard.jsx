@@ -60,6 +60,13 @@ const quickLinks = [
     Icon: ChartBarIcon,
     theme: 'teal',
   },
+  {
+    tab: 'leaderboard',
+    title: 'Leaderboard',
+    description: 'See your class rank',
+    Icon: TrophyIcon,
+    theme: 'gold',
+  },
 ];
 
 const PrimaryLearnerDashboard = () => {
