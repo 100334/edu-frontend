@@ -8,6 +8,7 @@ import {
   ChevronDownIcon,
   ClipboardDocumentCheckIcon,
   HomeIcon,
+  TrophyIcon,
   UserCircleIcon,
 } from '@heroicons/react/24/outline';
 
@@ -17,6 +18,7 @@ const primaryTabs = [
   { id: 'quizzes', label: 'Quizzes', Icon: ClipboardDocumentCheckIcon },
   { id: 'library', label: 'Library', Icon: AcademicCapIcon },
   { id: 'results', label: 'Results', Icon: ChartBarIcon },
+  { id: 'leaderboard', label: 'Rank', Icon: TrophyIcon },
   { id: 'attendance', label: 'Attendance', Icon: ClipboardDocumentCheckIcon },
 ];
 

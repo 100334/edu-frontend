@@ -17,6 +17,7 @@ import {
   ClipboardDocumentCheckIcon,
   DocumentTextIcon,
   HomeIcon,
+  TrophyIcon,
   UserCircleIcon,
 } from '@heroicons/react/24/outline';
 
@@ -26,6 +27,7 @@ const primaryTabs = [
   { id: 'quizzes', label: 'Quizzes', Icon: ClipboardDocumentCheckIcon },
   { id: 'library', label: 'Library', Icon: AcademicCapIcon },
   { id: 'results', label: 'Results', Icon: ChartBarIcon },
+  { id: 'leaderboard', label: 'Rank', Icon: TrophyIcon },
   { id: 'attendance', label: 'Attendance', Icon: ClipboardDocumentCheckIcon },
 ];
 
@@ -65,6 +67,10 @@ const PrimaryLearnerDashboard = () => {
   const [activeTab, setActiveTab] = useState('home');
   const [reports, setReports] = useState([]);
   const [quizAttempts, setQuizAttempts] = useState([]);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [currentUserRank, setCurrentUserRank] = useState(null);
+  const [leaderboardTotalParticipants, setLeaderboardTotalParticipants] = useState(0);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [attendance, setAttendance] = useState({ stats: {}, records: [] });
   const [showQuiz, setShowQuiz] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -117,9 +123,29 @@ const PrimaryLearnerDashboard = () => {
     setLoading(false);
   }, []);
 
+  const loadLeaderboard = useCallback(async () => {
+    setLeaderboardLoading(true);
+    try {
+      const response = await api.get('/api/learner/leaderboard');
+      if (response.data.success) {
+        setLeaderboard(response.data.leaderboard || []);
+        setCurrentUserRank(response.data.current_user_rank);
+        setLeaderboardTotalParticipants(response.data.total_participants || 0);
+      }
+    } catch (error) {
+      toast.error('Could not load the leaderboard');
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadDashboardData();
   }, [loadDashboardData]);
+
+  useEffect(() => {
+    if (activeTab === 'leaderboard') loadLeaderboard();
+  }, [activeTab, loadLeaderboard]);
 
   if (showQuiz) {
     return (
@@ -429,6 +455,88 @@ const PrimaryLearnerDashboard = () => {
                     </h3>
                     <QuizResults onRetake={quizId => setShowQuiz(quizId)} />
                   </div>
+                </div>
+              )}
+
+              {activeTab === 'leaderboard' && (
+                <div className="space-y-5">
+                  <div>
+                    <h3 className="text-lg font-black text-[#00565B]">
+                      Class leaderboard
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Your rank is based on the total points you earn from completed quizzes.
+                    </p>
+                  </div>
+
+                  {leaderboardLoading ? (
+                    <p className="rounded-2xl bg-[#F3FAF9] p-6 text-center text-sm text-slate-500">
+                      Loading your rank…
+                    </p>
+                  ) : (
+                    <>
+                      <div className="rounded-2xl bg-gradient-to-r from-[#009B9D] to-[#00585F] p-5 text-white shadow-md">
+                        <p className="text-sm font-bold text-white/80">Your rank</p>
+                        <p className="mt-1 text-3xl font-black">
+                          {currentUserRank ? `#${currentUserRank}` : 'Not ranked yet'}
+                        </p>
+                        <p className="mt-1 text-xs text-white/80">
+                          {currentUserRank
+                            ? `of ${leaderboardTotalParticipants} learners with completed quizzes`
+                            : 'Complete a quiz to appear on the leaderboard.'}
+                        </p>
+                      </div>
+
+                      {leaderboard.length > 0 ? (
+                        <div className="overflow-hidden rounded-2xl border border-[#D5E9E7]">
+                          <div className="overflow-x-auto">
+                            <table className="w-full min-w-[440px]">
+                              <thead className="bg-[#E7F8F7]">
+                                <tr>
+                                  {['Rank', 'Learner', 'Points earned', 'Quizzes'].map(heading => (
+                                    <th
+                                      key={heading}
+                                      className="px-3 py-3 text-left text-xs font-black uppercase text-[#00565B]"
+                                    >
+                                      {heading}
+                                    </th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-[#E4FAFA]">
+                                {leaderboard.map(learner => {
+                                  const isCurrentLearner = String(learner.id) === String(user?.id);
+                                  return (
+                                    <tr
+                                      key={learner.id}
+                                      className={isCurrentLearner ? 'bg-[#DDF6F2]' : ''}
+                                    >
+                                      <td className="px-3 py-3 text-sm font-black text-[#00565B]">
+                                        #{learner.rank}
+                                      </td>
+                                      <td className="px-3 py-3 text-sm font-semibold text-[#073F43]">
+                                        {isCurrentLearner ? 'You' : learner.name}
+                                      </td>
+                                      <td className="px-3 py-3 text-sm font-bold text-[#073F43]">
+                                        {learner.quiz_points}
+                                      </td>
+                                      <td className="px-3 py-3 text-sm font-bold text-[#073F43]">
+                                        {learner.quiz_count}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="rounded-2xl bg-[#F3FAF9] p-6 text-center text-sm text-slate-500">
+                          No completed quizzes yet. Be the first to earn a rank!
+                        </p>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 

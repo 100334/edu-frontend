@@ -1559,7 +1559,7 @@ toast.error('Failed to generate PDF');
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Rank</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Student</th>
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Average Quiz Score</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Total Points Earned</th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Quizzes Taken</th>
                         </tr>
                       </thead>
@@ -1573,7 +1573,7 @@ toast.error('Failed to generate PDF');
                               <div className="font-medium text-sm text-gray-900">{student.name}</div>
                               <div className="text-xs text-gray-500">{student.reg_number}</div>
                             </td>
-                            <td className="px-4 py-3 text-sm font-semibold">{student.quiz_score}%</td>
+                            <td className="px-4 py-3 text-sm font-semibold">{student.quiz_points}</td>
                             <td className="px-4 py-3 text-sm font-semibold">{student.quiz_count}</td>
                           </tr>
                         ))}

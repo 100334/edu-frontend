@@ -762,7 +762,7 @@ export default function UpperFormDashboard() {
               <table className="w-full min-w-[380px]">
                 <thead className="bg-gradient-to-r from-[#E7F8F7] to-[#F7FCFA]">
                   <tr>
-                    {['#', 'Student', 'Average Quiz Score', 'Quizzes Taken'].map(h => (
+                    {['#', 'Student', 'Total Points Earned', 'Quizzes Taken'].map(h => (
                       <th key={h} className="px-3 py-2.5 text-left text-[10px] font-black text-[#00565B] uppercase tracking-wide">{h}</th>
                     ))}
                   </tr>
@@ -775,7 +775,7 @@ export default function UpperFormDashboard() {
                         <p className="text-xs font-bold text-[#073F43] leading-none">{s.name}</p>
                         <p className="text-[10px] text-slate-400 mt-0.5">{s.reg_number}</p>
                       </td>
-                      <td className="px-3 py-2.5 text-xs font-bold text-[#073F43]">{s.quiz_score}%</td>
+                      <td className="px-3 py-2.5 text-xs font-bold text-[#073F43]">{s.quiz_points}</td>
                       <td className="px-3 py-2.5 text-xs font-bold text-[#073F43]">{s.quiz_count}</td>
                     </tr>
                   ))}
