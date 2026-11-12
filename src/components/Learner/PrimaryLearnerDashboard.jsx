@@ -60,13 +60,6 @@ const quickLinks = [
     Icon: ChartBarIcon,
     theme: 'teal',
   },
-  {
-    tab: 'leaderboard',
-    title: 'Leaderboard',
-    description: 'See your class rank',
-    Icon: TrophyIcon,
-    theme: 'gold',
-  },
 ];
 
 const PrimaryLearnerDashboard = () => {
@@ -78,6 +71,7 @@ const PrimaryLearnerDashboard = () => {
   const [currentUserRank, setCurrentUserRank] = useState(null);
   const [leaderboardTotalParticipants, setLeaderboardTotalParticipants] = useState(0);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [leaderboardError, setLeaderboardError] = useState('');
   const [attendance, setAttendance] = useState({ stats: {}, records: [] });
   const [showQuiz, setShowQuiz] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -132,15 +126,24 @@ const PrimaryLearnerDashboard = () => {
 
   const loadLeaderboard = useCallback(async () => {
     setLeaderboardLoading(true);
+    setLeaderboardError('');
     try {
       const response = await api.get('/api/learner/leaderboard');
-      if (response.data.success) {
-        setLeaderboard(response.data.leaderboard || []);
-        setCurrentUserRank(response.data.current_user_rank);
-        setLeaderboardTotalParticipants(response.data.total_participants || 0);
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'The server could not load leaderboard data.');
       }
+
+      setLeaderboard(response.data.leaderboard || []);
+      setCurrentUserRank(response.data.current_user_rank);
+      setLeaderboardTotalParticipants(response.data.total_participants || 0);
     } catch (error) {
-      toast.error('Could not load the leaderboard');
+      console.error('Leaderboard request failed:', error.response?.data || error);
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        'An unexpected error occurred.';
+      setLeaderboardError(message);
+      toast.error(`Could not load the leaderboard: ${message}`);
     } finally {
       setLeaderboardLoading(false);
     }
@@ -480,6 +483,22 @@ const PrimaryLearnerDashboard = () => {
                     <p className="rounded-2xl bg-[#F3FAF9] p-6 text-center text-sm text-slate-500">
                       Loading your rank…
                     </p>
+                  ) : leaderboardError ? (
+                    <div
+                      role="alert"
+                      className="rounded-2xl border border-red-200 bg-red-50 p-5 text-center"
+                    >
+                      <p className="text-sm font-bold text-red-800">
+                        Could not load the leaderboard: {leaderboardError}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={loadLeaderboard}
+                        className="mt-3 rounded-full bg-[#00666B] px-4 py-2 text-sm font-bold text-white transition hover:bg-[#00565B]"
+                      >
+                        Try again
+                      </button>
+                    </div>
                   ) : (
                     <>
                       <div className="rounded-2xl bg-gradient-to-r from-[#009B9D] to-[#00585F] p-5 text-white shadow-md">
