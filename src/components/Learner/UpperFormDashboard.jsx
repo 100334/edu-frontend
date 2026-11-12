@@ -121,6 +121,7 @@ export default function UpperFormDashboard() {
   const [leaderboard,      setLeaderboard]      = useState([]);
   const [currentUserRank,  setCurrentUserRank]  = useState(null);
   const [leaderboardTotalParticipants, setLeaderboardTotalParticipants] = useState(0);
+  const [leaderboardScope, setLeaderboardScope] = useState('class');
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [stats, setStats] = useState({
     reportsCount: 0, attendanceRate: '—', averageScore: '—',
@@ -271,6 +272,7 @@ export default function UpperFormDashboard() {
         setLeaderboard(res.data.leaderboard || []);
         setCurrentUserRank(res.data.current_user_rank);
         setLeaderboardTotalParticipants(res.data.total_participants || 0);
+        setLeaderboardScope(res.data.scope || (res.data.class_id ? 'class' : 'form'));
       }
     } catch { toast.error('Failed to load leaderboard'); }
     finally { setLeaderboardLoading(false); }
@@ -734,6 +736,9 @@ export default function UpperFormDashboard() {
   // ── Leaderboard ───────────────────────────────────────────────────────────
   const LeaderboardPanelContent = () => (
     <div className="space-y-4">
+      <p className="text-sm text-slate-500">
+        Rankings for your {leaderboardScope}, based on total points earned from completed quizzes.
+      </p>
       {leaderboardLoading ? (
         <div className="flex items-center justify-center py-16">
           <div className="w-8 h-8 border-4 border-[#12BFC0]/20 border-t-[#12BFC0] rounded-full animate-spin" />

@@ -70,6 +70,7 @@ const PrimaryLearnerDashboard = () => {
   const [leaderboard, setLeaderboard] = useState([]);
   const [currentUserRank, setCurrentUserRank] = useState(null);
   const [leaderboardTotalParticipants, setLeaderboardTotalParticipants] = useState(0);
+  const [leaderboardScope, setLeaderboardScope] = useState('class');
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardError, setLeaderboardError] = useState('');
   const [attendance, setAttendance] = useState({ stats: {}, records: [] });
@@ -136,6 +137,7 @@ const PrimaryLearnerDashboard = () => {
       setLeaderboard(response.data.leaderboard || []);
       setCurrentUserRank(response.data.current_user_rank);
       setLeaderboardTotalParticipants(response.data.total_participants || 0);
+      setLeaderboardScope(response.data.scope || (response.data.class_id ? 'class' : 'form'));
     } catch (error) {
       console.error('Leaderboard request failed:', error.response?.data || error);
       const message =
@@ -472,10 +474,10 @@ const PrimaryLearnerDashboard = () => {
                 <div className="space-y-5">
                   <div>
                     <h3 className="text-lg font-black text-[#00565B]">
-                      Class leaderboard
+                      {leaderboardScope === 'form' ? 'Form leaderboard' : 'Class leaderboard'}
                     </h3>
                     <p className="mt-1 text-sm text-slate-500">
-                      Your rank is based on the total points you earn from completed quizzes.
+                      Your rank is based on total points earned from completed quizzes.
                     </p>
                   </div>
 

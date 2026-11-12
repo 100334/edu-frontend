@@ -297,6 +297,7 @@ function LowerFormDashboard() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [currentUserRank, setCurrentUserRank] = useState(null);
   const [leaderboardTotalParticipants, setLeaderboardTotalParticipants] = useState(0);
+  const [leaderboardScope, setLeaderboardScope] = useState('class');
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [stats, setStats] = useState({
     reportsCount: 0,
@@ -526,6 +527,7 @@ setQuizAttempts([]);
         setLeaderboard(res.data.leaderboard || []);
         setCurrentUserRank(res.data.current_user_rank);
         setLeaderboardTotalParticipants(res.data.total_participants || 0);
+        setLeaderboardScope(res.data.scope || (res.data.class_id ? 'class' : 'form'));
       }
     } catch (error) {
 toast.error('Failed to load leaderboard');
@@ -1517,8 +1519,12 @@ toast.error('Failed to generate PDF');
         {activeTab === 'leaderboard' && (
           <div className="space-y-5">
             <div>
-              <h1 className="text-2xl font-bold text-[#0A2540]">Class Leaderboard</h1>
-              <p className="text-sm text-gray-500">See how you rank against your classmates</p>
+              <h1 className="text-2xl font-bold text-[#0A2540]">
+                {leaderboardScope === 'form' ? 'Form Leaderboard' : 'Class Leaderboard'}
+              </h1>
+              <p className="text-sm text-gray-500">
+                See how you rank against learners in your {leaderboardScope}.
+              </p>
             </div>
             {leaderboardLoading ? (
               <div className="bg-white rounded-xl border border-[#e2e8f0] p-8 text-center">
