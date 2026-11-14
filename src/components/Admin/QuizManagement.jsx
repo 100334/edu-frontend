@@ -14,11 +14,25 @@ import {
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { loadPdfJs } from '../../utils/loadPdfJs';
+import { buildQuestionPaperSections } from '../../utils/questionPaperSections';
 import ImageUploader from '../common/ImageUploader';
 import './QuestionPaperPrint.css';
 
 // ── shared input style ────────────────────────────────────────────────────────
 const inp = 'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#00B4D8] focus:border-[#00B4D8] transition';
+const formatQuestionMarks = (marks) => `${marks} ${marks === 1 ? 'mark' : 'marks'}`;
+const getOptionLabel = (index) => {
+  let label = '';
+  let remaining = index;
+  do {
+    label = String.fromCharCode(65 + (remaining % 26)) + label;
+    remaining = Math.floor(remaining / 26) - 1;
+  } while (remaining >= 0);
+  return label;
+};
+const getCircledOptionLetter = (index) => (
+  index < 26 ? String.fromCharCode(0x24B6 + index) : `(${getOptionLabel(index)})`
+);
 
 const TABS = [
   { id: 'all',            label: 'All Papers',      Icon: DocumentTextIcon         },
@@ -763,21 +777,15 @@ const QuizManagement = () => {
         };
       }));
 
-      let paperQuestionNumber = 0;
-      const numberedQuizzes = paperQuizzes.map(quiz => ({
-        ...quiz,
-        questions: quiz.questions.map(question => ({
-          ...question,
-          paperNumber: (paperQuestionNumber += 1),
-        })),
-      }));
-      const questions = numberedQuizzes.flatMap(quiz => quiz.questions);
+      const sections = buildQuestionPaperSections(paperQuizzes);
+      const questions = sections.flatMap(section => section.questions);
       setPrintPaper({
-        quizzes: numberedQuizzes,
+        quizzes: paperQuizzes,
+        sections,
         questions,
-        title: numberedQuizzes.length === 1 ? numberedQuizzes[0].title : 'Combined Question Paper',
+        title: paperQuizzes.length === 1 ? paperQuizzes[0].title : 'Combined Question Paper',
         totalMarks: questions.reduce((total, question) => total + question.marks, 0),
-        duration: numberedQuizzes.reduce((total, quiz) => total + (Number(quiz.duration) || 0), 0),
+        duration: paperQuizzes.reduce((total, quiz) => total + (Number(quiz.duration) || 0), 0),
       });
     } catch (err) {
       toast.error(err.response?.data?.message || err.message || 'Failed to build question paper');
@@ -1987,7 +1995,7 @@ const QuestionPaperPrint = ({ paper, onBack }) => {
         const cellChildren = [new Paragraph({
           spacing: { after: 60 },
           children: [new TextRun({
-            text: `${question.paperNumber}. ${question.question_text || ''} (${question.marks})`,
+            text: `${question.paperNumber}. ${question.question_text || ''} (${formatQuestionMarks(question.marks)})`,
             bold: true,
             size: 20,
             font: 'Arial',
@@ -2003,7 +2011,7 @@ const QuestionPaperPrint = ({ paper, onBack }) => {
           cellChildren.push(new Paragraph({
             spacing: { after: 40 },
             children: [new TextRun({
-              text: `○  ${String.fromCharCode(65 + optionIndex)}. ${question.options[optionIndex]}`,
+              text: `${getCircledOptionLetter(optionIndex)} ${question.options[optionIndex]}`,
               size: 18,
               font: 'Arial',
             })],
@@ -2046,71 +2054,56 @@ const QuestionPaperPrint = ({ paper, onBack }) => {
       addText('2. Answer the questions in the spaces provided. Show your working where necessary.', { after: 40 });
       addText("3. Each question's mark allocation is shown in brackets.", { after: 180 });
 
-      for (const quiz of paper.quizzes) {
-        addText(`${quiz.title}${quiz.subject_name ? ` — ${quiz.subject_name}` : ''}`, {
-          alignment: AlignmentType.CENTER,
+      for (const section of paper.sections) {
+        addText(`SECTION ${section.id}: ${section.title} (${formatQuestionMarks(section.totalMarks)})`, {
           bold: true,
           size: 24,
           before: 160,
           after: 80,
         });
-        for (const section of ['A', 'B']) {
-          const questions = quiz.questions.filter(question => question.section === section);
-          if (!questions.length) continue;
-          addText(`Section ${section}`, { bold: true, after: 80 });
-          for (let questionIndex = 0; questionIndex < questions.length;) {
-            const question = questions[questionIndex];
-            if (question.question_type === 'multiple_choice') {
-              const multipleChoiceQuestions = [];
-              while (
-                questionIndex < questions.length &&
-                questions[questionIndex].question_type === 'multiple_choice'
-              ) {
-                multipleChoiceQuestions.push(questions[questionIndex]);
-                questionIndex += 1;
-              }
-              const rows = [];
-              for (let index = 0; index < multipleChoiceQuestions.length; index += 2) {
-                const leftCell = await makeMultipleChoiceCell(multipleChoiceQuestions[index]);
-                const rightCell = multipleChoiceQuestions[index + 1]
-                  ? await makeMultipleChoiceCell(multipleChoiceQuestions[index + 1])
-                  : new TableCell({ children: [new Paragraph('')], width: { size: 5103, type: WidthType.DXA } });
-                rows.push(new TableRow({ children: [leftCell, rightCell], cantSplit: true }));
-              }
-              const noBorder = { style: BorderStyle.NIL };
-              children.push(new Table({
-                rows,
-                width: { size: 100, type: WidthType.PERCENTAGE },
-                columnWidths: [5103, 5103],
-                layout: 'fixed',
-                borders: {
-                  top: noBorder,
-                  bottom: noBorder,
-                  left: noBorder,
-                  right: noBorder,
-                  insideHorizontal: noBorder,
-                  insideVertical: noBorder,
-                },
-              }));
-              continue;
-            }
-            addText(`${question.paperNumber}. ${question.question_text || ''} (${question.marks})`, {
-              bold: true,
-              after: 60,
-            });
-            if (question.question_image) {
-              children.push(new Paragraph({
-                spacing: { after: 80 },
-                children: [await addImage(question.question_image, 500, 300)],
-              }));
-            }
-            const answerLines = Math.min(10, Math.max(2, question.marks * 2));
-            for (let index = 0; index < answerLines; index += 1) {
-              addText('________________________________________________________________________', { after: 50 });
-            }
-            addText('', { after: 100 });
-            questionIndex += 1;
+        if (section.id === 'A') {
+          const rows = [];
+          for (let index = 0; index < section.questions.length; index += 2) {
+            const leftCell = await makeMultipleChoiceCell(section.questions[index]);
+            const rightCell = section.questions[index + 1]
+              ? await makeMultipleChoiceCell(section.questions[index + 1])
+              : new TableCell({ children: [new Paragraph('')], width: { size: 5103, type: WidthType.DXA } });
+            rows.push(new TableRow({ children: [leftCell, rightCell], cantSplit: true }));
           }
+          const noBorder = { style: BorderStyle.NIL };
+          children.push(new Table({
+            rows,
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            columnWidths: [5103, 5103],
+            layout: 'fixed',
+            borders: {
+              top: noBorder,
+              bottom: noBorder,
+              left: noBorder,
+              right: noBorder,
+              insideHorizontal: noBorder,
+              insideVertical: { style: BorderStyle.SINGLE, color: '888888', size: 4 },
+            },
+          }));
+          continue;
+        }
+
+        for (const question of section.questions) {
+          addText(`${question.paperNumber}. ${question.question_text || ''} (${formatQuestionMarks(question.marks)})`, {
+            bold: true,
+            after: 60,
+          });
+          if (question.question_image) {
+            children.push(new Paragraph({
+              spacing: { after: 80 },
+              children: [await addImage(question.question_image, 500, 300)],
+            }));
+          }
+          const answerLines = Math.min(10, Math.max(2, question.marks * 2));
+          for (let index = 0; index < answerLines; index += 1) {
+            addText('________________________________________________________________________', { after: 50 });
+          }
+          addText('', { after: 100 });
         }
       }
       addText('END OF QUESTION PAPER', { alignment: AlignmentType.CENTER, bold: true, before: 200 });
@@ -2188,62 +2181,54 @@ const QuestionPaperPrint = ({ paper, onBack }) => {
         </section>
 
         <div className="space-y-7">
-          {paper.quizzes.map(quiz => (
-            <section key={quiz.id} className="question-paper-source">
-              <h3 className="mb-3 border-b border-gray-400 pb-1 text-center text-sm font-bold uppercase text-black">
-                {quiz.title}{quiz.subject_name ? ` — ${quiz.subject_name}` : ''}
+          {paper.sections.map(section => (
+            <section key={section.id} className={section.id === 'A' ? 'question-paper-mcq-section' : ''}>
+              <h3 className="mb-4 flex items-center justify-between gap-3 border-b border-black pb-2 text-sm font-bold uppercase text-black">
+                <span>SECTION {section.id}: {section.title}</span>
+                <span className="whitespace-nowrap">({formatQuestionMarks(section.totalMarks)})</span>
               </h3>
-              {['A', 'B'].map(section => {
-                const questions = quiz.questions.filter(question => question.section === section);
-                if (!questions.length) return null;
-                return (
-                  <div key={section} className="mb-5">
-                    <h4 className="mb-3 text-sm font-bold text-black">Section {section}</h4>
-                    <div className="question-paper-question-list">
-                      {questions.map(question => (
-                        <div
-                          key={question.id}
-                          className={`question-paper-question text-sm leading-6 text-black ${
-                            question.question_type === 'multiple_choice' ? 'question-paper-mcq' : 'question-paper-written'
-                          }`}
-                        >
-                          <div className="flex items-start gap-2">
-                            <span className="font-bold">{question.paperNumber}.</span>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-start justify-between gap-4">
-                                <p className="font-medium whitespace-pre-wrap">{question.question_text}</p>
-                                <span className="shrink-0 font-semibold">({question.marks})</span>
-                              </div>
-                              {question.question_image && (
-                                <img src={question.question_image} alt="Question illustration" className="max-h-56 max-w-full object-contain my-3" />
-                              )}
-                              {question.question_type === 'multiple_choice' ? (
-                                <div className="mt-2 grid grid-cols-1 gap-y-1">
-                                  {(Array.isArray(question.options) ? question.options : []).map((option, index) => (
-                                    <div key={index} className="flex items-start gap-2">
-                                      <span>○</span>
-                                      <span><strong>{String.fromCharCode(65 + index)}.</strong> {option}</span>
-                                      {question.option_images?.[index] && (
-                                        <img src={question.option_images[index]} alt={`Option ${String.fromCharCode(65 + index)}`} className="max-h-20 max-w-24 object-contain" />
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="mt-2 space-y-0" aria-label="Answer space">
-                                  {Array.from({ length: Math.min(10, Math.max(2, question.marks * 2)) }, (_, index) => (
-                                    <div key={index} className="question-paper-answer-line" />
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </div>
+              <div className={`question-paper-question-list ${section.id === 'A' ? 'question-paper-mcq-list' : 'question-paper-written-list'}`}>
+                {section.questions.map(question => (
+                  <div
+                    key={question.id}
+                    className={`question-paper-question text-sm leading-6 text-black ${
+                      section.id === 'A' ? 'question-paper-mcq' : 'question-paper-written'
+                    }`}
+                  >
+                    <div className="flex items-start gap-2">
+                      <span className="font-bold">{question.paperNumber}.</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-4">
+                          <p className="font-medium whitespace-pre-wrap">{question.question_text}</p>
+                          <span className="shrink-0 font-semibold">({formatQuestionMarks(question.marks)})</span>
                         </div>
-                      ))}
+                        {question.question_image && (
+                          <img src={question.question_image} alt="Question illustration" className="max-h-56 max-w-full object-contain my-3" />
+                        )}
+                        {section.id === 'A' ? (
+                          <div className="mt-2 grid grid-cols-1 gap-y-1">
+                            {(Array.isArray(question.options) ? question.options : []).map((option, index) => (
+                              <div key={index} className="flex items-start gap-2">
+                                <span className="question-paper-option-letter">{getOptionLabel(index)}</span>
+                                <span>{option}</span>
+                                {question.option_images?.[index] && (
+                                  <img src={question.option_images[index]} alt={`Option ${String.fromCharCode(65 + index)}`} className="max-h-20 max-w-24 object-contain" />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="mt-2 space-y-0" aria-label="Answer space">
+                            {Array.from({ length: Math.min(10, Math.max(2, question.marks * 2)) }, (_, index) => (
+                              <div key={index} className="question-paper-answer-line" />
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </section>
           ))}
         </div>
