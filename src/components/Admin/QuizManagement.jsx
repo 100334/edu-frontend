@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   PlusIcon, PencilIcon, TrashIcon, EyeIcon, XMarkIcon,
   DocumentTextIcon, ClockIcon, QuestionMarkCircleIcon,
@@ -14,6 +15,7 @@ import toast from 'react-hot-toast';
 import api from '../../services/api';
 import { loadPdfJs } from '../../utils/loadPdfJs';
 import ImageUploader from '../common/ImageUploader';
+import './QuestionPaperPrint.css';
 
 // ── shared input style ────────────────────────────────────────────────────────
 const inp = 'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#00B4D8] focus:border-[#00B4D8] transition';
@@ -33,6 +35,9 @@ const QuizManagement = () => {
   const [loading,        setLoading]        = useState(true);
   const [activeTab,      setActiveTab]      = useState('all');
   const [selectedQuiz,   setSelectedQuiz]   = useState(null);
+  const [selectedPaperQuizIds, setSelectedPaperQuizIds] = useState([]);
+  const [buildingPaper,  setBuildingPaper]  = useState(false);
+  const [printPaper,     setPrintPaper]     = useState(null);
   const [showQuizModal,  setShowQuizModal]  = useState(false);
   const [showQModal,     setShowQModal]     = useState(false);
   const [editingQuiz,    setEditingQuiz]    = useState(null);
@@ -206,6 +211,7 @@ const QuizManagement = () => {
       const res = await api.delete(`/api/admin/quizzes/${quiz.id}`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.data.success) {
         toast.success('Quiz deleted'); loadQuizzes();
+        setSelectedPaperQuizIds(current => current.filter(id => id !== String(quiz.id)));
         if (selectedQuiz?.id === quiz.id) setSelectedQuiz(null);
         if (gradingQuizId === quiz.id) { setGradingQuizId(null); setSubmissions([]); }
       } else toast.error(res.data.message);
@@ -726,6 +732,60 @@ const QuizManagement = () => {
     } catch { toast.error('Failed to load quiz details'); }
   };
 
+  const buildQuestionPaper = async () => {
+    const selectedQuizzes = quizzes.filter(quiz => selectedPaperQuizIds.includes(String(quiz.id)));
+    if (!selectedQuizzes.length) return;
+
+    setBuildingPaper(true);
+    try {
+      const token = localStorage.getItem('token');
+      const paperQuizzes = await Promise.all(selectedQuizzes.map(async quiz => {
+        const res = await api.get(`/api/admin/quizzes/${quiz.id}/questions`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const questions = res.data.questions || [];
+        if (!questions.length) {
+          throw new Error(`"${quiz.title}" does not have any questions yet.`);
+        }
+        return {
+          ...quiz,
+          questions: questions
+            .slice()
+            .sort((a, b) => (a.section || 'A').localeCompare(b.section || 'A'))
+            .map(question => {
+              const marks = Number(question.marks ?? question.points);
+              return {
+                ...question,
+                marks: Number.isFinite(marks) ? marks : 1,
+                section: question.section === 'B' ? 'B' : 'A',
+              };
+            }),
+        };
+      }));
+
+      let paperQuestionNumber = 0;
+      const numberedQuizzes = paperQuizzes.map(quiz => ({
+        ...quiz,
+        questions: quiz.questions.map(question => ({
+          ...question,
+          paperNumber: (paperQuestionNumber += 1),
+        })),
+      }));
+      const questions = numberedQuizzes.flatMap(quiz => quiz.questions);
+      setPrintPaper({
+        quizzes: numberedQuizzes,
+        questions,
+        title: numberedQuizzes.length === 1 ? numberedQuizzes[0].title : 'Combined Question Paper',
+        totalMarks: questions.reduce((total, question) => total + question.marks, 0),
+        duration: numberedQuizzes.reduce((total, quiz) => total + (Number(quiz.duration) || 0), 0),
+      });
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to build question paper');
+    } finally {
+      setBuildingPaper(false);
+    }
+  };
+
   const handleGradingTab = () => {
     setActiveTab('grading');
     if (gradingQuizId) loadSubmissions(gradingQuizId);
@@ -743,6 +803,15 @@ const QuizManagement = () => {
     active:    quizzes.filter(q => q.is_active).length,
     questions: quizzes.reduce((a, q) => a + (q.question_count || 0), 0),
   };
+
+  if (printPaper) {
+    return (
+      <QuestionPaperPrint
+        paper={printPaper}
+        onBack={() => setPrintPaper(null)}
+      />
+    );
+  }
 
   // ── confirm delete dispatcher ────────────────────────────────────────────────
   const executeConfirmedDelete = () => {
@@ -798,12 +867,24 @@ const QuizManagement = () => {
             </button>
           ))}
         </div>
-        <button
-          onClick={() => { loadSubjects(); setEditingQuiz(null); resetQuizForm(); setShowQuizModal(true); }}
-          className="flex items-center gap-1.5 px-4 py-2 bg-[#006770] text-white rounded-lg text-sm font-medium hover:bg-[#005a62] transition"
-        >
-          <PlusIcon className="w-4 h-4" /> New Quiz
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          {selectedPaperQuizIds.length > 0 && (
+            <button
+              onClick={buildQuestionPaper}
+              disabled={buildingPaper}
+              className="flex items-center gap-1.5 px-4 py-2 border border-[#006770] text-[#006770] rounded-lg text-sm font-medium hover:bg-[#f0faf9] disabled:opacity-50 transition"
+            >
+              <DocumentArrowDownIcon className="w-4 h-4" />
+              {buildingPaper ? 'Preparing…' : `Build Question Paper (${selectedPaperQuizIds.length})`}
+            </button>
+          )}
+          <button
+            onClick={() => { loadSubjects(); setEditingQuiz(null); resetQuizForm(); setShowQuizModal(true); }}
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#006770] text-white rounded-lg text-sm font-medium hover:bg-[#005a62] transition"
+          >
+            <PlusIcon className="w-4 h-4" /> New Quiz
+          </button>
+        </div>
       </div>
 
       {/* ── GRADING TAB ─────────────────────────────────────────────────────── */}
@@ -1027,7 +1108,7 @@ const QuizManagement = () => {
                       <table className="w-full min-w-[600px]">
                         <thead className="bg-gray-50">
                           <tr>
-                            {['Title', 'Form', 'Duration', 'Marks', 'Questions', 'Status', 'Actions'].map(h => (
+                            {['Select', 'Title', 'Form', 'Duration', 'Marks', 'Questions', 'Status', 'Actions'].map(h => (
                               <th key={h} className="px-4 py-2.5 text-left text-[10px] font-semibold text-gray-400 uppercase tracking-wide">{h}</th>
                             ))}
                           </tr>
@@ -1035,6 +1116,19 @@ const QuizManagement = () => {
                         <tbody className="divide-y divide-gray-100">
                           {subQuizzes.map(quiz => (
                             <tr key={quiz.id} className="hover:bg-[#f0faf9] transition-colors">
+                              <td className="px-4 py-3">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedPaperQuizIds.includes(String(quiz.id))}
+                                  onChange={event => setSelectedPaperQuizIds(current => (
+                                    event.target.checked
+                                      ? [...new Set([...current, String(quiz.id)])]
+                                      : current.filter(id => id !== String(quiz.id))
+                                  ))}
+                                  aria-label={`Select ${quiz.title} for printable question paper`}
+                                  className="w-4 h-4 accent-[#006770]"
+                                />
+                              </td>
                               <td className="px-4 py-3">
                                 <p className="text-sm font-semibold text-[#003B46]">{quiz.title}</p>
                                 {quiz.description && <p className="text-[10px] text-gray-400 line-clamp-1">{quiz.description}</p>}
@@ -1793,5 +1887,303 @@ const QuestionCard = ({ question, index, onEdit, onDelete }) => (
     </div>
   </div>
 );
+
+const QuestionPaperPrint = ({ paper, onBack }) => {
+  const subjects = [...new Set(paper.quizzes.map(quiz => quiz.subject_name).filter(Boolean))];
+  const forms = [...new Set(paper.quizzes.map(quiz => quiz.target_form).filter(Boolean))];
+  const examTypes = [...new Set(paper.quizzes.map(quiz => quiz.exam_type).filter(Boolean))];
+  const examYears = [...new Set(paper.quizzes.map(quiz => quiz.exam_year).filter(Boolean))];
+  const [exporting, setExporting] = useState(null);
+  const contentRef = useRef(null);
+  const fileBaseName = paper.title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '') || 'question-paper';
+
+  const downloadBlob = (blob, extension) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${fileBaseName}.${extension}`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const downloadPdf = async () => {
+    setExporting('pdf');
+    try {
+      const html2pdf = (await import('html2pdf.js')).default;
+      await html2pdf()
+        .set({
+          margin: 12,
+          filename: `${fileBaseName}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['css', 'legacy'] },
+        })
+        .from(contentRef.current)
+        .save();
+    } catch (error) {
+      toast.error(error.message || 'Failed to create PDF');
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  const downloadDocx = async () => {
+    setExporting('docx');
+    try {
+      const { AlignmentType, Document, ImageRun, Packer, Paragraph, TextRun } = await import('docx');
+      const children = [];
+      const addText = (text, options = {}) => children.push(new Paragraph({
+        alignment: options.alignment,
+        spacing: { before: options.before || 0, after: options.after ?? 100 },
+        children: [new TextRun({
+          text,
+          bold: !!options.bold,
+          size: options.size || 22,
+          font: 'Arial',
+        })],
+      }));
+      const addImage = async (src, maxWidth, maxHeight) => {
+        const response = await fetch(src);
+        if (!response.ok) throw new Error('Could not load an image for the Word document.');
+        const imageBlob = await response.blob();
+        const imageUrl = URL.createObjectURL(imageBlob);
+        try {
+          const image = new Image();
+          await new Promise((resolve, reject) => {
+            image.onload = resolve;
+            image.onerror = () => reject(new Error('Could not read an image for the Word document.'));
+            image.src = imageUrl;
+          });
+          const scale = Math.min(1, maxWidth / image.naturalWidth, maxHeight / image.naturalHeight);
+          const width = Math.max(1, Math.round(image.naturalWidth * scale));
+          const height = Math.max(1, Math.round(image.naturalHeight * scale));
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const context = canvas.getContext('2d');
+          if (!context) throw new Error('Could not prepare an image for the Word document.');
+          context.drawImage(image, 0, 0, width, height);
+          const pngBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+          if (!pngBlob) throw new Error('Could not convert an image for the Word document.');
+          return new ImageRun({
+            data: new Uint8Array(await pngBlob.arrayBuffer()),
+            type: 'png',
+            transformation: { width, height },
+          });
+        } finally {
+          URL.revokeObjectURL(imageUrl);
+        }
+      };
+
+      children.push(new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { after: 100 },
+        children: [await addImage('/school-logo.jpeg', 90, 90)],
+      }));
+      addText('PROGRESS SCHOOLS', { alignment: AlignmentType.CENTER, bold: true, size: 30, after: 60 });
+      addText(
+        `${examTypes.length === 1 ? examTypes[0] : 'ASSESSMENT'}${examYears.length === 1 ? ` · ${examYears[0]}` : ''}`,
+        { alignment: AlignmentType.CENTER, bold: true, size: 20, after: 60 }
+      );
+      addText(paper.title.toUpperCase(), { alignment: AlignmentType.CENTER, bold: true, size: 26, after: 60 });
+      addText(subjects.length ? subjects.join(' / ') : 'General Assessment', {
+        alignment: AlignmentType.CENTER,
+        bold: true,
+        after: 180,
+      });
+      addText(`Name: ____________________________________    Class/Form: ${forms.length === 1 ? forms[0] : '__________________'}`, { after: 100 });
+      addText(`Date: __________________________    Duration: ${paper.duration} minutes`, { after: 100 });
+      addText(`Total Marks: ${paper.totalMarks}`, { after: 180 });
+      addText('INSTRUCTIONS', { bold: true, after: 60 });
+      addText('1. Write your name and class in the spaces provided.', { after: 40 });
+      addText('2. Answer the questions in the spaces provided. Show your working where necessary.', { after: 40 });
+      addText("3. Each question's mark allocation is shown in brackets.", { after: 180 });
+
+      for (const quiz of paper.quizzes) {
+        addText(`${quiz.title}${quiz.subject_name ? ` — ${quiz.subject_name}` : ''}`, {
+          alignment: AlignmentType.CENTER,
+          bold: true,
+          size: 24,
+          before: 160,
+          after: 80,
+        });
+        for (const section of ['A', 'B']) {
+          const questions = quiz.questions.filter(question => question.section === section);
+          if (!questions.length) continue;
+          addText(`Section ${section}`, { bold: true, after: 80 });
+          for (const question of questions) {
+            addText(`${question.paperNumber}. ${question.question_text || ''} (${question.marks})`, {
+              bold: true,
+              after: 60,
+            });
+            if (question.question_image) {
+              children.push(new Paragraph({
+                spacing: { after: 80 },
+                children: [await addImage(question.question_image, 500, 300)],
+              }));
+            }
+            if (question.question_type === 'multiple_choice') {
+              for (let index = 0; index < (question.options || []).length; index += 1) {
+                addText(`○  ${String.fromCharCode(65 + index)}. ${question.options[index]}`, { after: 40 });
+                if (question.option_images?.[index]) {
+                  children.push(new Paragraph({
+                    spacing: { after: 40 },
+                    children: [await addImage(question.option_images[index], 220, 130)],
+                  }));
+                }
+              }
+            } else {
+              const answerLines = Math.min(10, Math.max(2, question.marks * 2));
+              for (let index = 0; index < answerLines; index += 1) {
+                addText('________________________________________________________________________', { after: 50 });
+              }
+            }
+            addText('', { after: 100 });
+          }
+        }
+      }
+      addText('END OF QUESTION PAPER', { alignment: AlignmentType.CENTER, bold: true, before: 200 });
+
+      const doc = new Document({
+        sections: [{
+          properties: {
+            page: {
+              size: { width: 11906, height: 16838 },
+              margin: { top: 720, right: 850, bottom: 720, left: 850 },
+            },
+          },
+          children,
+        }],
+      });
+      downloadBlob(await Packer.toBlob(doc), 'docx');
+    } catch (error) {
+      toast.error(error.message || 'Failed to create Word document');
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  return createPortal(
+    <div id="question-paper-print" className="min-h-screen bg-gray-100 px-4 py-6 sm:px-8">
+      <div className="question-paper-controls max-w-[210mm] mx-auto mb-4 flex flex-wrap items-center justify-between gap-3">
+        <button onClick={onBack} className="px-4 py-2 border border-gray-300 bg-white rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50">
+          Back to quiz manager
+        </button>
+        <div className="flex flex-wrap gap-2">
+          <button onClick={downloadPdf} disabled={!!exporting} className="px-4 py-2 bg-[#006770] rounded-lg text-sm font-semibold text-white hover:bg-[#005a62] disabled:opacity-50">
+            {exporting === 'pdf' ? 'Creating PDF…' : 'Download PDF'}
+          </button>
+          <button onClick={downloadDocx} disabled={!!exporting} className="px-4 py-2 bg-[#003B46] rounded-lg text-sm font-semibold text-white hover:bg-[#002d36] disabled:opacity-50">
+            {exporting === 'docx' ? 'Creating DOCX…' : 'Download DOCX'}
+          </button>
+          <button onClick={() => window.print()} disabled={!!exporting} className="px-4 py-2 border border-gray-300 bg-white rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50">
+            Print
+          </button>
+        </div>
+      </div>
+
+      <article ref={contentRef} className="question-paper-content max-w-[210mm] min-h-[297mm] mx-auto bg-white px-8 py-10 shadow-lg sm:px-14 sm:py-12">
+        <header className="text-center border-b-2 border-black pb-5">
+          <img src="/school-logo.jpeg" alt="Progress Schools" className="w-16 h-16 object-contain mx-auto mb-2" />
+          <h1 className="text-xl font-black tracking-wide text-black">PROGRESS SCHOOLS</h1>
+          <p className="mt-1 text-xs font-bold uppercase tracking-widest text-black">
+            {examTypes.length === 1 ? examTypes[0] : 'ASSESSMENT'}
+            {examYears.length === 1 ? ` · ${examYears[0]}` : ''}
+          </p>
+          <h2 className="mt-3 text-lg font-bold uppercase text-black">{paper.title}</h2>
+          <p className="mt-1 text-sm font-semibold text-black">
+            {subjects.length ? subjects.join(' / ') : 'General Assessment'}
+          </p>
+        </header>
+
+        <div className="grid grid-cols-2 gap-x-8 gap-y-3 border-b border-black py-5 text-sm text-black">
+          <div className="flex items-end gap-2"><strong className="whitespace-nowrap">Name:</strong><span className="question-paper-fill-line" /></div>
+          <div className="flex items-end gap-2">
+            <strong className="whitespace-nowrap">Class/Form:</strong>
+            {forms.length === 1 ? <span>{forms[0]}</span> : <span className="question-paper-fill-line" />}
+          </div>
+          <div className="flex items-end gap-2"><strong className="whitespace-nowrap">Date:</strong><span className="question-paper-fill-line" /></div>
+          <div><strong>Duration:</strong> {paper.duration} minutes</div>
+          <div className="col-span-2"><strong>Total Marks:</strong> {paper.totalMarks}</div>
+        </div>
+
+        <section className="py-5">
+          <h3 className="mb-2 text-sm font-bold uppercase text-black">Instructions</h3>
+          <ol className="list-decimal pl-5 text-sm leading-6 text-black">
+            <li>Write your name and class in the spaces provided.</li>
+            <li>Answer the questions in the spaces provided. Show your working where necessary.</li>
+            <li>Each question's mark allocation is shown in brackets.</li>
+          </ol>
+        </section>
+
+        <div className="space-y-7">
+          {paper.quizzes.map(quiz => (
+            <section key={quiz.id} className="question-paper-source">
+              <h3 className="mb-3 border-b border-gray-400 pb-1 text-center text-sm font-bold uppercase text-black">
+                {quiz.title}{quiz.subject_name ? ` — ${quiz.subject_name}` : ''}
+              </h3>
+              {['A', 'B'].map(section => {
+                const questions = quiz.questions.filter(question => question.section === section);
+                if (!questions.length) return null;
+                return (
+                  <div key={section} className="mb-5">
+                    <h4 className="mb-3 text-sm font-bold text-black">Section {section}</h4>
+                    <div className="space-y-5">
+                      {questions.map(question => (
+                        <div key={question.id} className="question-paper-question text-sm leading-6 text-black">
+                          <div className="flex items-start gap-2">
+                            <span className="font-bold">{question.paperNumber}.</span>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-4">
+                                <p className="font-medium whitespace-pre-wrap">{question.question_text}</p>
+                                <span className="shrink-0 font-semibold">({question.marks})</span>
+                              </div>
+                              {question.question_image && (
+                                <img src={question.question_image} alt="Question illustration" className="max-h-56 max-w-full object-contain my-3" />
+                              )}
+                              {question.question_type === 'multiple_choice' ? (
+                                <div className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
+                                  {(Array.isArray(question.options) ? question.options : []).map((option, index) => (
+                                    <div key={index} className="flex items-start gap-2">
+                                      <span>○</span>
+                                      <span><strong>{String.fromCharCode(65 + index)}.</strong> {option}</span>
+                                      {question.option_images?.[index] && (
+                                        <img src={question.option_images[index]} alt={`Option ${String.fromCharCode(65 + index)}`} className="max-h-20 max-w-24 object-contain" />
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="mt-2 space-y-5" aria-label="Answer space">
+                                  {Array.from({ length: Math.min(10, Math.max(2, question.marks * 2)) }, (_, index) => (
+                                    <div key={index} className="question-paper-answer-line" />
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </section>
+          ))}
+        </div>
+        <footer className="mt-10 border-t border-black pt-3 text-center text-xs font-semibold text-black">
+          END OF QUESTION PAPER
+        </footer>
+      </article>
+    </div>,
+    document.body
+  );
+};
 
 export default QuizManagement;
