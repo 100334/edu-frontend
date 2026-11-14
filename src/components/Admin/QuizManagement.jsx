@@ -1902,7 +1902,6 @@ const QuestionPaperPrint = ({ paper, onBack }) => {
   const examTypes = [...new Set(paper.quizzes.map(quiz => quiz.exam_type).filter(Boolean))];
   const examYears = [...new Set(paper.quizzes.map(quiz => quiz.exam_year).filter(Boolean))];
   const [exporting, setExporting] = useState(null);
-  const contentRef = useRef(null);
   const fileBaseName = paper.title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
@@ -1922,18 +1921,8 @@ const QuestionPaperPrint = ({ paper, onBack }) => {
   const downloadPdf = async () => {
     setExporting('pdf');
     try {
-      const html2pdf = (await import('html2pdf.js')).default;
-      await html2pdf()
-        .set({
-          margin: 12,
-          filename: `${fileBaseName}.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-          pagebreak: { mode: ['css', 'legacy'] },
-        })
-        .from(contentRef.current)
-        .save();
+      const { downloadQuestionPaperPdf } = await import('../../utils/exportQuestionPaperPdf');
+      await downloadQuestionPaperPdf(paper, { subjects, forms, examTypes, examYears }, `${fileBaseName}.pdf`);
     } catch (error) {
       toast.error(error.message || 'Failed to create PDF');
     } finally {
@@ -2146,7 +2135,7 @@ const QuestionPaperPrint = ({ paper, onBack }) => {
         </div>
       </div>
 
-      <article ref={contentRef} className="question-paper-content max-w-[210mm] min-h-[297mm] mx-auto bg-white px-8 py-10 shadow-lg sm:px-14 sm:py-12">
+      <article className="question-paper-content max-w-[210mm] min-h-[297mm] mx-auto bg-white px-8 py-10 shadow-lg sm:px-14 sm:py-12">
         <header className="text-center border-b-2 border-black pb-5">
           <img src="/school-logo.jpeg" alt="Progress Schools" className="w-16 h-16 object-contain mx-auto mb-2" />
           <h1 className="text-xl font-black tracking-wide text-black">PROGRESS SCHOOLS</h1>
