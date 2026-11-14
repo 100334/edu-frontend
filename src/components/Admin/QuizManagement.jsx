@@ -1936,7 +1936,10 @@ const QuestionPaperPrint = ({ paper, onBack }) => {
   const downloadDocx = async () => {
     setExporting('docx');
     try {
-      const { AlignmentType, Document, ImageRun, Packer, Paragraph, TextRun } = await import('docx');
+      const {
+        AlignmentType, BorderStyle, Document, ImageRun, Packer, Paragraph,
+        Table, TableCell, TableRow, TextRun, WidthType,
+      } = await import('docx');
       const children = [];
       const addText = (text, options = {}) => children.push(new Paragraph({
         alignment: options.alignment,
@@ -1980,6 +1983,44 @@ const QuestionPaperPrint = ({ paper, onBack }) => {
           URL.revokeObjectURL(imageUrl);
         }
       };
+      const makeMultipleChoiceCell = async question => {
+        const cellChildren = [new Paragraph({
+          spacing: { after: 60 },
+          children: [new TextRun({
+            text: `${question.paperNumber}. ${question.question_text || ''} (${question.marks})`,
+            bold: true,
+            size: 20,
+            font: 'Arial',
+          })],
+        })];
+        if (question.question_image) {
+          cellChildren.push(new Paragraph({
+            spacing: { after: 60 },
+            children: [await addImage(question.question_image, 220, 150)],
+          }));
+        }
+        for (let optionIndex = 0; optionIndex < (question.options || []).length; optionIndex += 1) {
+          cellChildren.push(new Paragraph({
+            spacing: { after: 40 },
+            children: [new TextRun({
+              text: `○  ${String.fromCharCode(65 + optionIndex)}. ${question.options[optionIndex]}`,
+              size: 18,
+              font: 'Arial',
+            })],
+          }));
+          if (question.option_images?.[optionIndex]) {
+            cellChildren.push(new Paragraph({
+              spacing: { after: 40 },
+              children: [await addImage(question.option_images[optionIndex], 160, 90)],
+            }));
+          }
+        }
+        return new TableCell({
+          children: cellChildren,
+          width: { size: 5103, type: WidthType.DXA },
+          margins: { top: 60, right: 100, bottom: 60, left: 100 },
+        });
+      };
 
       children.push(new Paragraph({
         alignment: AlignmentType.CENTER,
@@ -2017,7 +2058,42 @@ const QuestionPaperPrint = ({ paper, onBack }) => {
           const questions = quiz.questions.filter(question => question.section === section);
           if (!questions.length) continue;
           addText(`Section ${section}`, { bold: true, after: 80 });
-          for (const question of questions) {
+          for (let questionIndex = 0; questionIndex < questions.length;) {
+            const question = questions[questionIndex];
+            if (question.question_type === 'multiple_choice') {
+              const multipleChoiceQuestions = [];
+              while (
+                questionIndex < questions.length &&
+                questions[questionIndex].question_type === 'multiple_choice'
+              ) {
+                multipleChoiceQuestions.push(questions[questionIndex]);
+                questionIndex += 1;
+              }
+              const rows = [];
+              for (let index = 0; index < multipleChoiceQuestions.length; index += 2) {
+                const leftCell = await makeMultipleChoiceCell(multipleChoiceQuestions[index]);
+                const rightCell = multipleChoiceQuestions[index + 1]
+                  ? await makeMultipleChoiceCell(multipleChoiceQuestions[index + 1])
+                  : new TableCell({ children: [new Paragraph('')], width: { size: 5103, type: WidthType.DXA } });
+                rows.push(new TableRow({ children: [leftCell, rightCell], cantSplit: true }));
+              }
+              const noBorder = { style: BorderStyle.NIL };
+              children.push(new Table({
+                rows,
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                columnWidths: [5103, 5103],
+                layout: 'fixed',
+                borders: {
+                  top: noBorder,
+                  bottom: noBorder,
+                  left: noBorder,
+                  right: noBorder,
+                  insideHorizontal: noBorder,
+                  insideVertical: noBorder,
+                },
+              }));
+              continue;
+            }
             addText(`${question.paperNumber}. ${question.question_text || ''} (${question.marks})`, {
               bold: true,
               after: 60,
@@ -2028,23 +2104,12 @@ const QuestionPaperPrint = ({ paper, onBack }) => {
                 children: [await addImage(question.question_image, 500, 300)],
               }));
             }
-            if (question.question_type === 'multiple_choice') {
-              for (let index = 0; index < (question.options || []).length; index += 1) {
-                addText(`○  ${String.fromCharCode(65 + index)}. ${question.options[index]}`, { after: 40 });
-                if (question.option_images?.[index]) {
-                  children.push(new Paragraph({
-                    spacing: { after: 40 },
-                    children: [await addImage(question.option_images[index], 220, 130)],
-                  }));
-                }
-              }
-            } else {
-              const answerLines = Math.min(10, Math.max(2, question.marks * 2));
-              for (let index = 0; index < answerLines; index += 1) {
-                addText('________________________________________________________________________', { after: 50 });
-              }
+            const answerLines = Math.min(10, Math.max(2, question.marks * 2));
+            for (let index = 0; index < answerLines; index += 1) {
+              addText('________________________________________________________________________', { after: 50 });
             }
             addText('', { after: 100 });
+            questionIndex += 1;
           }
         }
       }
@@ -2134,9 +2199,14 @@ const QuestionPaperPrint = ({ paper, onBack }) => {
                 return (
                   <div key={section} className="mb-5">
                     <h4 className="mb-3 text-sm font-bold text-black">Section {section}</h4>
-                    <div className="space-y-5">
+                    <div className="question-paper-question-list">
                       {questions.map(question => (
-                        <div key={question.id} className="question-paper-question text-sm leading-6 text-black">
+                        <div
+                          key={question.id}
+                          className={`question-paper-question text-sm leading-6 text-black ${
+                            question.question_type === 'multiple_choice' ? 'question-paper-mcq' : 'question-paper-written'
+                          }`}
+                        >
                           <div className="flex items-start gap-2">
                             <span className="font-bold">{question.paperNumber}.</span>
                             <div className="min-w-0 flex-1">
@@ -2148,7 +2218,7 @@ const QuestionPaperPrint = ({ paper, onBack }) => {
                                 <img src={question.question_image} alt="Question illustration" className="max-h-56 max-w-full object-contain my-3" />
                               )}
                               {question.question_type === 'multiple_choice' ? (
-                                <div className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
+                                <div className="mt-2 grid grid-cols-1 gap-y-1">
                                   {(Array.isArray(question.options) ? question.options : []).map((option, index) => (
                                     <div key={index} className="flex items-start gap-2">
                                       <span>○</span>
@@ -2160,7 +2230,7 @@ const QuestionPaperPrint = ({ paper, onBack }) => {
                                   ))}
                                 </div>
                               ) : (
-                                <div className="mt-2 space-y-5" aria-label="Answer space">
+                                <div className="mt-2 space-y-0" aria-label="Answer space">
                                   {Array.from({ length: Math.min(10, Math.max(2, question.marks * 2)) }, (_, index) => (
                                     <div key={index} className="question-paper-answer-line" />
                                   ))}
