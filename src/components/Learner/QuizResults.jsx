@@ -3,6 +3,7 @@ import { XMarkIcon, ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/react/24
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 import html2pdf from 'html2pdf.js/dist/html2pdf.bundle.min.js';
+import { useAuth } from '../../context/AuthContext';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 const MONTH_NAMES = [
@@ -33,10 +34,24 @@ const getSelectedOptionIndex = answer =>
   answer.selected_answer == null || answer.selected_answer === ''
     ? -1
     : Number(answer.selected_answer);
+const groupPaperSections = answers => {
+  const sections = [];
+  answers.forEach((answer, index) => {
+    const id = String(answer.section || 'A').toUpperCase() === 'B' ? 'B' : 'A';
+    let section = sections.find(item => item.id === id);
+    if (!section) {
+      section = { id, questions: [] };
+      sections.push(section);
+    }
+    section.questions.push({ answer, questionNumber: index + 1 });
+  });
+  return sections;
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 const QuizResults = ({ onRetake }) => {
+  const { user } = useAuth();
   const [attempts,        setAttempts]        = useState([]);
   const [loading,         setLoading]         = useState(true);
   const [error,           setError]           = useState(null);
@@ -293,6 +308,12 @@ const QuizResults = ({ onRetake }) => {
       {showModal && selectedAttempt && (() => {
         const stats = getStats(selectedAttempt);
         const col   = scoreColor(stats?.pct || 0);
+        const paperSections = groupPaperSections(selectedAttempt.answers || []);
+        const learnerName = user?.name || '____________________________';
+        const learnerClass = user?.form || user?.class || '________________';
+        const completedDate = selectedAttempt.completed_at
+          ? new Date(selectedAttempt.completed_at).toLocaleDateString('en', { day: 'numeric', month: 'long', year: 'numeric' })
+          : '________________';
         // find the matching attempt from our list to check allow_retake
         const listAttempt = attempts.find(a => a.id === selectedAttempt.id);
         const canRetake   = listAttempt?.allow_retake || false;
@@ -300,7 +321,7 @@ const QuizResults = ({ onRetake }) => {
         return (
           <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowModal(false)} />
-            <div className="relative bg-white w-full sm:rounded-2xl sm:max-w-lg max-h-[92vh] overflow-hidden flex flex-col shadow-2xl">
+            <div className="relative bg-white w-full sm:rounded-2xl sm:max-w-5xl max-h-[94vh] overflow-hidden flex flex-col shadow-2xl">
 
               {/* Modal header */}
               <div className="flex items-center gap-3 px-4 py-3 bg-[#003B46] flex-shrink-0">
@@ -375,77 +396,94 @@ const QuizResults = ({ onRetake }) => {
                 {/* Marked question paper */}
                 <div>
                   <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Marked Question Paper</p>
-                  <div className="border border-slate-300 bg-[#fffefa] px-4 py-2 shadow-sm">
-                    {(selectedAttempt.answers || []).map((ans, idx) => {
-                      const full = Number(ans.points_obtained) >= Number(ans.max_points);
-                      const earned = Number(ans.points_obtained) || 0;
-                      const hasCredit = earned > 0;
-                      const max = Number(ans.max_points) || 0;
-                      const selectedOption = getSelectedOptionIndex(ans);
-                      const options = Array.isArray(ans.options) ? ans.options : [];
-                      const section = String(ans.section || 'A').toUpperCase() === 'B' ? 'B' : 'A';
-                      const previousSection = idx > 0
-                        ? (String(selectedAttempt.answers[idx - 1].section || 'A').toUpperCase() === 'B' ? 'B' : 'A')
-                        : null;
-
-                      return (
-                        <React.Fragment key={idx}>
-                          {(idx === 0 || section !== previousSection) && (
-                            <h3 className="mt-4 border-b border-black pb-1 text-xs font-bold uppercase text-black">
-                              Section {section}
-                            </h3>
-                          )}
-                          <article className="relative border-b border-slate-200 py-3 pr-10 text-sm text-slate-900">
-                            <div className="flex items-start justify-between gap-3">
-                              <p className="font-semibold">
-                                {idx + 1}. {ans.question_text}
-                                <span className="ml-2 whitespace-nowrap text-xs font-normal">({max} {max === 1 ? 'mark' : 'marks'})</span>
-                              </p>
-                              <span className="absolute right-0 top-2 rotate-[-12deg] text-2xl font-black italic text-red-600" aria-label={hasCredit ? 'Marks awarded' : 'No marks awarded'}>
-                                {hasCredit ? '✓' : '✗'}
-                              </span>
-                            </div>
-                            {ans.question_image && (
-                              <img src={ans.question_image} alt="Question illustration" className="my-2 max-h-40 max-w-full object-contain" />
-                            )}
-                            {options.length > 0 && (
-                              <div className="mt-2 space-y-1">
-                                {options.map((option, optionIndex) => {
-                                  const isSelected = selectedOption === optionIndex;
-                                  const isCorrectOption = String(option) === String(ans.correct_answer);
-                                  return (
-                                    <div key={optionIndex} className="flex items-start gap-2">
-                                      <span className="w-5 shrink-0 font-semibold">{getOptionLabel(optionIndex)}.</span>
-                                      <span className="min-w-0 flex-1">{option}</span>
-                                      {ans.option_images?.[optionIndex] && (
-                                        <img src={ans.option_images[optionIndex]} alt={`Option ${getOptionLabel(optionIndex)}`} className="max-h-16 max-w-24 object-contain" />
-                                      )}
-                                      {(isSelected || (!isSelected && isCorrectOption && !full)) && (
-                                        <span className="shrink-0 rotate-[-12deg] font-black italic text-red-600" aria-label={isSelected && full ? 'Selected correct answer' : isSelected ? 'Selected incorrect answer' : 'Correct answer'}>
-                                          {isSelected && full ? '✓' : isSelected ? '✗' : '✓'}
-                                        </span>
-                                      )}
+                  <div className="border border-slate-400 bg-[#fffefa] px-4 py-4 shadow-sm sm:px-7">
+                    <header className="border-b-2 border-black pb-3 text-center text-black">
+                      <h2 className="text-lg font-black tracking-wide">PROGRESS SCHOOLS</h2>
+                      <p className="mt-1 text-sm font-bold uppercase">Marked Question Paper</p>
+                      <p className="mt-1 text-sm font-semibold">{selectedAttempt.quiz_title}</p>
+                    </header>
+                    <div className="my-3 grid gap-x-8 gap-y-2 border-b border-slate-400 pb-3 text-xs text-black sm:grid-cols-2">
+                      <p><strong>Name of learner:</strong> {learnerName}</p>
+                      <p><strong>Class/Form:</strong> {learnerClass}</p>
+                      <p><strong>Date:</strong> {completedDate}</p>
+                      <p><strong>Total:</strong> {stats?.earned}/{stats?.possible} marks ({stats?.pct}%)</p>
+                    </div>
+                    <div className="space-y-5">
+                      {paperSections.map(section => (
+                        <section key={section.id}>
+                          <h3 className="mb-3 border-b-2 border-black pb-1 text-sm font-black uppercase tracking-wide text-black">
+                            SECTION {section.id} — {section.id === 'A' ? 'Multiple Choice' : 'Short Answer'}
+                          </h3>
+                          <div className="grid grid-cols-1 gap-x-6 gap-y-3 md:grid-cols-2">
+                            {section.questions.map(({ answer: ans, questionNumber }) => {
+                              const full = Number(ans.points_obtained) >= Number(ans.max_points);
+                              const selectedOption = getSelectedOptionIndex(ans);
+                              const options = Array.isArray(ans.options) ? ans.options : [];
+                              const earned = Number(ans.points_obtained) || 0;
+                              const max = Number(ans.max_points) || 0;
+                              const teacherComment = ans.feedback || ans.explanation;
+                              return (
+                                <article key={ans.question_id || questionNumber} className="border-b border-slate-300 pb-3 text-sm text-slate-900">
+                                  <p className="font-semibold">
+                                    {questionNumber}. {ans.question_text}
+                                    <span className="ml-1 whitespace-nowrap text-xs font-normal">({max} {max === 1 ? 'mark' : 'marks'})</span>
+                                  </p>
+                                  {ans.question_image && (
+                                    <img src={ans.question_image} alt="Question illustration" className="my-2 max-h-36 max-w-full object-contain" />
+                                  )}
+                                  {options.length > 0 && (
+                                    <div className="mt-2 space-y-1 text-xs">
+                                      {options.map((option, optionIndex) => {
+                                        const isSelected = selectedOption === optionIndex;
+                                        const isCorrectOption = String(option) === String(ans.correct_answer);
+                                        return (
+                                          <div key={optionIndex} className="flex items-start gap-1.5">
+                                            <span className={`min-w-0 ${isSelected ? 'rounded-full border-2 border-black px-2 py-0.5' : 'px-2 py-0.5'}`}>
+                                              <strong>{getOptionLabel(optionIndex)}.</strong> {String(option)}
+                                            </span>
+                                            {isSelected && (
+                                              <span className="shrink-0 rotate-[-10deg] font-black italic text-red-700" aria-label={full ? 'Correct answer' : 'Incorrect answer'}>
+                                                {full ? '✓' : '✗'}
+                                              </span>
+                                            )}
+                                            {!isSelected && isCorrectOption && !full && (
+                                              <span className="shrink-0 rotate-[-10deg] font-black italic text-red-700" aria-label="Correct answer">✓</span>
+                                            )}
+                                            {ans.option_images?.[optionIndex] && (
+                                              <img src={ans.option_images[optionIndex]} alt={`Option ${getOptionLabel(optionIndex)}`} className="max-h-12 max-w-20 object-contain" />
+                                            )}
+                                          </div>
+                                        );
+                                      })}
                                     </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                            <div className="mt-2 border-l-2 border-slate-300 pl-2">
-                              <p><span className="font-semibold">Learner's answer: </span>{ans.selected_answer_text || 'Not answered'}</p>
-                              {ans.correct_answer != null && !full && (
-                                <p className="mt-1 text-slate-700"><span className="font-semibold">Correct answer: </span>{String(ans.correct_answer)}</p>
-                              )}
-                            </div>
-                            <p className="mt-2 text-right font-bold text-red-700">{earned}/{max}</p>
-                            {(ans.feedback || ans.explanation) && (
-                              <p className="mt-1 rounded bg-blue-50 px-2 py-1 text-xs text-blue-800">
-                                {String(ans.feedback || ans.explanation)}
-                              </p>
-                            )}
-                          </article>
-                        </React.Fragment>
-                      );
-                    })}
+                                  )}
+                                  <div className="mt-2 text-xs">
+                                    {!options.length && <span className="font-semibold">Learner's answer: </span>}
+                                    <span className="inline-block rounded-full border-2 border-black px-2 py-1">
+                                      {ans.selected_answer_text || 'Not answered'}
+                                    </span>
+                                    {!options.length && (
+                                      <span className="ml-1 rotate-[-10deg] font-black italic text-red-700" aria-label={earned > 0 ? 'Marks awarded' : 'No marks awarded'}>
+                                        {earned > 0 ? '✓' : '✗'}
+                                      </span>
+                                    )}
+                                    <span className="ml-2 rotate-[-5deg] font-bold italic text-red-700">{earned}/{max}</span>
+                                  </div>
+                                  {!full && ans.correct_answer != null && (
+                                    <p className="mt-1 text-xs text-slate-700"><strong>Correct answer:</strong> {String(ans.correct_answer)}</p>
+                                  )}
+                                  {teacherComment && (
+                                    <p className="mt-2 text-sm italic text-blue-800" style={{ fontFamily: "'Segoe Print', 'Bradley Hand', cursive" }}>
+                                      <span className="font-bold">Feedback: </span>{String(teacherComment)}
+                                    </p>
+                                  )}
+                                </article>
+                              );
+                            })}
+                          </div>
+                        </section>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -471,73 +509,76 @@ const QuizResults = ({ onRetake }) => {
 
             {/* Hidden PDF content */}
             <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
-              <div ref={pdfRef} style={{ fontFamily: 'Arial, sans-serif', padding: '20px', backgroundColor: 'white', maxWidth: '700px' }}>
-                <div style={{ textAlign: 'center', borderBottom: '2px solid #003B46', paddingBottom: '10px', marginBottom: '20px' }}>
-                  <h1 style={{ color: '#003B46', fontSize: '20px', margin: 0 }}>Progress Secondary School</h1>
-                  <h2 style={{ color: '#006770', fontSize: '14px', margin: '4px 0 0' }}>Marked Question Paper</h2>
-                  <p style={{ fontSize: '11px', color: '#888', margin: '4px 0 0' }}>
-                    {selectedAttempt.quiz_title} — {selectedAttempt.completed_at ? new Date(selectedAttempt.completed_at).toLocaleDateString('en', { day: 'numeric', month: 'long', year: 'numeric' }) : ''}
-                  </p>
+              <div ref={pdfRef} style={{ boxSizing: 'border-box', fontFamily: 'Arial, sans-serif', padding: '20px', backgroundColor: 'white', width: '690px', color: '#111' }}>
+                <header style={{ textAlign: 'center', borderBottom: '2px solid #111', paddingBottom: '10px', marginBottom: '12px' }}>
+                  <h1 style={{ fontSize: '20px', margin: 0, fontWeight: 'bold' }}>PROGRESS SCHOOLS</h1>
+                  <h2 style={{ fontSize: '14px', margin: '4px 0', fontWeight: 'bold' }}>MARKED QUESTION PAPER</h2>
+                  <p style={{ fontSize: '13px', margin: 0, fontWeight: 'bold' }}>{selectedAttempt.quiz_title}</p>
+                </header>
+                <div style={{ display: 'flex', flexWrap: 'wrap', paddingBottom: '10px', marginBottom: '14px', borderBottom: '1px solid #555', fontSize: '11px' }}>
+                  <p style={{ width: '50%', margin: '3px 0' }}><strong>Name of learner:</strong> {learnerName}</p>
+                  <p style={{ width: '50%', margin: '3px 0' }}><strong>Class/Form:</strong> {learnerClass}</p>
+                  <p style={{ width: '50%', margin: '3px 0' }}><strong>Date:</strong> {completedDate}</p>
+                  <p style={{ width: '50%', margin: '3px 0' }}><strong>Total:</strong> {stats?.earned}/{stats?.possible} marks ({stats?.pct}%)</p>
                 </div>
-                {stats && (
-                  <div style={{ display: 'flex', gap: '30px', marginBottom: '16px', fontSize: '12px' }}>
-                    <div><strong>Marks:</strong> {stats.earned}/{stats.possible}</div>
-                    <div><strong>Score:</strong> {stats.pct}%</div>
-                    <div><strong>Correct:</strong> {stats.correct}</div>
-                    <div><strong>Incorrect:</strong> {stats.incorrect}</div>
-                    <div><strong>Result:</strong> {stats.passed ? 'PASS' : 'FAIL'}</div>
-                  </div>
-                )}
-                {selectedAttempt.feedback && (
-                  <div style={{ background: '#FFF3E0', padding: '10px', borderRadius: '6px', marginBottom: '16px', fontSize: '12px' }}>
-                    <strong>Teacher Feedback:</strong> {String(selectedAttempt.feedback)}
-                  </div>
-                )}
-                <hr style={{ margin: '10px 0' }} />
-                {(selectedAttempt.answers || []).map((ans, idx) => {
-                  const full = Number(ans.points_obtained) >= Number(ans.max_points);
-                  const section = String(ans.section || 'A').toUpperCase() === 'B' ? 'B' : 'A';
-                  const previousSection = idx > 0
-                    ? (String(selectedAttempt.answers[idx - 1].section || 'A').toUpperCase() === 'B' ? 'B' : 'A')
-                    : null;
-                  const options = Array.isArray(ans.options) ? ans.options : [];
-                  const selectedOption = getSelectedOptionIndex(ans);
-                  const hasCredit = Number(ans.points_obtained) > 0;
-                  return (
-                  <div key={idx} style={{ position: 'relative', marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #ddd', pageBreakInside: 'avoid', fontSize: '12px' }}>
-                    {(idx === 0 || section !== previousSection) && (
-                      <h3 style={{ margin: '18px 0 10px', paddingBottom: '4px', borderBottom: '1px solid #111', fontSize: '13px', fontWeight: 'bold', textTransform: 'uppercase' }}>
-                        Section {section}
-                      </h3>
-                    )}
-                    <p style={{ paddingRight: '30px' }}><strong>{idx + 1}. {ans.question_text}</strong>
-                      <span style={{ marginLeft: '8px', fontSize: '10px' }}>({ans.max_points} {Number(ans.max_points) === 1 ? 'mark' : 'marks'})</span>
-                    </p>
-                    <span style={{ position: 'absolute', right: '2px', top: '0', color: '#d00000', fontSize: '28px', fontWeight: 'bold', fontStyle: 'italic', transform: 'rotate(-12deg)' }}>{hasCredit ? '✓' : '✗'}</span>
-                    {ans.question_image && <img src={ans.question_image} alt="Question illustration" style={{ display: 'block', maxWidth: '100%', maxHeight: '160px', objectFit: 'contain', margin: '8px 0' }} />}
-                    {options.map((option, optionIndex) => {
-                      const isSelected = selectedOption === optionIndex;
-                      const isCorrectOption = String(option) === String(ans.correct_answer);
-                      return (
-                        <p key={optionIndex} style={{ margin: '3px 0' }}>
-                          <strong>{getOptionLabel(optionIndex)}.</strong> {String(option)}
-                          {isSelected && <span style={{ marginLeft: '8px', color: '#d00000', fontWeight: 'bold', fontStyle: 'italic' }}>{full ? '✓' : '✗'}</span>}
-                          {!isSelected && isCorrectOption && !full && <span style={{ marginLeft: '8px', color: '#d00000', fontWeight: 'bold', fontStyle: 'italic' }}>✓</span>}
-                          {ans.option_images?.[optionIndex] && <img src={ans.option_images[optionIndex]} alt={`Option ${getOptionLabel(optionIndex)}`} style={{ display: 'inline-block', maxWidth: '100px', maxHeight: '60px', objectFit: 'contain', verticalAlign: 'middle', marginLeft: '8px' }} />}
-                        </p>
-                      );
-                    })}
-                    <p style={{ marginTop: '8px' }}><strong>Learner's answer:</strong> {String(ans.selected_answer_text || 'Not answered')}</p>
-                    {!full && ans.correct_answer != null && <p><strong>Correct answer:</strong> {String(ans.correct_answer)}</p>}
-                    <p style={{ color: '#d00000', textAlign: 'right', fontWeight: 'bold' }}>{ans.points_obtained}/{ans.max_points} marks</p>
-                    {(ans.feedback || ans.explanation) && (
-                      <p style={{ background: '#E0F7FA', padding: '6px', borderRadius: '4px' }}>
-                        <strong>Feedback:</strong> {String(ans.feedback || ans.explanation)}
-                      </p>
-                    )}
-                  </div>
-                  );
-                })}
+                {paperSections.map(section => (
+                  <section key={section.id} style={{ marginBottom: '18px' }}>
+                    <h3 style={{ margin: '0 0 10px', paddingBottom: '4px', borderBottom: '2px solid #111', fontSize: '13px', fontWeight: 'bold' }}>
+                      SECTION {section.id} — {section.id === 'A' ? 'MULTIPLE CHOICE' : 'SHORT ANSWER'}
+                    </h3>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                      {section.questions.map(({ answer: ans, questionNumber }) => {
+                        const full = Number(ans.points_obtained) >= Number(ans.max_points);
+                        const options = Array.isArray(ans.options) ? ans.options : [];
+                        const selectedOption = getSelectedOptionIndex(ans);
+                        const earned = Number(ans.points_obtained) || 0;
+                        const max = Number(ans.max_points) || 0;
+                        const teacherComment = ans.feedback || ans.explanation;
+                        return (
+                          <article key={ans.question_id || questionNumber} style={{ width: '48%', paddingBottom: '10px', marginBottom: '12px', borderBottom: '1px solid #ccc', pageBreakInside: 'avoid', fontSize: '11px' }}>
+                            <p style={{ margin: 0, fontWeight: 'bold' }}>
+                              {questionNumber}. {ans.question_text}
+                              <span style={{ marginLeft: '5px', fontSize: '9px', fontWeight: 'normal' }}>({max} {max === 1 ? 'mark' : 'marks'})</span>
+                            </p>
+                            {ans.question_image && <img src={ans.question_image} alt="Question illustration" style={{ display: 'block', maxWidth: '100%', maxHeight: '120px', objectFit: 'contain', margin: '6px 0' }} />}
+                            {options.length > 0 && (
+                              <div style={{ marginTop: '6px' }}>
+                                {options.map((option, optionIndex) => {
+                                  const isSelected = selectedOption === optionIndex;
+                                  const isCorrectOption = String(option) === String(ans.correct_answer);
+                                  return (
+                                    <p key={optionIndex} style={{ margin: '4px 0' }}>
+                                      <span style={isSelected ? { display: 'inline-block', border: '1.5px solid #000', borderRadius: '999px', padding: '2px 7px' } : { padding: '2px 7px' }}>
+                                        <strong>{getOptionLabel(optionIndex)}.</strong> {String(option)}
+                                      </span>
+                                      {isSelected && <span style={{ marginLeft: '4px', color: '#bd0000', fontSize: '16px', fontWeight: 'bold', fontStyle: 'italic' }}>{full ? '✓' : '✗'}</span>}
+                                      {!isSelected && isCorrectOption && !full && <span style={{ marginLeft: '4px', color: '#bd0000', fontSize: '16px', fontWeight: 'bold', fontStyle: 'italic' }}>✓</span>}
+                                      {ans.option_images?.[optionIndex] && <img src={ans.option_images[optionIndex]} alt={`Option ${getOptionLabel(optionIndex)}`} style={{ display: 'inline-block', maxWidth: '80px', maxHeight: '45px', objectFit: 'contain', verticalAlign: 'middle', marginLeft: '5px' }} />}
+                                    </p>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            {options.length === 0 && (
+                              <p style={{ margin: '8px 0 0' }}>
+                                <strong>Learner's answer: </strong>
+                                <span style={{ display: 'inline-block', maxWidth: '100%', overflowWrap: 'anywhere', border: '1.5px solid #000', borderRadius: '999px', padding: '3px 8px', verticalAlign: 'middle' }}>{String(ans.selected_answer_text || 'Not answered')}</span>
+                                <span style={{ marginLeft: '4px', color: '#bd0000', fontSize: '16px', fontWeight: 'bold', fontStyle: 'italic' }}>{earned > 0 ? '✓' : '✗'}</span>
+                              </p>
+                            )}
+                            {!full && ans.correct_answer != null && <p style={{ margin: '5px 0 0' }}><strong>Correct answer:</strong> {String(ans.correct_answer)}</p>}
+                            <p style={{ margin: '5px 0 0', textAlign: 'right', color: '#bd0000', fontWeight: 'bold', fontStyle: 'italic' }}>{earned}/{max}</p>
+                            {teacherComment && (
+                              <p style={{ margin: '5px 0 0', color: '#173f83', fontSize: '12px', fontStyle: 'italic', fontFamily: "'Segoe Print', 'Bradley Hand', cursive" }}>
+                                <strong>Feedback: </strong>{String(teacherComment)}
+                              </p>
+                            )}
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
                 <div style={{ fontSize: '10px', color: '#aaa', textAlign: 'center', marginTop: '20px' }}>
                   Generated on {new Date().toLocaleString()}
                 </div>
