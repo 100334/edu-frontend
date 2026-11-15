@@ -105,7 +105,7 @@ const QuizResults = ({ onRetake }) => {
     try {
       await html2pdf()
         .set({
-          margin: [0.5, 0.5, 0.5, 0.5],
+          margin: [0, 0.5, 0.5, 0.5],
           filename: `${selectedAttempt.quiz_title}_marked_question_paper.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
           html2canvas: { scale: 2, useCORS: true },
@@ -512,7 +512,7 @@ const QuizResults = ({ onRetake }) => {
 
             {/* Hidden PDF content */}
             <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
-              <div ref={pdfRef} style={{ boxSizing: 'border-box', fontFamily: 'Arial, sans-serif', padding: '20px', backgroundColor: 'white', width: '690px', color: '#111' }}>
+              <div ref={pdfRef} style={{ boxSizing: 'border-box', fontFamily: 'Arial, sans-serif', padding: '0 20px 20px', backgroundColor: 'white', width: '690px', color: '#111' }}>
                 <header style={{ position: 'relative', minHeight: '66px', textAlign: 'center', borderBottom: '2px solid #111', padding: '2px 58px 10px', marginBottom: '12px' }}>
                   <img src="/school-logo.jpeg" alt="Progress Schools logo" crossOrigin="anonymous" style={{ position: 'absolute', left: 0, top: 0, width: '54px', height: '54px', objectFit: 'contain' }} />
                   <h1 style={{ fontSize: '20px', margin: 0, fontWeight: 'bold' }}>PROGRESS SCHOOLS</h1>
