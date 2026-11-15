@@ -465,6 +465,9 @@ const PrimaryLearnerDashboard = () => {
                     <h3 className="mb-4 text-lg font-black text-[#00565B]">
                       Quiz results
                     </h3>
+                    <p className="mb-3 text-xs text-slate-500">
+                      Open a completed quiz’s marked paper to review your answers and download the corrected paper.
+                    </p>
                     <QuizResults onRetake={quizId => setShowQuiz(quizId)} />
                   </div>
                 </div>
