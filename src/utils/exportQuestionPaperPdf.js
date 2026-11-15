@@ -55,7 +55,7 @@ const fitImage = (image, maxWidth, maxHeight) => {
   return { width: image.width * scale, height: image.height * scale };
 };
 
-export const downloadQuestionPaperPdf = async (paper, metadata, filename) => {
+export const downloadQuestionPaperPdf = async (paper, metadata, filename, review = false) => {
   const { jsPDF } = await import('jspdf');
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const imageSources = new Set(['/school-logo.jpeg']);
@@ -75,6 +75,18 @@ export const downloadQuestionPaperPdf = async (paper, metadata, filename) => {
     pdf.setFont('helvetica', style);
     pdf.setFontSize(size);
     pdf.setTextColor(0, 0, 0);
+  };
+  const drawMark = (mark, x, y) => {
+    pdf.setDrawColor(180, 0, 0);
+    pdf.setLineWidth(0.7);
+    if (mark === 'x') {
+      pdf.line(x, y - 1.8, x + 3.6, y + 1.8);
+      pdf.line(x + 3.6, y - 1.8, x, y + 1.8);
+    } else {
+      pdf.line(x, y, x + 1.4, y + 1.4);
+      pdf.line(x + 1.4, y + 1.4, x + 4.2, y - 1.8);
+    }
+    pdf.setDrawColor(0);
   };
   const wrapText = (text, width) => {
     const lines = pdf.splitTextToSize(String(text || ' '), width);
@@ -97,6 +109,26 @@ export const downloadQuestionPaperPdf = async (paper, metadata, filename) => {
     addImage('/school-logo.jpeg', MARGIN, 8, 18, 18);
     let y = 13;
     y += addCenteredText('PROGRESS SCHOOLS', y, CONTENT_WIDTH, 14, 'bold') + 1;
+    if (review) {
+      y += addCenteredText('MARKED QUESTION PAPER', y, CONTENT_WIDTH - 26, 8, 'bold') + 1;
+      y += addCenteredText(paper.title.toUpperCase(), y, CONTENT_WIDTH - 26, 11, 'bold') + 1;
+      pdf.setLineWidth(0.4);
+      pdf.line(MARGIN, y, PAGE_WIDTH - MARGIN, y);
+      y += 7;
+
+      setFont(9);
+      pdf.text(`Name: ${metadata.learnerName || '____________________________'}`, MARGIN, y);
+      pdf.text(`Class/Form: ${metadata.learnerClass || '________________'}`, PAGE_WIDTH / 2 + 3, y);
+      y += 5;
+      pdf.text(`Date: ${metadata.completedDate || '________________'}`, MARGIN, y);
+      pdf.setTextColor(180, 0, 0);
+      pdf.text(`Score: ${metadata.earnedMarks}/${metadata.totalMarks} (${metadata.percentage}%)`, PAGE_WIDTH / 2 + 3, y);
+      y += 5;
+      setFont(9, 'bold');
+      pdf.text(`Total Marks: ${paper.totalMarks}`, MARGIN, y);
+      return y + 7;
+    }
+
     const examType = metadata.examTypes.length === 1 ? metadata.examTypes[0] : 'ASSESSMENT';
     const examYear = metadata.examYears.length === 1 ? ` - ${metadata.examYears[0]}` : '';
     y += addCenteredText(`${examType}${examYear}`, y, CONTENT_WIDTH - 26, 8, 'bold') + 1;
@@ -152,7 +184,11 @@ export const downloadQuestionPaperPdf = async (paper, metadata, filename) => {
     return drawSectionHeading(section, drawRunningHeader(), true);
   };
   const layoutMultipleChoiceQuestion = (question) => {
-    const markLabel = `(${formatMarks(question.marks)})`;
+    const earned = Number(question.points_obtained) || 0;
+    const maximum = Number(question.marks) || 0;
+    const markLabel = review
+      ? `${earned}/${maximum} marks`
+      : `(${formatMarks(question.marks)})`;
     setFont(8, 'bold');
     const markWidth = pdf.getTextWidth(markLabel) + 2;
     setFont(9);
@@ -170,7 +206,14 @@ export const downloadQuestionPaperPdf = async (paper, metadata, filename) => {
       const image = question.option_images?.[index]
         ? imageSize(question.option_images[index], COLUMN_WIDTH - 12, 25)
         : null;
-      return { label: getOptionLabel(index), lines, image };
+      return {
+        label: getOptionLabel(index),
+        lines,
+        image,
+        selected: question.selected_answer != null && question.selected_answer !== ''
+          && Number(question.selected_answer) === index,
+        correct: String(option) === String(question.correct_answer),
+      };
     });
     let height = Math.max(1, titleLines.length) * LINE_HEIGHT + 1.5;
     if (questionImage) height += questionImage.height + 3;
@@ -178,6 +221,13 @@ export const downloadQuestionPaperPdf = async (paper, metadata, filename) => {
       height += Math.max(LINE_HEIGHT, option.lines.length * LINE_HEIGHT) + 1;
       if (option.image) height += option.image.height + 1;
     });
+    if (review && !options.some(option => option.selected)) height += LINE_HEIGHT + 1;
+    if (review && earned < maximum && question.correct_answer) {
+      height += Math.max(1, wrapText(`Correct answer: ${question.correct_answer}`, COLUMN_WIDTH - 4).length) * LINE_HEIGHT + 1;
+    }
+    if (review && (question.feedback || question.explanation)) {
+      height += Math.max(1, wrapText(`Feedback: ${question.feedback || question.explanation}`, COLUMN_WIDTH - 4).length) * LINE_HEIGHT + 1;
+    }
     return { markLabel, number, numberWidth, titleLines, questionImage, options, height: height + 2 };
   };
   const drawMultipleChoiceQuestion = (question, layout, x, y) => {
@@ -186,6 +236,7 @@ export const downloadQuestionPaperPdf = async (paper, metadata, filename) => {
     setFont(9);
     pdf.text(layout.titleLines, x + layout.numberWidth, y + LINE_HEIGHT);
     setFont(8, 'bold');
+    if (review) pdf.setTextColor(180, 0, 0);
     pdf.text(layout.markLabel, x + COLUMN_WIDTH, y + LINE_HEIGHT, { align: 'right' });
     y += Math.max(1, layout.titleLines.length) * LINE_HEIGHT + 1.5;
 
@@ -197,31 +248,73 @@ export const downloadQuestionPaperPdf = async (paper, metadata, filename) => {
       const centerX = x + 2.5;
       const centerY = y + 2.3;
       pdf.setLineWidth(0.35);
-      pdf.circle(centerX, centerY, 2.2, 'S');
+      if (!review || option.selected) {
+        pdf.setDrawColor(0);
+        pdf.circle(centerX, centerY, 2.2, 'S');
+      }
       setFont(7.5, 'bold');
       pdf.text(option.label, centerX, centerY + 1, { align: 'center' });
       setFont(8);
       pdf.text(option.lines, x + 7, y + 3.1);
+      if (review && (option.selected || (!option.selected && option.correct && !question.is_correct))) {
+        const lastLine = option.lines[option.lines.length - 1] || '';
+        const markX = Math.min(x + COLUMN_WIDTH - 3, x + 7 + pdf.getTextWidth(lastLine) + 1);
+        drawMark(option.selected && !question.is_correct ? 'x' : 'check', markX, y + 1);
+      }
       y += Math.max(LINE_HEIGHT, option.lines.length * LINE_HEIGHT) + 1;
       if (option.image) {
         y += addImage(question.option_images[index], x + 7, y, COLUMN_WIDTH - 12, 25) + 1;
       }
     });
+    if (review && !layout.options.some(option => option.selected)) {
+      setFont(8);
+      pdf.text("Learner's answer: Not answered", x + 2, y + LINE_HEIGHT);
+      drawMark('x', x + 48, y + LINE_HEIGHT - 2);
+      y += LINE_HEIGHT + 1;
+    }
+    if (review && Number(question.points_obtained) < Number(question.marks) && question.correct_answer) {
+      setFont(8);
+      pdf.setTextColor(0, 0, 0);
+      const lines = wrapText(`Correct answer: ${question.correct_answer}`, COLUMN_WIDTH - 4);
+      pdf.text(lines, x + 2, y + LINE_HEIGHT);
+      y += lines.length * LINE_HEIGHT + 1;
+    }
+    if (review && (question.feedback || question.explanation)) {
+      pdf.setFont('times', 'italic');
+      pdf.setFontSize(8);
+      pdf.setTextColor(30, 60, 120);
+      const lines = wrapText(`Feedback: ${question.feedback || question.explanation}`, COLUMN_WIDTH - 4);
+      pdf.text(lines, x + 2, y + LINE_HEIGHT);
+      y += lines.length * LINE_HEIGHT + 1;
+    }
+    pdf.setTextColor(0, 0, 0);
     return y + 2;
   };
-  const layoutShortAnswerQuestion = (question) => {
-    const markLabel = `(${formatMarks(question.marks)})`;
+  const layoutShortAnswerQuestion = (question, width = CONTENT_WIDTH) => {
+    const earned = Number(question.points_obtained) || 0;
+    const maximum = Number(question.marks) || 0;
+    const markLabel = review
+      ? `${earned}/${maximum} marks`
+      : `(${formatMarks(question.marks)})`;
     setFont(8, 'bold');
     const markWidth = pdf.getTextWidth(markLabel) + 2;
     const number = `${question.paperNumber}.`;
     setFont(9, 'bold');
     const numberWidth = pdf.getTextWidth(number) + 1;
     setFont(9);
-    const titleLines = wrapText(question.question_text, CONTENT_WIDTH - numberWidth - markWidth);
+    const titleLines = wrapText(question.question_text, width - numberWidth - markWidth);
     const questionImage = question.question_image
-      ? imageSize(question.question_image, CONTENT_WIDTH, 55)
+      ? imageSize(question.question_image, width, 55)
       : null;
-    const answerLines = Math.min(10, Math.max(2, question.marks * 2));
+    const answerLines = review
+      ? wrapText(question.selected_answer_text || 'Not answered', width - 8)
+      : Math.min(10, Math.max(2, question.marks * 2));
+    const correctAnswerLines = review && Number(question.points_obtained) < Number(question.marks) && question.correct_answer
+      ? wrapText(`Correct answer: ${question.correct_answer}`, width - 4)
+      : [];
+    const feedbackLines = review && (question.feedback || question.explanation)
+      ? wrapText(`Feedback: ${question.feedback || question.explanation}`, width - 4)
+      : [];
     return {
       markLabel,
       number,
@@ -229,28 +322,58 @@ export const downloadQuestionPaperPdf = async (paper, metadata, filename) => {
       titleLines,
       questionImage,
       answerLines,
+      correctAnswerLines,
+      feedbackLines,
       height: Math.max(1, titleLines.length) * LINE_HEIGHT + (questionImage ? questionImage.height + 3 : 1)
-        + answerLines * 4.6 + 4,
+        + (review ? (answerLines.length + 1) * LINE_HEIGHT : answerLines * 4.6)
+        + correctAnswerLines.length * LINE_HEIGHT
+        + feedbackLines.length * LINE_HEIGHT + 4,
     };
   };
-  const drawShortAnswerQuestion = (question, layout, y) => {
+  const drawShortAnswerQuestion = (question, layout, y, x = MARGIN, width = CONTENT_WIDTH) => {
     setFont(9, 'bold');
-    pdf.text(layout.number, MARGIN, y + LINE_HEIGHT);
+    pdf.text(layout.number, x, y + LINE_HEIGHT);
     setFont(9);
-    pdf.text(layout.titleLines, MARGIN + layout.numberWidth, y + LINE_HEIGHT);
+    pdf.text(layout.titleLines, x + layout.numberWidth, y + LINE_HEIGHT);
     setFont(8, 'bold');
-    pdf.text(layout.markLabel, PAGE_WIDTH - MARGIN, y + LINE_HEIGHT, { align: 'right' });
+    pdf.text(layout.markLabel, x + width, y + LINE_HEIGHT, { align: 'right' });
     y += Math.max(1, layout.titleLines.length) * LINE_HEIGHT + 1;
 
     if (layout.questionImage) {
       y += 1;
-      y += addImage(question.question_image, MARGIN, y, CONTENT_WIDTH, 55) + 2;
+      y += addImage(question.question_image, x, y, width, 55) + 2;
     }
+    if (review) {
+      setFont(8, 'bold');
+      pdf.text("Learner's answer:", x, y + LINE_HEIGHT);
+      setFont(9);
+      pdf.text(layout.answerLines, x + 24, y + LINE_HEIGHT);
+      const lastLine = layout.answerLines[layout.answerLines.length - 1] || '';
+      const markX = Math.min(x + width - 2, x + 25 + pdf.getTextWidth(lastLine) + 1);
+      drawMark(Number(question.points_obtained) > 0 ? 'check' : 'x', markX, y + LINE_HEIGHT - 2);
+      y += (layout.answerLines.length + 1) * LINE_HEIGHT + 1;
+
+      if (layout.correctAnswerLines.length) {
+        setFont(8);
+        pdf.text(layout.correctAnswerLines, x + 2, y + LINE_HEIGHT);
+        y += layout.correctAnswerLines.length * LINE_HEIGHT + 1;
+      }
+      if (layout.feedbackLines.length) {
+        pdf.setFont('times', 'italic');
+        pdf.setFontSize(8);
+        pdf.setTextColor(30, 60, 120);
+        pdf.text(layout.feedbackLines, x + 2, y + LINE_HEIGHT);
+        y += layout.feedbackLines.length * LINE_HEIGHT + 1;
+      }
+      pdf.setTextColor(0, 0, 0);
+      return y + 3;
+    }
+
     pdf.setLineWidth(0.2);
     pdf.setDrawColor(120);
     for (let index = 0; index < layout.answerLines; index += 1) {
       y += 4.6;
-      pdf.line(MARGIN, y, PAGE_WIDTH - MARGIN, y);
+      pdf.line(x, y, x + width, y);
     }
     pdf.setDrawColor(0);
     return y + 3;

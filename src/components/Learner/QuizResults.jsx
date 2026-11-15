@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { XMarkIcon, ArrowDownTrayIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
-import html2pdf from 'html2pdf.js/dist/html2pdf.bundle.min.js';
 import { useAuth } from '../../context/AuthContext';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -59,7 +58,6 @@ const QuizResults = ({ onRetake }) => {
   const [showModal,       setShowModal]       = useState(false);
   const [generatingPdf,   setGeneratingPdf]   = useState(false);
   const [collapsed,       setCollapsed]       = useState({});   // { monthKey: bool }
-  const pdfRef = useRef(null);
 
   useEffect(() => { loadResults(); }, []);
 
@@ -100,20 +98,44 @@ const QuizResults = ({ onRetake }) => {
   };
 
   const downloadPDF = async () => {
-    if (!selectedAttempt || !pdfRef.current) return;
+    if (!selectedAttempt) return;
     setGeneratingPdf(true);
     try {
-      await html2pdf()
-        .set({
-          margin: [0, 0.5, 0.5, 0.5],
-          filename: `${selectedAttempt.quiz_title}_marked_question_paper.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true },
-          jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
-          pagebreak: { mode: ['css', 'legacy'], avoid: ['.marked-paper-question'] },
-        })
-        .from(pdfRef.current)
-        .save();
+      const { downloadQuestionPaperPdf } = await import('../../utils/exportQuestionPaperPdf');
+      const sections = groupPaperSections(selectedAttempt.answers || []).map(section => ({
+        ...section,
+        title: section.id === 'A' ? 'Multiple Choice' : 'Short Answer',
+        questions: section.questions.map(({ answer, questionNumber }) => ({
+          ...answer,
+          paperNumber: questionNumber,
+          marks: Number(answer.max_points) || 1,
+        })),
+      }));
+      const questions = sections.flatMap(section => section.questions);
+      const totalMarks = Number(selectedAttempt.total_points)
+        || questions.reduce((total, question) => total + question.marks, 0);
+      const paper = {
+        title: selectedAttempt.quiz_title || 'Marked Question Paper',
+        questions,
+        sections,
+        totalMarks,
+      };
+      const metadata = {
+        subjects: selectedAttempt.subject ? [selectedAttempt.subject] : [],
+        forms: user?.form ? [user.form] : [],
+        examTypes: [],
+        examYears: [],
+        learnerName: user?.name,
+        learnerClass: user?.form || user?.class,
+        completedDate: selectedAttempt.completed_at
+          ? new Date(selectedAttempt.completed_at).toLocaleDateString('en', { day: 'numeric', month: 'long', year: 'numeric' })
+          : '',
+        earnedMarks: selectedAttempt.earned_points,
+        totalMarks,
+        percentage: selectedAttempt.percentage,
+      };
+      const filenameBase = paper.title.replace(/[<>:"/\\|?*\x00-\x1F]/g, '-').trim() || 'marked-question-paper';
+      await downloadQuestionPaperPdf(paper, metadata, `${filenameBase}_marked_question_paper.pdf`, true);
       toast.success('PDF downloaded!');
     } catch {
       toast.error('Failed to generate PDF');
@@ -510,103 +532,6 @@ const QuizResults = ({ onRetake }) => {
               </div>
             </div>
 
-            {/* Hidden PDF content */}
-            <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
-              <div ref={pdfRef} style={{ boxSizing: 'border-box', fontFamily: 'Arial, sans-serif', padding: '0 20px 20px', backgroundColor: 'white', width: '690px', color: '#111' }}>
-                <header style={{ position: 'relative', minHeight: '66px', textAlign: 'center', borderBottom: '2px solid #111', padding: '2px 58px 10px', marginBottom: '12px' }}>
-                  <img src="/school-logo.jpeg" alt="Progress Schools logo" crossOrigin="anonymous" style={{ position: 'absolute', left: 0, top: 0, width: '54px', height: '54px', objectFit: 'contain' }} />
-                  <h1 style={{ fontSize: '20px', margin: 0, fontWeight: 'bold' }}>PROGRESS SCHOOLS</h1>
-                  <h2 style={{ fontSize: '14px', margin: '4px 0', fontWeight: 'bold' }}>MARKED QUESTION PAPER</h2>
-                  <p style={{ fontSize: '13px', margin: 0, fontWeight: 'bold' }}>{selectedAttempt.quiz_title}</p>
-                </header>
-                <div style={{ display: 'flex', flexWrap: 'wrap', paddingBottom: '10px', marginBottom: '14px', borderBottom: '1px solid #555', fontSize: '11px' }}>
-                  <p style={{ width: '50%', margin: '3px 0' }}><strong>Name of learner:</strong> {learnerName}</p>
-                  <p style={{ width: '50%', margin: '3px 0' }}><strong>Class/Form:</strong> {learnerClass}</p>
-                  <p style={{ width: '50%', margin: '3px 0' }}><strong>Date:</strong> {completedDate}</p>
-                  <p style={{ width: '50%', margin: '3px 0' }}><strong>Total:</strong> {stats?.earned}/{stats?.possible} marks ({stats?.pct}%)</p>
-                </div>
-                {paperSections.map(section => (
-                  <section key={section.id} style={{ marginBottom: '18px' }}>
-                    <h3 className="paper-section-heading" style={{ margin: '0 0 10px', paddingBottom: '4px', borderBottom: '2px solid #111', fontSize: '13px', fontWeight: 'bold', pageBreakAfter: 'avoid', breakAfter: 'avoid' }}>
-                      SECTION {section.id} — {section.id === 'A' ? 'MULTIPLE CHOICE' : 'SHORT ANSWER'}
-                    </h3>
-                    <div style={{ display: 'flex', alignItems: 'stretch', width: '100%' }}>
-                      {[0, 1].map(columnIndex => {
-                        const splitIndex = Math.ceil(section.questions.length / 2);
-                        const columnQuestions = columnIndex === 0
-                          ? section.questions.slice(0, splitIndex)
-                          : section.questions.slice(splitIndex);
-                        return (
-                      <div key={columnIndex} style={{
-                        boxSizing: 'border-box',
-                        width: '50%',
-                        paddingLeft: columnIndex === 1 ? '12px' : 0,
-                        paddingRight: columnIndex === 0 ? '12px' : 0,
-                        borderRight: columnIndex === 0 ? '1px solid #555' : 'none',
-                      }}>
-                      {columnQuestions.map(({ answer: ans, questionNumber }) => {
-                        const full = Number(ans.points_obtained) >= Number(ans.max_points);
-                        const options = Array.isArray(ans.options) ? ans.options : [];
-                        const selectedOption = getSelectedOptionIndex(ans);
-                        const earned = Number(ans.points_obtained) || 0;
-                        const max = Number(ans.max_points) || 0;
-                        const teacherComment = ans.feedback || ans.explanation;
-                        return (
-                          <article key={ans.question_id || questionNumber} className="marked-paper-question" style={{ width: '100%', paddingBottom: '10px', marginBottom: '12px', borderBottom: '1px solid #ccc', pageBreakInside: 'avoid', breakInside: 'avoid', fontSize: '11px' }}>
-                            <p style={{ margin: 0, fontWeight: 'bold' }}>
-                              {questionNumber}. {ans.question_text}
-                              <span style={{ marginLeft: '5px', fontSize: '9px', fontWeight: 'normal' }}>({max} {max === 1 ? 'mark' : 'marks'})</span>
-                            </p>
-                            {ans.question_image && <img src={ans.question_image} alt="Question illustration" style={{ display: 'block', maxWidth: '100%', maxHeight: '120px', objectFit: 'contain', margin: '6px 0' }} />}
-                            {options.length > 0 && (
-                              <div style={{ marginTop: '6px' }}>
-                                {options.map((option, optionIndex) => {
-                                  const isSelected = selectedOption === optionIndex;
-                                  const isCorrectOption = String(option) === String(ans.correct_answer);
-                                  return (
-                                    <p key={optionIndex} style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', margin: '4px 0' }}>
-                                      <span style={isSelected
-                                        ? { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 19px', width: '19px', height: '19px', border: '1.5px solid #000', borderRadius: '50%', fontWeight: 'bold' }
-                                        : { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 19px', width: '19px', height: '19px', fontWeight: 'bold' }}>
-                                        {getOptionLabel(optionIndex)}
-                                      </span>
-                                      <span style={{ flex: '1 1 auto', overflowWrap: 'anywhere' }}>{String(option)}</span>
-                                      {isSelected && <span style={{ marginLeft: '4px', color: '#bd0000', fontSize: '16px', fontWeight: 'bold', fontStyle: 'italic' }}>{full ? '✓' : '✗'}</span>}
-                                      {!isSelected && isCorrectOption && !full && <span style={{ marginLeft: '4px', color: '#bd0000', fontSize: '16px', fontWeight: 'bold', fontStyle: 'italic' }}>✓</span>}
-                                      {ans.option_images?.[optionIndex] && <img src={ans.option_images[optionIndex]} alt={`Option ${getOptionLabel(optionIndex)}`} style={{ display: 'inline-block', maxWidth: '80px', maxHeight: '45px', objectFit: 'contain', verticalAlign: 'middle', marginLeft: '5px' }} />}
-                                    </p>
-                                  );
-                                })}
-                              </div>
-                            )}
-                            {options.length === 0 && (
-                              <p style={{ margin: '8px 0 0', overflowWrap: 'anywhere' }}>
-                                <strong>Learner's answer: </strong>
-                                <span>{String(ans.selected_answer_text || 'Not answered')}</span>
-                                <span style={{ marginLeft: '4px', color: '#bd0000', fontSize: '16px', fontWeight: 'bold', fontStyle: 'italic' }}>{earned > 0 ? '✓' : '✗'}</span>
-                              </p>
-                            )}
-                            {!full && ans.correct_answer != null && <p style={{ margin: '5px 0 0' }}><strong>Correct answer:</strong> {String(ans.correct_answer)}</p>}
-                            <p style={{ margin: '5px 0 0', textAlign: 'right', color: '#bd0000', fontWeight: 'bold', fontStyle: 'italic' }}>{earned}/{max}</p>
-                            {teacherComment && (
-                              <p style={{ margin: '5px 0 0', color: '#173f83', fontSize: '12px', fontStyle: 'italic', fontFamily: "'Segoe Print', 'Bradley Hand', cursive" }}>
-                                <strong>Feedback: </strong>{String(teacherComment)}
-                              </p>
-                            )}
-                          </article>
-                        );
-                      })}
-                      </div>
-                        );
-                      })}
-                    </div>
-                  </section>
-                ))}
-                <div style={{ fontSize: '10px', color: '#aaa', textAlign: 'center', marginTop: '20px' }}>
-                  Generated on {new Date().toLocaleString()}
-                </div>
-              </div>
-            </div>
           </div>
         );
       })()}
