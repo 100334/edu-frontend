@@ -398,7 +398,8 @@ const QuizResults = ({ onRetake }) => {
                 <div>
                   <p className="mb-2 text-[10px] font-bold uppercase tracking-widest text-slate-400">Marked Question Paper</p>
                   <div className="border border-slate-400 bg-[#fffefa] px-4 py-4 shadow-sm sm:px-7">
-                    <header className="border-b-2 border-black pb-3 text-center text-black">
+                    <header className="relative border-b-2 border-black pb-3 text-center text-black">
+                      <img src="/school-logo.jpeg" alt="Progress Schools logo" className="absolute left-0 top-0 h-14 w-14 object-contain" />
                       <h2 className="text-lg font-black tracking-wide">PROGRESS SCHOOLS</h2>
                       <p className="mt-1 text-sm font-bold uppercase">Marked Question Paper</p>
                       <p className="mt-1 text-sm font-semibold">{selectedAttempt.quiz_title}</p>
@@ -512,7 +513,8 @@ const QuizResults = ({ onRetake }) => {
             {/* Hidden PDF content */}
             <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
               <div ref={pdfRef} style={{ boxSizing: 'border-box', fontFamily: 'Arial, sans-serif', padding: '20px', backgroundColor: 'white', width: '690px', color: '#111' }}>
-                <header style={{ textAlign: 'center', borderBottom: '2px solid #111', paddingBottom: '10px', marginBottom: '12px' }}>
+                <header style={{ position: 'relative', minHeight: '66px', textAlign: 'center', borderBottom: '2px solid #111', padding: '2px 58px 10px', marginBottom: '12px' }}>
+                  <img src="/school-logo.jpeg" alt="Progress Schools logo" crossOrigin="anonymous" style={{ position: 'absolute', left: 0, top: 0, width: '54px', height: '54px', objectFit: 'contain' }} />
                   <h1 style={{ fontSize: '20px', margin: 0, fontWeight: 'bold' }}>PROGRESS SCHOOLS</h1>
                   <h2 style={{ fontSize: '14px', margin: '4px 0', fontWeight: 'bold' }}>MARKED QUESTION PAPER</h2>
                   <p style={{ fontSize: '13px', margin: 0, fontWeight: 'bold' }}>{selectedAttempt.quiz_title}</p>
@@ -528,8 +530,21 @@ const QuizResults = ({ onRetake }) => {
                     <h3 className="paper-section-heading" style={{ margin: '0 0 10px', paddingBottom: '4px', borderBottom: '2px solid #111', fontSize: '13px', fontWeight: 'bold', pageBreakAfter: 'avoid', breakAfter: 'avoid' }}>
                       SECTION {section.id} — {section.id === 'A' ? 'MULTIPLE CHOICE' : 'SHORT ANSWER'}
                     </h3>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-                      {section.questions.map(({ answer: ans, questionNumber }) => {
+                    <div style={{ display: 'flex', alignItems: 'stretch', width: '100%' }}>
+                      {[0, 1].map(columnIndex => {
+                        const splitIndex = Math.ceil(section.questions.length / 2);
+                        const columnQuestions = columnIndex === 0
+                          ? section.questions.slice(0, splitIndex)
+                          : section.questions.slice(splitIndex);
+                        return (
+                      <div key={columnIndex} style={{
+                        boxSizing: 'border-box',
+                        width: '50%',
+                        paddingLeft: columnIndex === 1 ? '12px' : 0,
+                        paddingRight: columnIndex === 0 ? '12px' : 0,
+                        borderRight: columnIndex === 0 ? '1px solid #555' : 'none',
+                      }}>
+                      {columnQuestions.map(({ answer: ans, questionNumber }) => {
                         const full = Number(ans.points_obtained) >= Number(ans.max_points);
                         const options = Array.isArray(ans.options) ? ans.options : [];
                         const selectedOption = getSelectedOptionIndex(ans);
@@ -537,7 +552,7 @@ const QuizResults = ({ onRetake }) => {
                         const max = Number(ans.max_points) || 0;
                         const teacherComment = ans.feedback || ans.explanation;
                         return (
-                          <article key={ans.question_id || questionNumber} className="marked-paper-question" style={{ width: '48%', paddingBottom: '10px', marginBottom: '12px', borderBottom: '1px solid #ccc', pageBreakInside: 'avoid', breakInside: 'avoid', fontSize: '11px' }}>
+                          <article key={ans.question_id || questionNumber} className="marked-paper-question" style={{ width: '100%', paddingBottom: '10px', marginBottom: '12px', borderBottom: '1px solid #ccc', pageBreakInside: 'avoid', breakInside: 'avoid', fontSize: '11px' }}>
                             <p style={{ margin: 0, fontWeight: 'bold' }}>
                               {questionNumber}. {ans.question_text}
                               <span style={{ marginLeft: '5px', fontSize: '9px', fontWeight: 'normal' }}>({max} {max === 1 ? 'mark' : 'marks'})</span>
@@ -579,6 +594,9 @@ const QuizResults = ({ onRetake }) => {
                               </p>
                             )}
                           </article>
+                        );
+                      })}
+                      </div>
                         );
                       })}
                     </div>
