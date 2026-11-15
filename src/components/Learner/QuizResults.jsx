@@ -467,12 +467,12 @@ const QuizResults = ({ onRetake }) => {
                                             </span>
                                             <span className="min-w-0 flex-1">{String(option)}</span>
                                             {isSelected && (
-                                              <span className="shrink-0 rotate-[-10deg] font-black italic text-red-700" aria-label={full ? 'Correct answer' : 'Incorrect answer'}>
+                                              <span className="shrink-0 rotate-[-10deg] font-black text-red-700" style={{ fontFamily: "'Patrick Hand', cursive" }} aria-label={full ? 'Correct answer' : 'Incorrect answer'}>
                                                 {full ? '✓' : '✗'}
                                               </span>
                                             )}
                                             {!isSelected && isCorrectOption && !full && (
-                                              <span className="shrink-0 rotate-[-10deg] font-black italic text-red-700" aria-label="Correct answer">✓</span>
+                                              <span className="shrink-0 rotate-[-10deg] font-black text-red-700" style={{ fontFamily: "'Patrick Hand', cursive" }} aria-label="Correct answer">✓</span>
                                             )}
                                             {ans.option_images?.[optionIndex] && (
                                               <img src={ans.option_images[optionIndex]} alt={`Option ${getOptionLabel(optionIndex)}`} className="max-h-12 max-w-20 object-contain" />
@@ -488,17 +488,17 @@ const QuizResults = ({ onRetake }) => {
                                       {ans.selected_answer_text || 'Not answered'}
                                     </span>
                                     {!options.length && (
-                                      <span className="ml-1 rotate-[-10deg] font-black italic text-red-700" aria-label={earned > 0 ? 'Marks awarded' : 'No marks awarded'}>
+                                      <span className="ml-1 rotate-[-10deg] font-black text-red-700" style={{ fontFamily: "'Patrick Hand', cursive" }} aria-label={earned > 0 ? 'Marks awarded' : 'No marks awarded'}>
                                         {earned > 0 ? '✓' : '✗'}
                                       </span>
                                     )}
-                                    <span className="ml-2 rotate-[-5deg] font-bold italic text-red-700">{earned}/{max}</span>
+                                    <span className="ml-2 rotate-[-5deg] font-bold text-red-700" style={{ fontFamily: "'Patrick Hand', cursive" }}>{earned}/{max}</span>
                                   </div>
                                   {!full && ans.correct_answer != null && (
                                     <p className="mt-1 text-xs text-slate-700"><strong>Correct answer:</strong> {String(ans.correct_answer)}</p>
                                   )}
                                   {teacherComment && (
-                                    <p className="mt-2 text-sm italic text-blue-800" style={{ fontFamily: "'Segoe Print', 'Bradley Hand', cursive" }}>
+                                    <p className="mt-2 text-sm text-blue-800" style={{ fontFamily: "'Patrick Hand', cursive" }}>
                                       <span className="font-bold">Feedback: </span>{String(teacherComment)}
                                     </p>
                                   )}

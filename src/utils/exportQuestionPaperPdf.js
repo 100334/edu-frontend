@@ -55,6 +55,20 @@ const fitImage = (image, maxWidth, maxHeight) => {
   return { width: image.width * scale, height: image.height * scale };
 };
 
+const createPatrickHandMark = text => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 128;
+  canvas.height = 128;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Could not prepare handwritten marks for the PDF.');
+  context.fillStyle = '#b40000';
+  context.font = '110px "Patrick Hand", cursive';
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(text, 64, 64);
+  return canvas.toDataURL('image/png');
+};
+
 export const downloadQuestionPaperPdf = async (paper, metadata, filename, review = false) => {
   const { jsPDF } = await import('jspdf');
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -71,31 +85,25 @@ export const downloadQuestionPaperPdf = async (paper, metadata, filename, review
     images.set(src, await loadImage(src));
   }
 
+  let markImages = null;
+  if (review) {
+    await document.fonts.load('110px "Patrick Hand"');
+    if (!document.fonts.check('110px "Patrick Hand"')) {
+      throw new Error('Patrick Hand font is not available for the marked paper.');
+    }
+    markImages = {
+      x: createPatrickHandMark('x'),
+      check: createPatrickHandMark('✓'),
+    };
+  }
+
   const setFont = (size, style = 'normal') => {
     pdf.setFont('helvetica', style);
     pdf.setFontSize(size);
     pdf.setTextColor(0, 0, 0);
   };
   const drawMark = (mark, x, y) => {
-    pdf.setDrawColor(180, 0, 0);
-    pdf.setLineCap('round');
-    pdf.setLineJoin('round');
-    pdf.setLineWidth(0.8);
-    if (mark === 'x') {
-      pdf.line(x, y - 2, x + 1.7, y - 0.1);
-      pdf.line(x + 1.7, y - 0.1, x + 4, y + 2);
-      pdf.line(x + 4, y - 2, x + 2.2, y - 0.1);
-      pdf.line(x + 2.2, y - 0.1, x, y + 2);
-    } else {
-      pdf.line(x, y + 0.2, x + 1.4, y + 1.8);
-      pdf.line(x + 1.4, y + 1.8, x + 4.5, y - 2.2);
-      pdf.setLineWidth(0.25);
-      pdf.line(x + 0.2, y + 0.3, x + 1.45, y + 1.7);
-      pdf.line(x + 1.45, y + 1.7, x + 4.3, y - 2);
-    }
-    pdf.setDrawColor(0);
-    pdf.setLineCap('butt');
-    pdf.setLineJoin('miter');
+    pdf.addImage(markImages[mark], 'PNG', x, y - 3.5, 5.5, 7);
   };
   const wrapText = (text, width) => {
     const lines = pdf.splitTextToSize(String(text || ' '), width);
